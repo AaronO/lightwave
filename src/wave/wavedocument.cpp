@@ -12,8 +12,8 @@ WaveDocument::WaveDocument(const QString& docId)
         s_revRegExp = new QRegExp("([0-9]+)-([0-9a-f]+)");
 }
 
-bool WaveDocument::setContent(FCGI::FCGIRequest* req, JSONObject obj)
-{
+bool WaveDocument::setContent(FCGI::FCGIRequest* req, JSONObject obj, bool suppressReply)
+{    
     //
     // Compute the new version and hash
     //
@@ -27,7 +27,8 @@ bool WaveDocument::setContent(FCGI::FCGIRequest* req, JSONObject obj)
     {
         if ( !s_revRegExp->exactMatch(m_rev) )
         {
-            req->errorReply("The revision is malformed");
+            if ( !suppressReply )
+                req->errorReply("The revision is malformed");
             return false;
         }
         m_revNumber = s_revRegExp->cap(1).toInt() + 1;
@@ -45,14 +46,15 @@ bool WaveDocument::setContent(FCGI::FCGIRequest* req, JSONObject obj)
     return true;
 }
 
-bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation docop)
+bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation docop, bool suppressReply)
 {
     // The mutation applies to the latest document version?
     if ( docop.revision() != m_rev )
     {
         if ( docop.mutation().isInsertMutation() )
         {
-            req->errorReply("When replacing the entire document, you must replace the most recent version");
+            if ( !suppressReply )
+                req->errorReply("When replacing the entire document, you must replace the most recent version");
             return false;
         }
 
@@ -60,7 +62,8 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
         QList<DocumentMutation> serverMutations = getMutations( docop.revision() );
         if ( serverMutations.isEmpty() )
         {
-            req->errorReply("The revision " + docop.revision() + " is unknown");
+            if ( !suppressReply )
+                req->errorReply("The revision " + docop.revision() + " is unknown");
             return false;
         }
 
@@ -86,7 +89,8 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
             t.xform(s, c);
             if ( t.hasError() )
             {
-                req->errorReply("Error transforming mutation: " + t.errorText());
+                if ( !suppressReply )
+                    req->errorReply("Error transforming mutation: " + t.errorText());
                 return false;
             }
             qDebug("result is\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
@@ -98,13 +102,14 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
     JSONObject result = docop.apply(m_json, &ok);
     if ( !ok )
     {
-        req->errorReply("Could not apply mutation");
+        if ( !suppressReply )
+            req->errorReply("Could not apply mutation");
         return false;
     }
     qDebug("Result is %s", qPrintable(result.toJSON()));
 
     // Store the document and that's it
-    if ( !setContent(req, result) )
+    if ( !setContent(req, result, suppressReply) )
     {
         qDebug("Could not store the content of the changed document");
         return false;

@@ -2,13 +2,15 @@
 #include "wavecontainer.h"
 #include "utils/settings.h"
 #include "session.h"
+#include "json/jsonobject.h"
+#include "json/jsonscanner.h"
 
 WaveProvider* WaveProvider::s_self = 0;
 
 WaveProvider::WaveProvider()
     : m_waveUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)"), m_docUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_sessionUriRegExp("(s\\+[A-Za-z0-9]+)"),
       m_sessionEventsUriRegExp("(s\\+[A-Za-z0-9]+)/_events"), m_sessionDeltasUriRegExp("(s\\+[A-Za-z0-9]+)/_deltas"),
-      m_hostWaveUriRegExp("_host/(w\\+[A-Za-z0-9]+)"), m_hostDocUriRegExp("_host/(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_remoteWaveUriRegExp("_remote/(w\\+[A-Za-z0-9]+)")
+      m_hostWaveUriRegExp("_host/(w\\+[A-Za-z0-9]+)"), m_hostDocUriRegExp("_host/(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_remoteWaveUriRegExp("_remote/([A-Za-z0-9.-]+)")
 {
     m_waveUriRegExp.setPatternSyntax(QRegExp::RegExp2);
     m_docUriRegExp.setPatternSyntax(QRegExp::RegExp2);
@@ -36,19 +38,16 @@ WaveContainer* WaveProvider::waveContainer(const QString& host, const QString& w
     QString id = h + "/" + waveId;
 
     if ( !m_container.contains(id))
-    {
-        qDebug("Unknown wave");
         return 0;
-    }
     return m_container[id];
 }
 
-WaveContainer* WaveProvider::createWaveContainer(const QString& host, const QString& waveId)
+WaveContainer* WaveProvider::createWaveContainer(const QString& host, const QString& waveId, bool asRemoteWave)
 {
     QString h = host;
     if ( h.isEmpty() )
         h = Settings::settings()->domain();
-    else if ( h != Settings::settings()->domain() )
+    else if ( !asRemoteWave && h != Settings::settings()->domain() )
     {
         qDebug("Cannot create wave on remote server");
         return 0;
@@ -93,7 +92,7 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
         // Find or create the wave
         WaveContainer* c = waveContainer(m_waveUriRegExp.cap(1), m_waveUriRegExp.cap(2));
         if ( !c )
-            c = createWaveContainer(m_waveUriRegExp.cap(1), m_waveUriRegExp.cap(2));
+            c = createWaveContainer(m_waveUriRegExp.cap(1), m_waveUriRegExp.cap(2), false);
         if ( !c )
         {
             req->errorReply("Error: Wave already exists");
@@ -148,11 +147,84 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
         }
         c->putDocumentFromRemote(req);
     }
-    // http://host/wave/_remote/w+123
+    // http://host/wave/_remote/some.host.com
     else if ( m_remoteWaveUriRegExp.exactMatch(req->requestUri()) )
     {
-        // TODO
-        qDebug("RECEIVED data from some host");
+        QString host = m_remoteWaveUriRegExp.cap(1);
+        JSONObject doc(true);
+        JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
+        bool ok = false;
+        doc = scanner.scan(&ok);
+        if ( !ok )
+        {
+            req->errorReply("JSON parsing error");
+            return;
+        }
+
+        qDebug("%s", qPrintable(doc.toJSON()));
+
+        // Iterate over the deltas for all the documents
+        foreach( QString id, doc.attributeNames() )
+        {
+            // host.com/w+123
+            if ( m_waveUriRegExp.exactMatch(id))
+            {
+                if ( !m_waveUriRegExp.cap(1).isEmpty() && m_waveUriRegExp.cap(1) != host + "/" )
+                {
+                    qDebug("Includes deltas from a remote host. We do no accept them");
+                    continue;
+                }
+
+                // Find or create the wave
+                WaveContainer* c = waveContainer(host, m_waveUriRegExp.cap(2));
+                if ( !c )
+                    c = createWaveContainer(host, m_waveUriRegExp.cap(2), true);
+                if ( !c )
+                {
+                    req->errorReply("Error: Wave does not exist and cannot be created");
+                    return;
+                }
+                qDebug("Created remote wave %s/%s", qPrintable(c->host()), qPrintable(c->waveId()));
+
+                if ( !c->putRootDocumentFromHost(req, doc.attributeObject(id) ) )
+                {
+                    qDebug("Applying a delta to the root failed");
+                    continue;
+                }
+            }
+            // host.com/w+123/d+abc
+            else if ( m_docUriRegExp.exactMatch(id))
+            {
+                if ( !m_docUriRegExp.cap(1).isEmpty() && m_docUriRegExp.cap(1) != host + "/" )
+                {
+                    qDebug("Includes deltas from a remote host. We do no accept them");
+                    continue;
+                }
+
+                // Find the wave
+                WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
+                if ( !c )
+                {
+                    req->errorReply("Error: Wave does not exist");
+                    return;
+                }
+
+                // Change the wave document
+                if ( !c->putDocumentFromHost(req, m_docUriRegExp.cap(3), doc.attributeObject(id)) )
+                {
+                    qDebug("Applying a delta failed");
+                    continue;
+                }
+            }
+            else
+            {
+                qDebug("Uninterpreted attribute %s when parsing message from hosting server", qPrintable(id));
+            }
+        }
+
+        JSONObject obj(true);
+        obj.setAttribute("ok", true);
+        req->replyJson(obj.toJSON());
     }
     else
         req->errorReply("Error: URI syntax error");

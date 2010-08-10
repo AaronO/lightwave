@@ -12,7 +12,7 @@ WaveRootDocument::WaveRootDocument(WaveContainer* container, const QString& docI
 {
 }
 
-bool WaveRootDocument::addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc)
+bool WaveRootDocument::addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc, bool suppressReply)
 {
     ObjectMutation rootop(true);
     if ( !jsonObject().hasAttribute("documents"))
@@ -33,11 +33,17 @@ bool WaveRootDocument::addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc)
 
     qDebug("OP=%s", qPrintable(docop.mutation().toJSON()));
 
-    return processMutation(req, docop);
+    return processMutation(req, docop, suppressReply);
 }
 
 void WaveRootDocument::update()
 {
+    if ( m_container->isRemote() )
+    {
+        m_container->m_authors = jsonObject().attributeObject("authors").attributeNamesSet();
+        return;
+    }
+
     QSet<QString> authors = jsonObject().attributeObject("authors").attributeNamesSet();
     QSet<QString> new_authors = authors.subtract(m_container->m_authors);
     QSet<QString> removed_authors = m_container->m_authors.subtract(authors);
@@ -82,42 +88,3 @@ void WaveRootDocument::update()
     }
 }
 
-///////////////////////////////////////////////////////
-//
-// SubmitToRemoteJob
-//
-///////////////////////////////////////////////////////
-
-SubmitToRemoteJob::SubmitToRemoteJob(WaveContainer* parent, const QString& host, const QByteArray& data )
-    : QObject(parent), m_data(data)
-{
-    QUrl url("http://" + host + "/wave/_remote/" + parent->waveId());
-    QNetworkRequest serverRequest( url );
-    m_serverReply = WaveContainer::networkManager()->put(serverRequest, m_data);
-}
-
-SubmitToRemoteJob::~SubmitToRemoteJob()
-{
-    if ( m_serverReply )
-    {
-        m_serverReply->abort();
-        m_serverReply->deleteLater();
-    }
-}
-
-void SubmitToRemoteJob::onError(QNetworkReply::NetworkError code)
-{
-    Q_UNUSED(code);
-    deleteLater();
-}
-
-void SubmitToRemoteJob::onFinished()
-{
-    deleteLater();
-}
-
-void SubmitToRemoteJob::onSslErrors( const QList<QSslError>& errors )
-{
-    Q_UNUSED(errors)
-    deleteLater();
-}

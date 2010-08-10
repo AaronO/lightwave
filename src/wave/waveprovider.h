@@ -21,7 +21,7 @@ public:
     void get(FCGI::FCGIRequest* req);
 
     WaveContainer* waveContainer(const QString& host, const QString& waveId);
-    WaveContainer* createWaveContainer(const QString& host, const QString& waveId);
+    WaveContainer* createWaveContainer(const QString& host, const QString& waveId, bool asRemoteWave);
     Session* createSession(FCGI::FCGIRequest* req, const QString& sessionId);
     Session* session(const QString& sessionId);
 
