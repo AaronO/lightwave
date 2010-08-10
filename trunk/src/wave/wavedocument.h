@@ -16,7 +16,7 @@ class WaveDocument : public QObject
 public:
     WaveDocument(const QString& docId);
 
-    bool processMutation(FCGI::FCGIRequest* req, DocumentMutation docop);
+    bool processMutation(FCGI::FCGIRequest* req, DocumentMutation docop, bool suppressReply = false);
 
     QString docId() const { return m_docId; }
     QString revision() const { return m_rev; }
@@ -27,7 +27,7 @@ public:
     QList<DocumentMutation> getMutations( const QString& sinceRevision );
 
 protected:
-    bool setContent(FCGI::FCGIRequest* req, JSONObject obj);
+    bool setContent(FCGI::FCGIRequest* req, JSONObject obj, bool suppressReply);
     virtual void update();
 
 private:

@@ -18,6 +18,7 @@
 class WaveRootDocument;
 class Session;
 class QNetworkAccessManager;
+class QRegExp;
 
 class WaveContainer : public QObject
 {
@@ -25,12 +26,13 @@ public:
     WaveContainer(const QString& host, const QString& waveId);
     ~WaveContainer();
 
-//    void replyToCreator(FCGI::FCGIRequest* req);
     /**
       * Invoked on behalf of a local client.
       */
     bool putDocument( FCGI::FCGIRequest* req, const QString& docId );
+    bool putDocumentFromHost( FCGI::FCGIRequest* req, const QString& docId, JSONObject doc );
     bool putRootDocument( FCGI::FCGIRequest* req );
+    bool putRootDocumentFromHost( FCGI::FCGIRequest* req, JSONObject doc );
     /**
       * Invoked on behalf of a remote server.
       *
@@ -87,6 +89,23 @@ private slots:
 private:
     FCGI::FCGIRequest* m_clientRequest;
     QString m_docId;
+    QByteArray m_data;
+    QNetworkReply* m_serverReply;
+};
+
+class SubmitToRemoteJob : public QObject
+{
+    Q_OBJECT
+public:
+    SubmitToRemoteJob(WaveContainer* parent, const QString& host, const QByteArray& data );
+    ~SubmitToRemoteJob();
+
+private slots:
+    void onError (QNetworkReply::NetworkError code);
+    void onFinished();
+    void onSslErrors( const QList<QSslError> & errors );
+
+private:
     QByteArray m_data;
     QNetworkReply* m_serverReply;
 };
