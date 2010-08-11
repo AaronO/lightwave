@@ -30,9 +30,11 @@ public:
       * Invoked on behalf of a local client.
       */
     bool putDocument( FCGI::FCGIRequest* req, const QString& docId );
-    bool putDocumentFromHost( FCGI::FCGIRequest* req, const QString& docId, JSONObject doc );
+    bool putDocumentFromHost( const QString& docId, JSONObject doc );
+    bool putDocumentSnapshotFromHost( const QString& docId, JSONObject doc );
     bool putRootDocument( FCGI::FCGIRequest* req );
-    bool putRootDocumentFromHost( FCGI::FCGIRequest* req, JSONObject doc );
+    bool putRootDocumentFromHost( JSONObject doc );
+    bool putRootDocumentSnapshotFromHost( JSONObject doc );
     /**
       * Invoked on behalf of a remote server.
       *
@@ -87,6 +89,8 @@ private slots:
     void onSslErrors( const QList<QSslError> & errors );
 
 private:
+    void sendErrorToClient();
+
     FCGI::FCGIRequest* m_clientRequest;
     QString m_docId;
     QByteArray m_data;
@@ -105,7 +109,7 @@ private slots:
     void onFinished();
     void onSslErrors( const QList<QSslError> & errors );
 
-private:
+private:        
     QByteArray m_data;
     QNetworkReply* m_serverReply;
 };

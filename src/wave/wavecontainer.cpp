@@ -27,14 +27,28 @@ WaveContainer::~WaveContainer()
     delete m_rootDoc;
 }
 
-bool WaveContainer::putRootDocumentFromHost( FCGI::FCGIRequest* req, JSONObject doc )
+bool WaveContainer::putRootDocumentFromHost(JSONObject doc )
 {
     Q_ASSERT(isRemote());
 
     // Apply the delta
     AbstractMutation m(doc);
     DocumentMutation docop( m );
-    if ( !m_rootDoc->processMutation(req, docop, true))
+
+    if ( !m_rootDoc->processMutationFromHost(docop))
+        return false;
+
+    // Tell all sessions which are listing that the wave has changed
+    notifySessions(m_rootDoc, false);
+
+    return true;
+}
+
+bool WaveContainer::putRootDocumentSnapshotFromHost( JSONObject doc )
+{
+    Q_ASSERT(isRemote());
+
+    if ( !m_rootDoc->setSnapshotFromHost(doc))
         return false;
 
     // Tell all sessions which are listing that the wave has changed
@@ -87,11 +101,83 @@ bool WaveContainer::putRootDocument( FCGI::FCGIRequest* req )
     // Tell all sessions which are listing that the wave has changed
     notifySessions(m_rootDoc, false);
 
+    //
+    // Check for changes in the root document
+    //
+
+    QSet<QString> authors = m_rootDoc->jsonObject().attributeObject("authors").attributeNamesSet();
+    QSet<QString> new_authors = authors.subtract(m_authors);
+    QSet<QString> removed_authors = m_authors.subtract(authors);
+
+    foreach( QString a, new_authors )
+    {
+        JID jid(a);
+        // Malformed
+        if ( !jid.isValid())
+            continue;
+        m_authors.insert(a);
+        // TODO: Inform the sessions of the author
+    }
+
+    foreach( QString a, removed_authors )
+    {
+        // TODO: Inform the sessions of the author
+    }
+
+    // Determine the set of remote hosts
+    QSet<QString> remoteHosts;
+    foreach(QString a, m_authors)
+    {
+        JID jid(a);
+        if ( jid.domain() == host())
+            continue;
+        remoteHosts.insert(jid.domain());
+    }
+
+    // Inform the remote hosts
+    foreach(QString h, remoteHosts)
+    {
+        if ( m_remoteHosts.contains(h))
+        {
+            JSONObject msg(true);
+            JSONObject m;
+            if ( m_rootDoc->revisionNumber() == 1 )
+            {
+                m = m_rootDoc->jsonObject().clone().toObject();
+                m.setAttribute("_snapshot", true);
+            }
+            else
+                m = doc.clone().toObject();
+            msg.setAttribute(m_rootDoc->docId(), m);
+            new SubmitToRemoteJob(this, h, msg.toJSON().toUtf8());
+        }
+        else
+        {
+            qDebug("ADDING remote host %s", qPrintable(h));
+            // Send a snapshot to the remote host
+            JSONObject obj(true);
+            JSONObject doc = m_rootDoc->jsonObject().clone().toObject();
+            doc.setAttribute("_snapshot", true);
+            obj.setAttribute(m_rootDoc->docId(), doc);
+            foreach( QString id, m_documents.keys())
+            {
+                WaveDocument* wdoc = m_documents[id];
+                doc = wdoc->jsonObject().clone().toObject();
+                doc.setAttribute("_snapshot", true);
+                obj.setAttribute(m_host + "/" + m_waveId + "/" + id, doc);
+            }
+            new SubmitToRemoteJob(this, h, obj.toJSON().toUtf8());
+        }
+    }
+
+    m_remoteHosts = remoteHosts;
+
     return true;
 }
 
 bool WaveContainer::putDocument( FCGI::FCGIRequest* req, const QString& docId )
 {
+    qDebug("Put document");
     Q_ASSERT(docId.startsWith("d+"));
 
     JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
@@ -105,6 +191,7 @@ bool WaveContainer::putDocument( FCGI::FCGIRequest* req, const QString& docId )
 
     if ( isRemote() )
     {
+        qDebug("Put document remote");
         new SubmitToHostJob(this, req, docId, QByteArray(req->m_stdinStream.data(), req->m_stdinStream.size()));
         return true;
     }
@@ -127,7 +214,7 @@ bool WaveContainer::putDocument( FCGI::FCGIRequest* req, const QString& docId )
             return false;
         }
         // Create the document
-        wdoc = new WaveDocument(m_host + "/" + m_waveId + "/" + docId);
+        wdoc = new WaveDocument(this, m_host + "/" + m_waveId + "/" + docId);
         // if ( !wdoc->setContent(req, doc) )
 
         // Apply the initial mutation
@@ -173,10 +260,47 @@ bool WaveContainer::putDocument( FCGI::FCGIRequest* req, const QString& docId )
     // Tell all sessions which are listing that the wave has changed
     notifySessions(wdoc, is_initial);
 
+    //
+    // Send a message to all remote hosts
+    //
+    if ( !m_remoteHosts.isEmpty() )
+    {
+        JSONObject msg(true);
+        JSONObject m = doc.clone().toObject();
+        if ( is_initial )
+            m.setAttribute("_snapshot", true);
+        msg.setAttribute(wdoc->docId(), m);
+        foreach(QString h, m_remoteHosts)
+        {
+            new SubmitToRemoteJob(this, h, msg.toJSON().toUtf8());
+        }
+    }
+
     return true;
 }
 
-bool WaveContainer::putDocumentFromHost( FCGI::FCGIRequest* req, const QString& docId, JSONObject doc )
+bool WaveContainer::putDocumentSnapshotFromHost( const QString& docId, JSONObject doc )
+{
+    Q_ASSERT(docId.startsWith("d+"));
+    Q_ASSERT(isRemote());
+
+    if ( m_documents.contains(docId))
+    {
+        qDebug("Error: Cannot use snapshot because document already exists");
+    }
+
+    // Create the document
+    WaveDocument* wdoc = new WaveDocument(this, m_host + "/" + m_waveId + "/" + docId);
+    wdoc->setSnapshotFromHost(doc);
+    m_documents[docId] = wdoc;
+
+    // Tell all sessions which are listing that the wave has changed
+    notifySessions(wdoc, true);
+
+    return true;
+}
+
+bool WaveContainer::putDocumentFromHost(const QString& docId, JSONObject doc )
 {
     Q_ASSERT(docId.startsWith("d+"));
     Q_ASSERT(isRemote());
@@ -186,45 +310,19 @@ bool WaveContainer::putDocumentFromHost( FCGI::FCGIRequest* req, const QString& 
     //
 
     WaveDocument* wdoc = m_documents.value(docId);
-
-    bool is_initial = false;
-    // Initial submission?
-    if ( doc.attributeString("_rev").isEmpty())
+    if ( !wdoc )
     {
-        is_initial = true;
-
-        if ( wdoc )
-            return false;
-
-        // Create the document
-        wdoc = new WaveDocument(m_host + "/" + m_waveId + "/" + docId);
-
-        // Apply the initial mutation
-        AbstractMutation m(doc);
-        DocumentMutation docop( m );
-        if ( !wdoc->processMutation(req, docop, true))
-            return false;
-
-        // Add the document to the wave
-        if ( !m_rootDoc->addDocument(req, wdoc, true) )
-            return false;
-
-        m_documents[docId] = wdoc;
+        qDebug("Error: The document does not yet exist.");
+        return false;
     }
-    // Overwrite/mutate the document?
-    else
-    {
-        if ( !wdoc )
-            return false;
 
-        AbstractMutation m(doc);
-        DocumentMutation docop( m );
-        if ( !wdoc->processMutation(req, docop, true))
-            return false;
-    }
+    AbstractMutation m(doc);
+    DocumentMutation docop( m );
+    if ( !wdoc->processMutationFromHost(docop))
+        return false;
 
     // Tell all sessions which are listing that the wave has changed
-    notifySessions(wdoc, is_initial);
+    notifySessions(wdoc, false);
 
     return true;
 }
@@ -245,6 +343,7 @@ bool WaveContainer::putDocumentFromRemote( FCGI::FCGIRequest* req, const QString
     // Check permissions, i.e. is this remote server perhaps blocked?
     // TODO
 
+    qDebug("Message from remote server: %s", req->m_stdinStream.data());
     return putDocument(req, docId);
 }
 
@@ -348,10 +447,11 @@ SubmitToHostJob::SubmitToHostJob(WaveContainer* parent, FCGI::FCGIRequest* req, 
     : QObject(parent), m_clientRequest(req), m_docId(docId), m_data(data)
 {
     QUrl url;
-    if ( docId.isEmpty() )
+    if ( !docId.isEmpty() )
         url = QUrl("http://" + parent->host() + "/wave/_host/" + parent->waveId() + "/" + docId);
     else
         url = QUrl("http://" + parent->host() + "/wave/_host/" + parent->waveId());
+    qDebug("Sending to host: %s", qPrintable(url.toString()));
     QNetworkRequest serverRequest( url );
     m_serverReply = WaveContainer::networkManager()->put(serverRequest, m_data);
 
@@ -375,11 +475,7 @@ SubmitToHostJob::~SubmitToHostJob()
 void SubmitToHostJob::onError(QNetworkReply::NetworkError code)
 {
     Q_UNUSED(code);
-    if ( m_clientRequest )
-    {
-        m_clientRequest->errorReply("Communication with hosting server failed");
-        m_clientRequest = 0;
-    }
+    sendErrorToClient();
     deleteLater();
 }
 
@@ -392,23 +488,39 @@ void SubmitToHostJob::onFinished()
         bool ok = false;
         JSONObject doc = scanner.scan(&ok);
         if ( !ok )
-            qDebug("Failed parsing the response from the remote server");
+            qDebug("Failed parsing the response from the hosting server: %s", qPrintable(doc.toJSON()));
         else
             qDebug("Answer from hosting server: %s", qPrintable(doc.toJSON()));
-        // TODO make any use from the reply
-    }
+
+        if ( doc.attribute("ok").toBool() == true )
+        {
+            if ( m_clientRequest )
+                m_clientRequest->replyJson(data);
+        }
+        else
+        {
+            if ( m_clientRequest )
+                m_clientRequest->errorReply( doc.attributeString("error"));
+        }
+        m_clientRequest = 0;
+    }    
     deleteLater();
 }
 
 void SubmitToHostJob::onSslErrors( const QList<QSslError>& errors )
 {
     Q_UNUSED(errors)
+    sendErrorToClient();
+    deleteLater();
+}
+
+void SubmitToHostJob::sendErrorToClient()
+{
     if ( m_clientRequest )
     {
         m_clientRequest->errorReply("Communication with hosting server failed");
         m_clientRequest = 0;
     }
-    deleteLater();
 }
 
 ///////////////////////////////////////////////////////
@@ -421,7 +533,7 @@ SubmitToRemoteJob::SubmitToRemoteJob(WaveContainer* parent, const QString& host,
     : QObject(parent), m_data(data)
 {
     Q_ASSERT(!parent->isRemote());
-    QUrl url("http://" + host + "/wave/_remote/" + parent->host());
+    QUrl url("http://" + host + "/wave/_remote");
     QNetworkRequest serverRequest( url );
     m_serverReply = WaveContainer::networkManager()->put(serverRequest, m_data);
 
@@ -457,7 +569,7 @@ void SubmitToRemoteJob::onFinished()
         bool ok = false;
         JSONObject doc = scanner.scan(&ok);
         if ( !ok )
-            qDebug("Failed parsing the response from the remote server");
+            qDebug("Failed parsing the response from the remote server: %s", qPrintable(doc.toJSON()));
         else
             qDebug("Answer from remote server: %s", qPrintable(doc.toJSON()));
         // TODO make any use from the reply

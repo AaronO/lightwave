@@ -14,13 +14,7 @@ class WaveRootDocument : public WaveDocument
 public:
     WaveRootDocument(WaveContainer* container, const QString& docId);
 
-    bool addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc, bool suppressReply = false);
-
-protected:
-    virtual void update();
-
-private:
-    WaveContainer* m_container;
+    bool addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc);
 };
 
 #endif // WAVEROOTDOCUMENT_H
