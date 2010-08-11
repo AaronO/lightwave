@@ -10,7 +10,7 @@ WaveProvider* WaveProvider::s_self = 0;
 WaveProvider::WaveProvider()
     : m_waveUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)"), m_docUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_sessionUriRegExp("(s\\+[A-Za-z0-9]+)"),
       m_sessionEventsUriRegExp("(s\\+[A-Za-z0-9]+)/_events"), m_sessionDeltasUriRegExp("(s\\+[A-Za-z0-9]+)/_deltas"),
-      m_hostWaveUriRegExp("_host/(w\\+[A-Za-z0-9]+)"), m_hostDocUriRegExp("_host/(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_remoteWaveUriRegExp("_remote/([A-Za-z0-9.-]+)")
+      m_hostWaveUriRegExp("_host/(w\\+[A-Za-z0-9]+)"), m_hostDocUriRegExp("_host/(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_remoteWaveUriRegExp("_remote")
 {
     m_waveUriRegExp.setPatternSyntax(QRegExp::RegExp2);
     m_docUriRegExp.setPatternSyntax(QRegExp::RegExp2);
@@ -105,6 +105,8 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
     else if ( m_docUriRegExp.exactMatch(req->requestUri()) )
     {
         QString host = m_docUriRegExp.cap(1);
+        if ( host.length() > 0 )
+            host = host.left(host.length() - 1);
         WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
         if ( !c )
         {
@@ -147,10 +149,9 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
         }
         c->putDocumentFromRemote(req);
     }
-    // http://host/wave/_remote/some.host.com
+    // http://host/wave/_remote
     else if ( m_remoteWaveUriRegExp.exactMatch(req->requestUri()) )
     {
-        QString host = m_remoteWaveUriRegExp.cap(1);
         JSONObject doc(true);
         JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
         bool ok = false;
@@ -169,37 +170,47 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
             // host.com/w+123
             if ( m_waveUriRegExp.exactMatch(id))
             {
-                if ( !m_waveUriRegExp.cap(1).isEmpty() && m_waveUriRegExp.cap(1) != host + "/" )
+                QString host = m_waveUriRegExp.cap(1);
+                host = host.left(host.length() - 1);
+                JSONObject data = doc.attributeObject(id);
+                // Create from a snapshot?
+                if ( data.hasAttribute("_snapshot") && data.attribute("_snapshot").toBool() )
                 {
-                    qDebug("Includes deltas from a remote host. We do no accept them");
-                    continue;
+                    WaveContainer* c = createWaveContainer(host, m_waveUriRegExp.cap(2), true);
+                    if ( !c )
+                    {
+                        req->errorReply("Error: Wave does not exist and cannot be created");
+                        return;
+                    }
+                    qDebug("Created remote wave %s/%s", qPrintable(c->host()), qPrintable(c->waveId()));
+                    if ( !c->putRootDocumentSnapshotFromHost(data) )
+                    {
+                        qDebug("Failed to apply snapshot");
+                    }
                 }
-
-                // Find or create the wave
-                WaveContainer* c = waveContainer(host, m_waveUriRegExp.cap(2));
-                if ( !c )
-                    c = createWaveContainer(host, m_waveUriRegExp.cap(2), true);
-                if ( !c )
+                // Mutate an existing wave?
+                else
                 {
-                    req->errorReply("Error: Wave does not exist and cannot be created");
-                    return;
-                }
-                qDebug("Created remote wave %s/%s", qPrintable(c->host()), qPrintable(c->waveId()));
-
-                if ( !c->putRootDocumentFromHost(req, doc.attributeObject(id) ) )
-                {
-                    qDebug("Applying a delta to the root failed");
-                    continue;
+                    // Find the wave
+                    WaveContainer* c = waveContainer(host, m_waveUriRegExp.cap(2));
+                    if ( !c )
+                    {
+                        qDebug("Error: Wave does not exist");
+                        continue;
+                    }
+                    // Mutate the wave
+                    if ( !c->putRootDocumentFromHost( data ) )
+                    {
+                        qDebug("Error: Applying a delta to the root failed");
+                        continue;
+                    }
                 }
             }
             // host.com/w+123/d+abc
             else if ( m_docUriRegExp.exactMatch(id))
             {
-                if ( !m_docUriRegExp.cap(1).isEmpty() && m_docUriRegExp.cap(1) != host + "/" )
-                {
-                    qDebug("Includes deltas from a remote host. We do no accept them");
-                    continue;
-                }
+                QString host = m_docUriRegExp.cap(1);
+                host = host.left(host.length() - 1);
 
                 // Find the wave
                 WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
@@ -209,11 +220,25 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
                     return;
                 }
 
-                // Change the wave document
-                if ( !c->putDocumentFromHost(req, m_docUriRegExp.cap(3), doc.attributeObject(id)) )
+                JSONObject data = doc.attributeObject(id);
+                // Create from a snapshot?
+                if ( data.hasAttribute("_snapshot") && data.attribute("_snapshot").toBool() )
                 {
-                    qDebug("Applying a delta failed");
-                    continue;
+                    // Change the wave document
+                    if ( !c->putDocumentSnapshotFromHost(m_docUriRegExp.cap(3), data) )
+                    {
+                        qDebug("Applying a delta failed");
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Change the wave document
+                    if ( !c->putDocumentFromHost( m_docUriRegExp.cap(3), data) )
+                    {
+                        qDebug("Applying a delta failed");
+                        continue;
+                    }
                 }
             }
             else

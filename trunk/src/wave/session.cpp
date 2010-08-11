@@ -15,7 +15,7 @@ Session::Session(const QString& sessionId)
 {
     if ( !s_waveUriRegExp )
         s_waveUriRegExp = new QRegExp("([A-Za-z0-9.-]+)/(w\\+[A-Za-z0-9]+)(/d\\+[A-Za-z0-9]+)?");
-    m_doc = new WaveDocument(sessionId);
+    m_doc = new WaveDocument(this, sessionId);
 }
 
 bool Session::get(FCGI::FCGIRequest* req)
