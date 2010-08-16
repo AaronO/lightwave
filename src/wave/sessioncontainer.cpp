@@ -11,5 +11,6 @@ WaveContainer* SessionContainer::createWaveContainer(const QString& name)
 {
     Q_ASSERT(childContainer(name) == 0);
     Session* s = new Session(this, name);
+    s->makePersistent();
     return s;
 }
