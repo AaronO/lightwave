@@ -31,9 +31,9 @@ private:
     JSONObject sendDeltas(FCGI::FCGIRequest* req);
 
     void update();
-    bool openWave(const WaveId& waveId);
+    bool openWave(const WaveId& waveId, const QString waveName);
     void closeWave(const WaveId& waveId);
-    void annotateWaveError( const QString& id, const QString& error );
+    void annotateWaveError( const QString& waveName, const QString& error );
     void putAnnotations();
 
     /**

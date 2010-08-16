@@ -28,15 +28,15 @@ void Session::update()
         {
             // Check for malfored ID
             WaveId wid(w);
-            if ( wid.isNull() )
+            if ( wid.isNull() || !wid.documentId().isEmpty() )
             {
                 annotateWaveError(w, "Malformed ID");
                 continue;
             }
             wid.normalize();
             // Open the wave    
-            if ( openWave(wid))
-                m_waves.insert(wid.toString());
+            if ( openWave(wid, w))
+                m_waves.insert(w);
         }
     }
 
@@ -46,14 +46,14 @@ void Session::update()
         {
             // Check for malfored ID
             WaveId wid(w);
-            if ( wid.isNull() )
+            if ( wid.isNull() || !wid.documentId().isEmpty() )
             {
                 annotateWaveError(w, "Malformed ID");
                 continue;
             }
             wid.normalize();
             // Close the wave
-            m_waves.remove(wid.toString());
+            m_waves.remove(w);
             closeWave(wid);
         }
     }
@@ -61,12 +61,12 @@ void Session::update()
     putAnnotations();
 }
 
-bool Session::openWave(const WaveId& waveId)
+bool Session::openWave(const WaveId& waveId, const QString waveName)
 {
     WaveContainer* c = WaveProvider::self()->container(waveId);
     if ( !c )
     {
-        annotateWaveError(waveId.toString(), "Wave does not exist");
+        annotateWaveError(waveName, "Wave does not exist");
         return false;
     }
     c->registerSession(this->name());
@@ -84,11 +84,9 @@ void Session::closeWave(const WaveId& waveId)
     c->deregisterSession(this->name());
 }
 
-void Session::annotateWaveError( const QString& id, const QString& error )
+void Session::annotateWaveError( const QString& waveName, const QString& error )
 {
-//    Q_ASSERT(doc());
-//    doc()->jsonObject().attributeObject("waves").attributeObject(id).setAttribute("error", error);
-    m_annotations[id] = error;
+    m_annotations[waveName] = error;
 }
 
 void Session::putAnnotations()
