@@ -6,28 +6,32 @@
 #include <QSet>
 #include <QHash>
 #include "fcgi/fcgirequest.h"
+#include "waveid.h"
+#include "wavecontainer.h"
 
 class WaveDocument;
-class QRegExp;
+class SessionContainer;
 
-class Session : public QObject
+class Session : public WaveContainer
 {
 public:
-    Session(const QString& sessionId);
-
-    bool get(FCGI::FCGIRequest* req);
-    bool put(FCGI::FCGIRequest* req);
-
-    QString sessionId() const { return m_sessionId; }
+    Session(SessionContainer* parent, const QString& sessionId);
 
     void notify( const QHash<QString,QString>& revisions );
     void sendEvents(FCGI::FCGIRequest* req);
     void sendDeltas(FCGI::FCGIRequest* req);
 
+    bool isRemote() const { return false; }
+
+protected:
+    virtual void onDocumentUpdate(WaveDocument* wdoc);
+
 private:
+    WaveDocument* doc() { return document("_default"); }
+
     void update();
-    bool openWave(const QString& host, const QString& waveId);
-    void closeWave(const QString& host, const QString& waveId);
+    bool openWave(const WaveId& waveId);
+    void closeWave(const WaveId& waveId);
     void annotateWaveError( const QString& id, const QString& error );
 
     /**
@@ -36,15 +40,11 @@ private:
       * a direct pointer to the wave itself.
       */
     QSet<QString> m_waves;
-    QString m_sessionId;
-    WaveDocument* m_doc;
     QHash<QString,QString> m_revisionsForEventListener;
     QHash<QString,QString> m_revisionsForDeltaListener;
 
     FCGI::FCGIRequest* m_eventListener;
     FCGI::FCGIRequest* m_deltaListener;
-
-    static QRegExp* s_waveUriRegExp;
 };
 
 #endif // SESSION_H

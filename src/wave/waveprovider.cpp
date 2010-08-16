@@ -1,5 +1,7 @@
 #include "waveprovider.h"
-#include "wavecontainer.h"
+#include "rootcontainer.h"
+#include "hostcontainer.h"
+#include "sessioncontainer.h"
 #include "utils/settings.h"
 #include "session.h"
 #include "json/jsonobject.h"
@@ -8,18 +10,16 @@
 WaveProvider* WaveProvider::s_self = 0;
 
 WaveProvider::WaveProvider()
-    : m_waveUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)"), m_docUriRegExp("([A-Za-z0-9.-]+/)?(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_sessionUriRegExp("(s\\+[A-Za-z0-9]+)"),
-      m_sessionEventsUriRegExp("(s\\+[A-Za-z0-9]+)/_events"), m_sessionDeltasUriRegExp("(s\\+[A-Za-z0-9]+)/_deltas"),
-      m_hostWaveUriRegExp("_host/(w\\+[A-Za-z0-9]+)"), m_hostDocUriRegExp("_host/(w\\+[A-Za-z0-9]+)/(d\\+[A-Za-z0-9]+)"), m_remoteWaveUriRegExp("_remote")
+    : m_sessionUriRegExp("_session/([+A-Za-z0-9.-]+)"),
+      m_sessionEventsUriRegExp("(_session/([+A-Za-z0-9.-]+)/_events"), m_sessionDeltasUriRegExp("_session/([+A-Za-z0-9.-]+)/_deltas"),
+      m_hostUriRegExp("_host"), m_remoteUriRegExp("_remote")
 {
-    m_waveUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_docUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_sessionUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_sessionEventsUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_sessionDeltasUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_hostWaveUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_hostDocUriRegExp.setPatternSyntax(QRegExp::RegExp2);
-    m_remoteWaveUriRegExp.setPatternSyntax(QRegExp::RegExp2);
+    m_rootContainer = new RootContainer();
+    // Create a container for local waves
+    HostContainer* h = new HostContainer(m_rootContainer, Settings::settings()->domain(), true);
+    h->makePersistent();
+    m_sessionContainer = new SessionContainer(m_rootContainer, "_settings");
+    m_sessionContainer->makePersistent();
 }
 
 WaveProvider* WaveProvider::self()
@@ -27,43 +27,6 @@ WaveProvider* WaveProvider::self()
     if ( !s_self )
         s_self = new WaveProvider();
     return s_self;
-}
-
-WaveContainer* WaveProvider::waveContainer(const QString& host, const QString& waveId)
-{
-    QString h = host;
-    if ( h.isEmpty() )
-        h = Settings::settings()->domain();
-
-    QString id = h + "/" + waveId;
-
-    if ( !m_container.contains(id))
-        return 0;
-    return m_container[id];
-}
-
-WaveContainer* WaveProvider::createWaveContainer(const QString& host, const QString& waveId, bool asRemoteWave)
-{
-    QString h = host;
-    if ( h.isEmpty() )
-        h = Settings::settings()->domain();
-    else if ( !asRemoteWave && h != Settings::settings()->domain() )
-    {
-        qDebug("Cannot create wave on remote server");
-        return 0;
-    }
-
-    QString id = h + "/" + waveId;
-
-    if ( m_container.contains(id))
-    {
-        qDebug("Wave already exists");
-        return 0;
-    }
-
-    WaveContainer* container = new WaveContainer(h, waveId);
-    m_container[id] = container;
-    return container;
 }
 
 Session* WaveProvider::createSession(FCGI::FCGIRequest* req, const QString& sessionId)
@@ -74,84 +37,38 @@ Session* WaveProvider::createSession(FCGI::FCGIRequest* req, const QString& sess
         return 0;
     }
 
-    Session* session = new Session(sessionId);
+    Session* session = new Session(m_sessionContainer, sessionId);
+    session->makePersistent();
     m_sessions[sessionId] = session;
     return session;
 }
 
 Session* WaveProvider::session(const QString& sessionId)
 {
-    return m_sessions[sessionId];
+    return static_cast<Session*>(m_sessionContainer->childContainer(sessionId));
+}
+
+WaveContainer* WaveProvider::container(const WaveId& waveId)
+{
+    return m_rootContainer->container(waveId);
 }
 
 void WaveProvider::put(FCGI::FCGIRequest* req)
 {
-    // http://host/wave/w+123
-    if ( m_waveUriRegExp.exactMatch(req->requestUri()) )
+    WaveId waveId(req->requestUri());
+    if ( !waveId.isNull())
     {
-        // Find or create the wave
-        WaveContainer* c = waveContainer(m_waveUriRegExp.cap(1), m_waveUriRegExp.cap(2));
-        if ( !c )
-            c = createWaveContainer(m_waveUriRegExp.cap(1), m_waveUriRegExp.cap(2), false);
-        if ( !c )
-        {
-            req->errorReply("Error: Wave already exists");
-            return;
-        }
-        // Change the wave
-        c->putRootDocument(req);
+        waveId.normalize();
+        qDebug("waveId = %s", qPrintable(waveId.toString()));
+        JSONObject response = m_rootContainer->put(req, waveId);
+        // Perhaps the request will be answered later because it may involve talking to a hosting server
+        if ( !response.isNull())
+            req->replyJson(response.toJSON());
     }
-    // http://host/wave/w+123/d+abc
-    else if ( m_docUriRegExp.exactMatch(req->requestUri()) )
+    // Federation Host Port: http://host/wave/_host
+    else if ( m_hostUriRegExp.exactMatch(req->requestUri()) )
     {
-        QString host = m_docUriRegExp.cap(1);
-        if ( host.length() > 0 )
-            host = host.left(host.length() - 1);
-        WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
-        if ( !c )
-        {
-            req->errorReply("Error: Wave does not exist");
-            return;
-        }
-        c->putDocument(req, m_docUriRegExp.cap(3));
-    }
-    // http://host/wave/s+123
-    else if ( m_sessionUriRegExp.exactMatch(req->requestUri()) )
-    {
-        Session* s = m_sessions.value(m_sessionUriRegExp.cap(1));
-        if ( !s )
-        {
-            s = createSession(req, m_sessionUriRegExp.cap(1));
-            if ( !s )
-                return;
-        }
-        s->put(req);
-    }
-    // http://host/wave/_host/w+123/d+abc
-    else if ( m_hostDocUriRegExp.exactMatch(req->requestUri()) )
-    {
-        WaveContainer* c = waveContainer(QString::null, m_hostDocUriRegExp.cap(1));
-        if ( !c )
-        {
-            req->errorReply("Error: Wave does not exist");
-            return;
-        }
-        c->putDocumentFromRemote(req, m_hostDocUriRegExp.cap(2));
-    }
-    // http://host/wave/_host/w+123
-    else if ( m_hostWaveUriRegExp.exactMatch(req->requestUri()) )
-    {
-        WaveContainer* c = waveContainer(QString::null, m_hostWaveUriRegExp.cap(1));
-        if ( !c )
-        {
-            req->errorReply("Error: Wave does not exist");
-            return;
-        }
-        c->putDocumentFromRemote(req);
-    }
-    // http://host/wave/_remote
-    else if ( m_remoteWaveUriRegExp.exactMatch(req->requestUri()) )
-    {
+        // Parse the JSON document
         JSONObject doc(true);
         JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
         bool ok = false;
@@ -162,126 +79,105 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
             return;
         }
 
-        qDebug("%s", qPrintable(doc.toJSON()));
+        JSONObject result(true);
+        qDebug("_host: %s", qPrintable(doc.toJSON()));
 
         // Iterate over the deltas for all the documents
         foreach( QString id, doc.attributeNames() )
         {
-            // host.com/w+123
-            if ( m_waveUriRegExp.exactMatch(id))
+            WaveId wid(id);
+            if ( wid.isNull() )
             {
-                QString host = m_waveUriRegExp.cap(1);
-                host = host.left(host.length() - 1);
-                JSONObject data = doc.attributeObject(id);
-                // Create from a snapshot?
-                if ( data.hasAttribute("_snapshot") && data.attribute("_snapshot").toBool() )
-                {
-                    WaveContainer* c = createWaveContainer(host, m_waveUriRegExp.cap(2), true);
-                    if ( !c )
-                    {
-                        req->errorReply("Error: Wave does not exist and cannot be created");
-                        return;
-                    }
-                    qDebug("Created remote wave %s/%s", qPrintable(c->host()), qPrintable(c->waveId()));
-                    if ( !c->putRootDocumentSnapshotFromHost(data) )
-                    {
-                        qDebug("Failed to apply snapshot");
-                    }
-                }
-                // Mutate an existing wave?
-                else
-                {
-                    // Find the wave
-                    WaveContainer* c = waveContainer(host, m_waveUriRegExp.cap(2));
-                    if ( !c )
-                    {
-                        qDebug("Error: Wave does not exist");
-                        continue;
-                    }
-                    // Mutate the wave
-                    if ( !c->putRootDocumentFromHost( data ) )
-                    {
-                        qDebug("Error: Applying a delta to the root failed");
-                        continue;
-                    }
-                }
+                qDebug("Error: Malformed wave ID: %s", qPrintable(id));
+                JSONObject e(true);
+                e.setAttribute("ok", true);
+                e.setAttribute("error", "Malformed wave ID");
+                result.setAttribute(id, e);
+                continue;
             }
-            // host.com/w+123/d+abc
-            else if ( m_docUriRegExp.exactMatch(id))
-            {
-                QString host = m_docUriRegExp.cap(1);
-                host = host.left(host.length() - 1);
 
-                // Find the wave
-                WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
-                if ( !c )
-                {
-                    req->errorReply("Error: Wave does not exist");
-                    return;
-                }
-
-                JSONObject data = doc.attributeObject(id);
-                // Create from a snapshot?
-                if ( data.hasAttribute("_snapshot") && data.attribute("_snapshot").toBool() )
-                {
-                    // Change the wave document
-                    if ( !c->putDocumentSnapshotFromHost(m_docUriRegExp.cap(3), data) )
-                    {
-                        qDebug("Applying a delta failed");
-                        continue;
-                    }
-                }
-                else
-                {
-                    // Change the wave document
-                    if ( !c->putDocumentFromHost( m_docUriRegExp.cap(3), data) )
-                    {
-                        qDebug("Applying a delta failed");
-                        continue;
-                    }
-                }
-            }
-            else
-            {
-                qDebug("Uninterpreted attribute %s when parsing message from hosting server", qPrintable(id));
-            }
+            JSONObject response = m_rootContainer->putFromRemoteServer(doc.attributeObject(id), wid);
+            result.setAttribute(id, response);
         }
 
-        JSONObject obj(true);
-        obj.setAttribute("ok", true);
-        req->replyJson(obj.toJSON());
+        req->replyJson(result.toJSON());
+    }
+    // Session: http://host/wave/_session/xxxxx
+    else if ( m_sessionUriRegExp.exactMatch(req->requestUri()) )
+    {
+        // Parse the JSON document
+        JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
+        bool ok = false;
+        JSONObject doc = scanner.scan(&ok);
+        if ( !ok )
+        {
+            req->errorReply("JSON parsing error");
+            return;
+        }
+
+        Session* s = m_sessions.value(m_sessionUriRegExp.cap(1));
+        if ( !s )
+        {
+            s = createSession(req, m_sessionUriRegExp.cap(1));
+            if ( !s )
+                return;
+        }
+        // TODO: return a JSON object here
+        s->put(doc, "_default");
+    }
+    // http://host/wave/_remote
+    else if ( m_remoteUriRegExp.exactMatch(req->requestUri()) )
+    {
+        // Parse the JSON document
+        JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
+        bool ok = false;
+        JSONObject doc = scanner.scan(&ok);
+        if ( !ok )
+        {
+            req->errorReply("JSON parsing error");
+            return;
+        }
+
+        JSONObject result(true);
+        qDebug("_remote: %s", qPrintable(doc.toJSON()));
+
+        // Iterate over the deltas for all the documents
+        foreach( QString id, doc.attributeNames() )
+        {
+            WaveId wid(id);
+            if ( wid.isNull() )
+            {
+                JSONObject e(true);
+                e.setAttribute("ok", true);
+                e.setAttribute("error", "Malformed wave ID");
+                result.setAttribute(id, e);
+                qDebug("Error: Malformed wave ID: %s", qPrintable(id));
+                continue;
+            }
+
+            JSONObject response = m_rootContainer->putFromHostingServer( doc.attributeObject(id), wid );
+            result.setAttribute(id, response);
+        }
+
+        req->replyJson(result.toJSON());
     }
     else
-        req->errorReply("Error: URI syntax error");
+    {
+        JSONObject result(true);
+        result.setAttribute("ok", false);
+        result.setAttribute("error", "URI syntax error");
+        req->replyJson(result.toJSON());
+    }
 }
 
 void WaveProvider::get(FCGI::FCGIRequest* req)
 {
-    if ( m_waveUriRegExp.exactMatch(req->requestUri()) )
+    WaveId waveId(req->requestUri());
+    if ( !waveId.isNull())
     {
-        QString host = m_waveUriRegExp.cap(1);
-        if ( !host.isEmpty() )
-            host = host.left(host.length() - 1);
-        WaveContainer* c = waveContainer(host, m_waveUriRegExp.cap(2));
-        if ( !c )
-        {
-            req->errorReply("Error: Wave does not exist");
-            return;
-        }
-        c->getRootDocument(req);
-    }
-    else if ( m_docUriRegExp.exactMatch(req->requestUri()) )
-    {
-        QString host = m_docUriRegExp.cap(1);
-        if ( !host.isEmpty() )
-            host = host.left(host.length() - 1);
-        WaveContainer* c = waveContainer(host, m_docUriRegExp.cap(2));
-        if ( !c )
-        {
-            req->errorReply("Error: Wave does not exist");
-            return;
-        }
-        c->getDocument(req, m_docUriRegExp.cap(3));
+        waveId.normalize();
+        JSONObject response = m_rootContainer->get(req, waveId);
+        req->replyJson(response.toJSON());
     }
     else if ( m_sessionUriRegExp.exactMatch(req->requestUri()) )
     {        
@@ -291,7 +187,7 @@ void WaveProvider::get(FCGI::FCGIRequest* req)
             req->errorReply("Error: Session does not exist");
             return;
         }
-        s->get(req);
+        s->get(req, "_default");
     }
     else if ( m_sessionEventsUriRegExp.exactMatch(req->requestUri()) )
     {

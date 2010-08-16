@@ -6,9 +6,12 @@
 #include <QHash>
 #include <QRegExp>
 #include "fcgi/fcgirequest.h"
+#include "waveid.h"
 
-class WaveContainer;
 class Session;
+class RootContainer;
+class WaveContainer;
+class SessionContainer;
 
 class WaveProvider : public QObject
 {
@@ -20,23 +23,22 @@ public:
     void put(FCGI::FCGIRequest* req);
     void get(FCGI::FCGIRequest* req);
 
-    WaveContainer* waveContainer(const QString& host, const QString& waveId);
-    WaveContainer* createWaveContainer(const QString& host, const QString& waveId, bool asRemoteWave);
-    Session* createSession(FCGI::FCGIRequest* req, const QString& sessionId);
     Session* session(const QString& sessionId);
+    WaveContainer* container(const WaveId& waveId);
 
 private:
-    QHash<QString, WaveContainer*> m_container;
+    Session* createSession(FCGI::FCGIRequest* req, const QString& sessionId);
+
     QHash<QString, Session*> m_sessions;
 
-    QRegExp m_waveUriRegExp;
-    QRegExp m_docUriRegExp;
     QRegExp m_sessionUriRegExp;
     QRegExp m_sessionEventsUriRegExp;
     QRegExp m_sessionDeltasUriRegExp;
-    QRegExp m_hostWaveUriRegExp;
-    QRegExp m_hostDocUriRegExp;
-    QRegExp m_remoteWaveUriRegExp;
+    QRegExp m_hostUriRegExp;
+    QRegExp m_remoteUriRegExp;
+
+    RootContainer* m_rootContainer;
+    SessionContainer* m_sessionContainer;
 
     static WaveProvider* s_self;
 };

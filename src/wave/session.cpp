@@ -6,104 +6,29 @@
 #include "ot/documentmutation.h"
 #include "waveprovider.h"
 #include "wavecontainer.h"
-#include <QRegExp>
+#include "sessioncontainer.h"
 
-QRegExp* Session::s_waveUriRegExp = 0;
-
-Session::Session(const QString& sessionId)
-    : m_sessionId(sessionId), m_eventListener(0), m_deltaListener(0)
+Session::Session(SessionContainer* parent, const QString& sessionId)
+    : WaveContainer(parent, sessionId), m_eventListener(0), m_deltaListener(0)
 {
-    if ( !s_waveUriRegExp )
-        s_waveUriRegExp = new QRegExp("([A-Za-z0-9.-]+)/(w\\+[A-Za-z0-9]+)(/d\\+[A-Za-z0-9]+)?");
-    m_doc = new WaveDocument(this, sessionId);
-}
-
-bool Session::get(FCGI::FCGIRequest* req)
-{
-    req->replyJson(m_doc->jsonObject().toJSON());
-    return true;
-}
-
-bool Session::put(FCGI::FCGIRequest* req)
-{
-    //
-    // Scan the document
-    //
-    JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
-    bool ok = false;
-    JSONObject doc = scanner.scan(&ok);
-    if ( !ok )
-    {
-        req->errorReply("JSON parsing error");
-        return false;
-    }
-
-    //
-    // Store the document
-    //
-
-    // Initial submission?
-    if ( doc.attributeString("_rev").isEmpty())
-    {
-        if ( !m_doc->revision().isNull() )
-        {
-            req->errorReply("Error: Session already exists");
-            return false;
-        }
-
-        // Apply the initial mutation
-        AbstractMutation m(doc);
-        DocumentMutation docop( m );
-        if ( !m_doc->processMutation(req, docop))
-            return false;
-    }
-    // Overwrite/mutate the document?
-    else
-    {
-        if ( doc.attributeString("_rev") != m_doc->revision() )
-        {
-           req->errorReply("Error: Attemp to overwrite based on outdated version");
-           return false;
-        }
-
-        AbstractMutation m(doc);
-        DocumentMutation docop( m );
-        if ( !m_doc->processMutation(req, docop))
-            return false;
-    }
-
-    //
-    // Let's see what has changed
-    //
-
-    update();
-
-    //
-    // Send a reply
-    //
-
-    JSONObject obj(true);
-    obj.setAttribute("ok", true);
-    obj.setAttribute("id", m_doc->docId());
-    obj.setAttribute("rev", m_doc->revision());
-    req->replyJson(obj.toJSON());
-
-    return true;
 }
 
 void Session::update()
 {
-    QList<QString> waves = m_doc->jsonObject().attributeObject("waves").attributeNames();
+    Q_ASSERT(doc());
+    QList<QString> waves = doc()->jsonObject().attributeObject("waves").attributeNames();
     foreach( QString w, waves )
     {
         if ( !m_waves.contains(w))
         {
             // Check for malfored ID
-            if ( !s_waveUriRegExp->exactMatch(w) )
+            WaveId wid(w);
+            if ( wid.isNull() )
                 continue;
+            wid.normalize();
             // Open the wave    
-            if ( openWave(s_waveUriRegExp->cap(1), s_waveUriRegExp->cap(2)) )
-                m_waves.insert(w);
+            if ( openWave(wid))
+                m_waves.insert(wid.toString());
         }
     }
 
@@ -112,41 +37,44 @@ void Session::update()
         if ( !waves.contains(w))
         {
             // Check for malfored ID
-            if ( !s_waveUriRegExp->exactMatch(w) )
+            WaveId wid(w);
+            if ( wid.isNull() )
                 continue;
+            wid.normalize();
             // Close the wave
-            m_waves.remove(w);
-            closeWave(s_waveUriRegExp->cap(1), s_waveUriRegExp->cap(2));
+            m_waves.remove(wid.toString());
+            closeWave(wid);
         }
     }
 }
 
-bool Session::openWave(const QString& host, const QString& waveId)
+bool Session::openWave(const WaveId& waveId)
 {
-    WaveContainer* c = WaveProvider::self()->waveContainer(host, waveId);
+    WaveContainer* c = WaveProvider::self()->container(waveId);
     if ( !c )
     {
-        annotateWaveError(host + "/" + waveId, "Wave does not exist");
+        annotateWaveError(waveId.toString(), "Wave does not exist");
         return false;
     }
-    c->registerSession(this->sessionId());
+    c->registerSession(this->name());
     return true;
 }
 
-void Session::closeWave(const QString& host, const QString& waveId)
+void Session::closeWave(const WaveId& waveId)
 {
-    WaveContainer* c = WaveProvider::self()->waveContainer(host, waveId);
+    WaveContainer* c = WaveProvider::self()->container(waveId);
     if ( !c )
     {
         qDebug("Strange, an open wave could not be closed");
         return;
     }
-    c->deregisterSession(this->sessionId());
+    c->deregisterSession(this->name());
 }
 
 void Session::annotateWaveError( const QString& id, const QString& error )
 {
-    m_doc->jsonObject().attributeObject("waves").attributeObject(id).setAttribute("error", error);
+    Q_ASSERT(doc());
+    doc()->jsonObject().attributeObject("waves").attributeObject(id).setAttribute("error", error);
 }
 
 void Session::notify( const QHash<QString,QString>& revisions )
@@ -200,13 +128,13 @@ void Session::sendDeltas(FCGI::FCGIRequest* req)
     JSONObject result(true);
     foreach( QString id, m_revisionsForDeltaListener.keys() )
     {
-        QString host, waveId;
-        if ( !s_waveUriRegExp->exactMatch(id) )
+        WaveId wid(id);
+        if ( wid.isNull())
         {
             qDebug("Malformed id");
-                return;
+            return;
         }
-        WaveContainer* c = WaveProvider::self()->waveContainer(s_waveUriRegExp->cap(1), s_waveUriRegExp->cap(2));
+        WaveContainer* c = WaveProvider::self()->container(wid);
         if ( !c )
         {
             qDebug("Strange, wave is open but could not be found %s", qPrintable(id));
@@ -229,4 +157,10 @@ void Session::sendDeltas(FCGI::FCGIRequest* req)
 
     if ( req == m_deltaListener )
         m_deltaListener = 0;
+}
+
+void Session::onDocumentUpdate(WaveDocument* wdoc)
+{
+    if ( wdoc == doc() )
+        update();
 }
