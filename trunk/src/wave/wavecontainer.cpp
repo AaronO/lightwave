@@ -348,7 +348,7 @@ void WaveContainer::registerSession( const QString& sessionId )
     Session *s = WaveProvider::self()->session(sessionId);
     if ( !s )
     {
-        qDebug("Oooops, new session is already dead");
+        qDebug("Oooops, new session is already dead: %s", qPrintable(sessionId));
         return;
     }
     m_sessions.insert(sessionId);
