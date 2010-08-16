@@ -2,6 +2,7 @@
 #include "wavecontainer.h"
 #include "hostcontainer.h"
 #include "rootcontainer.h"
+#include "sessioncontainer.h"
 #include "ot/transformation.h"
 #include "session.h"
 #include <QCryptographicHash>
@@ -225,6 +226,8 @@ WaveId WaveDocument::waveId() const
 {
     if ( dynamic_cast<const HostContainer*>(container()))
         return WaveId( container()->name(), QStringList(), m_docId);
+    if ( dynamic_cast<const SessionContainer*>(container()))
+        return WaveId( container()->name(), QStringList(), m_docId);
     if ( dynamic_cast<const RootContainer*>(container()))
         return WaveId( QString::null, QStringList(), m_docId);
     
@@ -238,9 +241,15 @@ WaveId WaveDocument::waveId() const
             host = c->name();
             break;
         }
+        if ( dynamic_cast<SessionContainer*>(c) )
+        {
+            host = "_session";
+            break;
+        }
         pathItems.prepend(c->name());
         c = c->parentContainer();
     }
+    Q_ASSERT(c);
 
-    return WaveId( container()->hostContainer()->name(), pathItems, m_docId);
+    return WaveId( host, pathItems, m_docId);
 }

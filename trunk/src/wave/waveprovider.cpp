@@ -123,7 +123,8 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
                 return;
         }
         // TODO: return a JSON object here
-        s->put(doc, "_default");
+        JSONObject response = s->put(doc, "_default");
+        req->replyJson(response.toJSON());
     }
     // http://host/wave/_remote
     else if ( m_remoteUriRegExp.exactMatch(req->requestUri()) )
@@ -187,7 +188,8 @@ void WaveProvider::get(FCGI::FCGIRequest* req)
             req->errorReply("Error: Session does not exist");
             return;
         }
-        s->get(req, "_default");
+        JSONObject response = s->get(req, "_default");
+        req->replyJson(response.toJSON());
     }
     else if ( m_sessionEventsUriRegExp.exactMatch(req->requestUri()) )
     {
