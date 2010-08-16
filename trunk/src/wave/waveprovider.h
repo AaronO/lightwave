@@ -23,17 +23,12 @@ public:
     void put(FCGI::FCGIRequest* req);
     void get(FCGI::FCGIRequest* req);
 
-    Session* session(const QString& sessionId);
-    WaveContainer* container(const WaveId& waveId);
+    Session* session(const QString& sessionId) const;
+    WaveContainer* container(const WaveId& waveId) const;
 
 private:
-    Session* createSession(FCGI::FCGIRequest* req, const QString& sessionId);
-
     QHash<QString, Session*> m_sessions;
 
-    QRegExp m_sessionUriRegExp;
-    QRegExp m_sessionEventsUriRegExp;
-    QRegExp m_sessionDeltasUriRegExp;
     QRegExp m_hostUriRegExp;
     QRegExp m_remoteUriRegExp;
 

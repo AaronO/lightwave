@@ -12,6 +12,9 @@ public:
     SessionContainer(RootContainer* parent, const QString& name);
 
     bool isRemote() const { return false; }
+
+protected:
+    virtual WaveContainer* createWaveContainer(const QString& name);
 };
 
 #endif // SESSIONCONTAINER_H

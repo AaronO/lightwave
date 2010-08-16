@@ -7,14 +7,19 @@
 #include "waveprovider.h"
 #include "wavecontainer.h"
 #include "sessioncontainer.h"
+#include "ot/objectmutation.h"
+#include "ot/insertmutation.h"
 
 Session::Session(SessionContainer* parent, const QString& sessionId)
-    : WaveContainer(parent, sessionId), m_eventListener(0), m_deltaListener(0)
+    : WaveContainer(parent, sessionId), m_blockUpdate(false), m_eventListener(0), m_deltaListener(0)
 {
 }
 
 void Session::update()
 {
+    if ( m_blockUpdate )
+        return;
+
     Q_ASSERT(doc());
     QList<QString> waves = doc()->jsonObject().attributeObject("waves").attributeNames();
     foreach( QString w, waves )
@@ -24,7 +29,10 @@ void Session::update()
             // Check for malfored ID
             WaveId wid(w);
             if ( wid.isNull() )
+            {
+                annotateWaveError(w, "Malformed ID");
                 continue;
+            }
             wid.normalize();
             // Open the wave    
             if ( openWave(wid))
@@ -39,13 +47,18 @@ void Session::update()
             // Check for malfored ID
             WaveId wid(w);
             if ( wid.isNull() )
+            {
+                annotateWaveError(w, "Malformed ID");
                 continue;
+            }
             wid.normalize();
             // Close the wave
             m_waves.remove(wid.toString());
             closeWave(wid);
         }
     }
+
+    putAnnotations();
 }
 
 bool Session::openWave(const WaveId& waveId)
@@ -73,8 +86,29 @@ void Session::closeWave(const WaveId& waveId)
 
 void Session::annotateWaveError( const QString& id, const QString& error )
 {
-    Q_ASSERT(doc());
-    doc()->jsonObject().attributeObject("waves").attributeObject(id).setAttribute("error", error);
+//    Q_ASSERT(doc());
+//    doc()->jsonObject().attributeObject("waves").attributeObject(id).setAttribute("error", error);
+    m_annotations[id] = error;
+}
+
+void Session::putAnnotations()
+{
+    if ( m_annotations.isEmpty() )
+        return;
+
+    m_blockUpdate = true;
+    ObjectMutation obj(true);
+    ObjectMutation obj2(true);
+    foreach( QString w, m_annotations.keys())
+    {
+        obj2.setMutation(w, InsertMutation(m_annotations[w]));
+    }
+    obj.setMutation("waves", obj2);
+    obj.toObject().setAttribute("_rev", doc()->revision() );
+    m_annotations.clear();
+
+    put(obj.toObject(), "_default");
+    m_blockUpdate = false;
 }
 
 void Session::notify( const QHash<QString,QString>& revisions )
@@ -94,7 +128,17 @@ void Session::notify( const QHash<QString,QString>& revisions )
         sendEvents(m_deltaListener);
 }
 
-void Session::sendEvents(FCGI::FCGIRequest* req)
+JSONObject Session::get(FCGI::FCGIRequest* req, const QString& docKind)
+{
+    if ( docKind == "_events")
+        return sendEvents(req);
+    else if ( docKind == "_deltas")
+        return sendDeltas(req);
+    else
+        return this->WaveContainer::get(req, docKind);
+}
+
+JSONObject Session::sendEvents(FCGI::FCGIRequest* req)
 {
     // Nothing to tell currently?
     if ( m_revisionsForEventListener.isEmpty() )
@@ -102,20 +146,21 @@ void Session::sendEvents(FCGI::FCGIRequest* req)
         if ( m_eventListener && m_eventListener != req )
             m_eventListener->replyNothing();
         m_eventListener = req;
-        return;
+        return JSONObject();
     }
 
     JSONObject result(true);
     foreach( QString id, m_revisionsForEventListener.keys() )
         result.setAttribute(id, m_revisionsForEventListener[id]);
-    req->replyJson(result.toJSON());
     m_revisionsForEventListener.clear();
 
     if ( req == m_eventListener )
         m_eventListener = 0;
+
+    return result;
 }
 
-void Session::sendDeltas(FCGI::FCGIRequest* req)
+JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
 {
     // Nothing to tell currently?
     if ( m_revisionsForDeltaListener.isEmpty() )
@@ -123,7 +168,7 @@ void Session::sendDeltas(FCGI::FCGIRequest* req)
         if ( m_deltaListener && m_deltaListener != req )
             m_deltaListener->replyNothing();
         m_deltaListener = req;
-        return;
+        return JSONObject();
     }
     JSONObject result(true);
     foreach( QString id, m_revisionsForDeltaListener.keys() )
@@ -132,7 +177,9 @@ void Session::sendDeltas(FCGI::FCGIRequest* req)
         if ( wid.isNull())
         {
             qDebug("Malformed id");
-            return;
+            result.setAttribute("ok", false);
+            result.setAttribute("error", "Malformed ID");
+            return result;
         }
         WaveContainer* c = WaveProvider::self()->container(wid);
         if ( !c )
@@ -152,11 +199,12 @@ void Session::sendDeltas(FCGI::FCGIRequest* req)
         }
         result.setAttribute(id, arr);
     }
-    req->replyJson(result.toJSON());
     m_revisionsForDeltaListener.clear();
 
     if ( req == m_deltaListener )
         m_deltaListener = 0;
+
+    return result;
 }
 
 void Session::onDocumentUpdate(WaveDocument* wdoc)

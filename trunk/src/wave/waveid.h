@@ -38,6 +38,7 @@ private:
     QString m_docId;
 
     static QRegExp* s_waveUriRegExp;
+    static QRegExp* s_sessionUriRegExp;
 };
 
 #endif // WAVEID_H

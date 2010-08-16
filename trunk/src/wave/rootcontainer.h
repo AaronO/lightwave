@@ -16,7 +16,7 @@ public:
     JSONObject putFromRemoteServer(JSONObject data, const WaveId& waveId);
     JSONObject get(FCGI::FCGIRequest* req, const WaveId& waveId);
 
-    WaveContainer* container(const WaveId& waveId) { return getOrCreateContainer(waveId, false); }
+    WaveContainer* container(const WaveId& waveId) const { return const_cast<RootContainer*>(this)->getOrCreateContainer(waveId, false); }
 
     bool isRemote() const { return false; }
 

@@ -17,22 +17,24 @@ class Session : public WaveContainer
 public:
     Session(SessionContainer* parent, const QString& sessionId);
 
-    void notify( const QHash<QString,QString>& revisions );
-    void sendEvents(FCGI::FCGIRequest* req);
-    void sendDeltas(FCGI::FCGIRequest* req);
+    virtual JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
+    virtual bool isRemote() const { return false; }
 
-    bool isRemote() const { return false; }
+    void notify( const QHash<QString,QString>& revisions );
 
 protected:
     virtual void onDocumentUpdate(WaveDocument* wdoc);
 
 private:
     WaveDocument* doc() { return document("_default"); }
+    JSONObject sendEvents(FCGI::FCGIRequest* req);
+    JSONObject sendDeltas(FCGI::FCGIRequest* req);
 
     void update();
     bool openWave(const WaveId& waveId);
     void closeWave(const WaveId& waveId);
     void annotateWaveError( const QString& id, const QString& error );
+    void putAnnotations();
 
     /**
       * A set of all currently opened waves.
@@ -42,6 +44,9 @@ private:
     QSet<QString> m_waves;
     QHash<QString,QString> m_revisionsForEventListener;
     QHash<QString,QString> m_revisionsForDeltaListener;
+
+    QHash<QString,QString> m_annotations;
+    bool m_blockUpdate;
 
     FCGI::FCGIRequest* m_eventListener;
     FCGI::FCGIRequest* m_deltaListener;
