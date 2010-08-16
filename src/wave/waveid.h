@@ -26,6 +26,7 @@ public:
     QStringList pathItems() const { return m_pathItems; }
     int pathItemCount() const { return m_pathItems.count(); }
     QString documentId() const { return m_docId; }
+    void clearDocumentId() { m_docId = QString::null; }
     QString host() const { return m_host; }
 
     QString toString() const;
