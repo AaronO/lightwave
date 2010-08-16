@@ -38,7 +38,7 @@ public:
     bool isTemporary() const { return m_isTemp; }
     void makePersistent();
 
-    JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
+    virtual JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
     JSONObject put( JSONObject doc, const QString& docKind, FCGI::FCGIRequest* req = 0 );
     JSONObject putFromHost( JSONObject doc, const QString& docKind );
     JSONObject putSnapshotFromHost( JSONObject data, const QString& docKind );

@@ -10,16 +10,16 @@
 WaveProvider* WaveProvider::s_self = 0;
 
 WaveProvider::WaveProvider()
-    : m_sessionUriRegExp("_session/([+A-Za-z0-9.-]+)"),
-      m_sessionEventsUriRegExp("(_session/([+A-Za-z0-9.-]+)/_events"), m_sessionDeltasUriRegExp("_session/([+A-Za-z0-9.-]+)/_deltas"),
-      m_hostUriRegExp("_host"), m_remoteUriRegExp("_remote")
+    : m_hostUriRegExp("_host"), m_remoteUriRegExp("_remote")
 {
     m_rootContainer = new RootContainer();
     // Create a container for local waves
     HostContainer* h = new HostContainer(m_rootContainer, Settings::settings()->domain(), true);
     h->makePersistent();
-    m_sessionContainer = new SessionContainer(m_rootContainer, "_settings");
+    // Create a container for sessions
+    m_sessionContainer = new SessionContainer(m_rootContainer, "session");
     m_sessionContainer->makePersistent();
+    qDebug("===================================");
 }
 
 WaveProvider* WaveProvider::self()
@@ -29,26 +29,12 @@ WaveProvider* WaveProvider::self()
     return s_self;
 }
 
-Session* WaveProvider::createSession(FCGI::FCGIRequest* req, const QString& sessionId)
-{
-    if ( m_sessions.contains(sessionId))
-    {
-        req->errorReply("Session with this ID already exists");
-        return 0;
-    }
-
-    Session* session = new Session(m_sessionContainer, sessionId);
-    session->makePersistent();
-    m_sessions[sessionId] = session;
-    return session;
-}
-
-Session* WaveProvider::session(const QString& sessionId)
+Session* WaveProvider::session(const QString& sessionId) const
 {
     return static_cast<Session*>(m_sessionContainer->childContainer(sessionId));
 }
 
-WaveContainer* WaveProvider::container(const WaveId& waveId)
+WaveContainer* WaveProvider::container(const WaveId& waveId) const
 {
     return m_rootContainer->container(waveId);
 }
@@ -102,30 +88,6 @@ void WaveProvider::put(FCGI::FCGIRequest* req)
 
         req->replyJson(result.toJSON());
     }
-    // Session: http://host/wave/_session/xxxxx
-    else if ( m_sessionUriRegExp.exactMatch(req->requestUri()) )
-    {
-        // Parse the JSON document
-        JSONScanner scanner(req->m_stdinStream.data(), req->m_stdinStream.size());
-        bool ok = false;
-        JSONObject doc = scanner.scan(&ok);
-        if ( !ok )
-        {
-            req->errorReply("JSON parsing error");
-            return;
-        }
-
-        Session* s = m_sessions.value(m_sessionUriRegExp.cap(1));
-        if ( !s )
-        {
-            s = createSession(req, m_sessionUriRegExp.cap(1));
-            if ( !s )
-                return;
-        }
-        // TODO: return a JSON object here
-        JSONObject response = s->put(doc, "_default");
-        req->replyJson(response.toJSON());
-    }
     // http://host/wave/_remote
     else if ( m_remoteUriRegExp.exactMatch(req->requestUri()) )
     {
@@ -178,38 +140,9 @@ void WaveProvider::get(FCGI::FCGIRequest* req)
     {
         waveId.normalize();
         JSONObject response = m_rootContainer->get(req, waveId);
-        req->replyJson(response.toJSON());
-    }
-    else if ( m_sessionUriRegExp.exactMatch(req->requestUri()) )
-    {        
-        Session* s = m_sessions.value(m_sessionUriRegExp.cap(1));
-        if ( !s )
-        {
-            req->errorReply("Error: Session does not exist");
-            return;
-        }
-        JSONObject response = s->get(req, "_default");
-        req->replyJson(response.toJSON());
-    }
-    else if ( m_sessionEventsUriRegExp.exactMatch(req->requestUri()) )
-    {
-        Session* s = m_sessions.value(m_sessionEventsUriRegExp.cap(1));
-        if ( !s )
-        {
-            req->errorReply("Error: Session does not exist");
-            return;
-        }
-        s->sendEvents(req);
-    }
-    else if ( m_sessionDeltasUriRegExp.exactMatch(req->requestUri()) )
-    {
-        Session* s = m_sessions.value(m_sessionDeltasUriRegExp.cap(1));
-        if ( !s )
-        {
-            req->errorReply("Error: Session does not exist");
-            return;
-        }
-        s->sendDeltas(req);
+        // Perhaps the request will be answered later because it may involve talking to a hosting server
+        if ( !response.isNull())
+            req->replyJson(response.toJSON());
     }
     else
         req->errorReply("Error: URI syntax error");
