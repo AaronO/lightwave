@@ -37,7 +37,11 @@ SOURCES += main.cpp \
     wave/waverootdocument.cpp \
     wave/session.cpp \
     utils/getopts.cpp \
-    utils/jid.cpp
+    utils/jid.cpp \
+    wave/waveid.cpp \
+    wave/hostcontainer.cpp \
+    wave/rootcontainer.cpp \
+    wave/sessioncontainer.cpp
 HEADERS += json/jsonabstractobject.h \
     json/jsonobject.h \
     json/jsonarray.h \
@@ -69,4 +73,9 @@ HEADERS += json/jsonabstractobject.h \
     wave/waverootdocument.h \
     utils/session.h \
     utils/getopts.h \
-    utils/jid.h
+    utils/jid.h \
+    wave/waveid.h \
+    wave/hostcontainer.h \
+    wave/rootcontainer.h \
+    wave/session.h \
+    wave/sessioncontainer.h

@@ -2,19 +2,18 @@
 #define WAVEROOTDOCUMENT_H
 
 #include "wavedocument.h"
+#include "fcgi/fcgirequest.h"
 #include <QString>
-#include <QObject>
-#include <QByteArray>
-#include <QNetworkReply>
 
 class WaveContainer;
 
-class WaveRootDocument : public WaveDocument
+class WaveMetaDocument : public WaveDocument
 {
 public:
-    WaveRootDocument(WaveContainer* container, const QString& docId);
+    WaveMetaDocument(WaveContainer* container, const QString& docId);
 
-    bool addDocument(FCGI::FCGIRequest* req, WaveDocument* wdoc);
+    bool addDocument(WaveDocument* wdoc);
+    bool addContainer(WaveContainer* c);
 };
 
 #endif // WAVEROOTDOCUMENT_H

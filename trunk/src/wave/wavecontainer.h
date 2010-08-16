@@ -10,62 +10,70 @@
 #include <QByteArray>
 
 #include "wavedocument.h"
+#include "waverootdocument.h"
+#include "waveid.h"
 #include "ot/documentmutation.h"
 #include "json/jsonobject.h"
 #include "fcgi/fcgirequest.h"
 #include "utils/jid.h"
 
-class WaveRootDocument;
 class Session;
+class HostContainer;
+class WaveMetaDocument;
 class QNetworkAccessManager;
 class QRegExp;
 
 class WaveContainer : public QObject
 {
 public:
-    WaveContainer(const QString& host, const QString& waveId);
+    WaveContainer(WaveContainer* parent, const QString& name);
     ~WaveContainer();
 
-    /**
-      * Invoked on behalf of a local client.
-      */
-    bool putDocument( FCGI::FCGIRequest* req, const QString& docId );
-    bool putDocumentFromHost( const QString& docId, JSONObject doc );
-    bool putDocumentSnapshotFromHost( const QString& docId, JSONObject doc );
-    bool putRootDocument( FCGI::FCGIRequest* req );
-    bool putRootDocumentFromHost( JSONObject doc );
-    bool putRootDocumentSnapshotFromHost( JSONObject doc );
-    /**
-      * Invoked on behalf of a remote server.
-      *
-      * If the docId is empty, then the target of the put is the root document.
-      */
-    bool putDocumentFromRemote( FCGI::FCGIRequest* req, const QString& docId = QString::null );
-    void getDocument( FCGI::FCGIRequest* req, const QString& docId );    
-    void getRootDocument( FCGI::FCGIRequest* req );
+    QString name() const { return m_name; }
 
-    WaveDocument* document(const QString& docId) { return m_documents[docId]; }
+    WaveContainer* childContainer( const QString& name ) { return m_children.value(name); }
+    WaveContainer* parentContainer() const { return static_cast<WaveContainer*>(parent()); }
+    HostContainer* hostContainer() const;
+
+    bool isTemporary() const { return m_isTemp; }
+    void makePersistent();
+
+    JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
+    JSONObject put( JSONObject doc, const QString& docKind, FCGI::FCGIRequest* req = 0 );
+    JSONObject putFromHost( JSONObject doc, const QString& docKind );
+    JSONObject putSnapshotFromHost( JSONObject data, const QString& docKind );
+    JSONObject putFromRemote( JSONObject data, const QString& docKind );
+
+    WaveDocument* document(const QString& docKind) const { return m_documents.value(docKind); }
+    WaveMetaDocument* metaDocument() const  { return static_cast<WaveMetaDocument*>(m_documents.value("_meta")); }
 
     void registerSession( const QString& sessionId );
     void deregisterSession( const QString& sessionId );
 
-    QList<DocumentMutation> getMutations( const QString& docId, const QString& sinceRevision = QString::null );
+    QList<DocumentMutation> getMutations( const QString& docKind, const QString& sinceRevision = QString::null );
 
-    bool isRemote() const;
-    QString host() const { return m_host; }
-    QString waveId() const { return m_waveId; }
+    virtual bool isRemote() const;
+
+    virtual WaveContainer* createWaveContainer(const QString& name);
 
     static QNetworkAccessManager* networkManager();
 
+protected:
+    void addContainer( WaveContainer* child );
+    virtual void onDocumentUpdate(WaveDocument* wdoc);
+
 private:
-    friend class WaveRootDocument;
+    void updateFromMetaDocument();
+    void notifySessions(WaveDocument* doc, bool sendMetaDoc);
 
-    void notifySessions(WaveDocument* doc, bool sendRootDoc);
+    JSONObject snapshot();
+    void snapshot(JSONObject obj);
 
-    QString m_host;
-    QString m_waveId;
+    QString m_name;
+    bool m_isTemp;
+    QHash<QString,WaveContainer*> m_children;
     QHash<QString,WaveDocument*> m_documents;
-    WaveRootDocument* m_rootDoc;
+
     QSet<QString> m_sessions;
     QSet<QString> m_authors;
     QSet<QString> m_remoteHosts;
@@ -80,7 +88,7 @@ public:
     /**
       * If docId is empty, then the submit targets the wave root document.
       */
-    SubmitToHostJob(WaveContainer* parent, FCGI::FCGIRequest* req, const QString& docId, const QByteArray& data);
+    SubmitToHostJob(WaveContainer* parent, FCGI::FCGIRequest* req, const WaveId& waveId, JSONObject data);
     ~SubmitToHostJob();
 
 private slots:
@@ -92,7 +100,6 @@ private:
     void sendErrorToClient();
 
     FCGI::FCGIRequest* m_clientRequest;
-    QString m_docId;
     QByteArray m_data;
     QNetworkReply* m_serverReply;
 };

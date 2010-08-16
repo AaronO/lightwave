@@ -115,12 +115,18 @@ void DocumentMutation::check(JSONAbstractObject dest, AbstractMutation mutation,
 
 void DocumentMutation::check(JSONAbstractObject dest, ObjectMutation mutation, Data* data)
 {
-    JSONObject destobj = dest.toObject();
-    if ( destobj.isNull() )
+    if ( !dest.isObject() && !dest.isNull())
     {
         data->setError();
         return;
     }
+
+    JSONObject destobj = dest.toObject();
+//    if ( destobj.isNull() )
+//    {
+//        data->setError();
+//        return;
+//    }
     JSONObject m = mutation.toObject();
     foreach( QString name, m.attributeNames() )
     {
@@ -152,12 +158,18 @@ void DocumentMutation::check(JSONAbstractObject dest, ObjectMutation mutation, D
 
 void DocumentMutation::check(JSONAbstractObject dest, ArrayMutation mutation, Data* data)
 {
-    JSONArray destarr = dest.toArray();
-    if ( destarr.isNull() )
+    if ( !dest.isArray() && !dest.isNull())
     {
         data->setError();
         return;
     }
+
+    JSONArray destarr = dest.toArray();
+//    if ( destarr.isNull() )
+//    {
+//        data->setError();
+//        return;
+//    }
     int index = 0;
     JSONArray arr = mutation.content();
     for( int i = 0; i < arr.count(); ++i )
@@ -248,7 +260,7 @@ void DocumentMutation::check(JSONAbstractObject dest, ArrayMutation mutation, Da
 
 void DocumentMutation::check(JSONAbstractObject dest, TextMutation mutation, Data* data)
 {
-    if ( !dest.isString() )
+    if ( !dest.isString() && !dest.isNull() )
     {
         data->setError();
         return;
@@ -313,7 +325,7 @@ void DocumentMutation::check(JSONAbstractObject dest, TextMutation mutation, Dat
 
 void DocumentMutation::check(JSONAbstractObject dest, RichTextMutation mutation, Data* data)
 {
-    if ( !dest.isObject() || dest.isNull() )
+    if ( !dest.isObject() && !dest.isNull() )
     {
         data->setError();
         return;

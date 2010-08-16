@@ -8,6 +8,7 @@
 #include "json/jsonobject.h"
 #include "ot/documentmutation.h"
 #include "fcgi/fcgirequest.h"
+#include "waveid.h"
 
 class DocumentMutation;
 class WaveContainer;
@@ -16,14 +17,14 @@ class Session;
 class WaveDocument : public QObject
 {
 public:
-    WaveDocument(WaveContainer* parent, const QString& docId);
-    WaveDocument(Session* parent, const QString& docId);
+    WaveDocument(WaveContainer* parent, const QString& docKind);
 
-    bool processMutation(FCGI::FCGIRequest* req, DocumentMutation docop);
+    bool processMutation(DocumentMutation docop);
     bool processMutationFromHost(DocumentMutation docop);
     bool setSnapshotFromHost( JSONObject doc );
 
-    QString docId() const { return m_docId; }
+    WaveId waveId() const;
+    QString documentId() const { return m_docId; }
     QString revision() const { return m_rev; }
     int revisionNumber() const { return m_revNumber; }
     JSONObject jsonObject() const { return m_json; }
@@ -31,8 +32,8 @@ public:
     DocumentMutation mutation(int revision) { return m_mutations.at(revision); }
     QList<DocumentMutation> getMutations( const QString& sinceRevision );
 
-    WaveContainer* container() { return (WaveContainer*)parent(); }
-    Session* session() { return (Session*)parent(); }
+    WaveContainer* container() const { return (WaveContainer*)parent(); }
+    Session* session() const { return (Session*)parent(); }
 
 protected:
     bool setContent(JSONObject obj);

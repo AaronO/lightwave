@@ -1,5 +1,7 @@
 #include "wavedocument.h"
 #include "wavecontainer.h"
+#include "hostcontainer.h"
+#include "rootcontainer.h"
 #include "ot/transformation.h"
 #include "session.h"
 #include <QCryptographicHash>
@@ -7,14 +9,7 @@
 QRegExp* WaveDocument::s_revRegExp = 0;
 
 WaveDocument::WaveDocument(WaveContainer* parent, const QString& docId)
-    : QObject(parent), m_docId(docId), m_revNumberOffset(0)
-{
-    if ( !s_revRegExp )
-        s_revRegExp = new QRegExp("([0-9]+)-([0-9a-f]+)");
-}
-
-WaveDocument::WaveDocument(Session* parent, const QString& docId)
-    : QObject(parent), m_docId(docId), m_revNumberOffset(0)
+    : QObject(parent), m_docId(docId), m_revNumber(0), m_revNumberOffset(0)
 {
     if ( !s_revRegExp )
         s_revRegExp = new QRegExp("([0-9]+)-([0-9a-f]+)");
@@ -84,7 +79,7 @@ bool WaveDocument::setContent(JSONObject obj)
     return true;
 }
 
-bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation docop)
+bool WaveDocument::processMutation(DocumentMutation docop)
 {
     Q_ASSERT(session() || !container()->isRemote());
 
@@ -93,7 +88,7 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
     {
         if ( docop.mutation().isInsertMutation() )
         {
-            req->errorReply("When replacing the entire document, you must replace the most recent version");
+            qDebug("Error: When replacing the entire document, you must replace the most recent version");
             return false;
         }
 
@@ -101,7 +96,7 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
         QList<DocumentMutation> serverMutations = getMutations( docop.revision() );
         if ( serverMutations.isEmpty() )
         {
-            req->errorReply("The revision " + docop.revision() + " is unknown");
+            qDebug("The revision %s is unknown", qPrintable(docop.revision()) );
             return false;
         }
 
@@ -127,7 +122,7 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
             t.xform(s, c);
             if ( t.hasError() )
             {
-                req->errorReply("Error transforming mutation: " + t.errorText());
+                qDebug("Error: transforming mutation: %s", qPrintable(t.errorText()));
                 return false;
             }
             qDebug("result is\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
@@ -139,7 +134,7 @@ bool WaveDocument::processMutation(FCGI::FCGIRequest* req, DocumentMutation doco
     JSONObject result = docop.apply(m_json, &ok);
     if ( !ok )
     {
-        req->errorReply("Could not apply mutation");
+        qDebug("Error: Could not apply mutation");
         return false;
     }
     qDebug("Result is %s", qPrintable(result.toJSON()));
@@ -175,6 +170,7 @@ bool WaveDocument::processMutationFromHost(DocumentMutation docop)
         qDebug("Error: The mutation must advance the current revision number by 1.");
         return false;
     }
+    int num = s_revRegExp->cap(1).toInt();
 
     bool ok;
     qDebug("Apply\n %s\nto\n %s", qPrintable(docop.mutation().toJSON()), qPrintable(m_json.toJSON()));
@@ -187,8 +183,9 @@ bool WaveDocument::processMutationFromHost(DocumentMutation docop)
     qDebug("Result is %s", qPrintable(result.toJSON()));
 
     // Store the document and that's it
-    m_revNumber = s_revRegExp->cap(1).toInt();
+    m_revNumber = num;
     m_rev = docop.revision();
+    result.setAttribute("_rev", m_rev);
     m_json = result;
 
     // Add the mutation to the list
@@ -222,4 +219,28 @@ QList<DocumentMutation> WaveDocument::getMutations( const QString& sinceRevision
         result.append(m_mutations.at(i - m_revNumberOffset));
     }
     return result;
+}
+
+WaveId WaveDocument::waveId() const
+{
+    if ( dynamic_cast<const HostContainer*>(container()))
+        return WaveId( container()->name(), QStringList(), m_docId);
+    if ( dynamic_cast<const RootContainer*>(container()))
+        return WaveId( QString::null, QStringList(), m_docId);
+    
+    QStringList pathItems;
+    WaveContainer* c = container();
+    QString host;
+    while(c)
+    {
+        if ( dynamic_cast<HostContainer*>(c) )
+        {
+            host = c->name();
+            break;
+        }
+        pathItems.prepend(c->name());
+        c = c->parentContainer();
+    }
+
+    return WaveId( container()->hostContainer()->name(), pathItems, m_docId);
 }
