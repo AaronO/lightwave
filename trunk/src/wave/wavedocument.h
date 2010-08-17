@@ -30,7 +30,7 @@ public:
     JSONObject jsonObject() const { return m_json; }
 
     DocumentMutation mutation(int revision) { return m_mutations.at(revision); }
-    QList<DocumentMutation> getMutations( const QString& sinceRevision );
+    QList<DocumentMutation> getMutations( int sinceRevision );
 
     WaveContainer* container() const { return (WaveContainer*)parent(); }
     Session* session() const { return (Session*)parent(); }

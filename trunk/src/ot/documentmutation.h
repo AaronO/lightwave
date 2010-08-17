@@ -21,6 +21,7 @@ public:
     AbstractMutation mutation() const { return m_mutation; }
     QString documentId() const;
     void setDocumentId( const QString& docId );
+    int revisionNumber() const;
     QString revision() const;
     void setRevision( const QString& rev );
     QString author() const;

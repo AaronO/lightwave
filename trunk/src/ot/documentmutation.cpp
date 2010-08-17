@@ -854,3 +854,11 @@ void DocumentMutation::setAuthor( const QString& author )
     m_mutation.toObject().setAttribute("_author", author);
 }
 
+int DocumentMutation::revisionNumber() const
+{
+    QString rev = m_mutation.toObject().attributeString("_rev");
+    int index = rev.indexOf('-');
+    if ( index == -1 )
+        return 0;
+    return rev.left(index).toInt();
+}

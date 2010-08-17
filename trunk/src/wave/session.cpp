@@ -109,14 +109,15 @@ void Session::putAnnotations()
     m_blockUpdate = false;
 }
 
-void Session::notify( const QHash<QString,QString>& revisions )
+void Session::notify( const QHash<QString,int>& revisions )
 {
-    foreach( QString id, revisions.keys() )
-        m_revisionsForEventListener[id] = revisions[id];
-    foreach( QString id, revisions.keys() )
+    foreach( QString wid, revisions.keys() )
+        m_revisionsForEventListener[wid] = revisions[wid];
+    foreach( QString wid, revisions.keys() )
     {
-        if ( !m_revisionsForDeltaListener.contains(id))
-            m_revisionsForDeltaListener[id] = revisions[id];
+        m_changedDocIdsForDeltaListener.insert(wid);
+//        if ( !m_revisionsForDeltaListener.contains(id))
+//            m_revisionsForDeltaListener[id] = revisions[id];
     }
 
     // Tell the client
@@ -161,7 +162,7 @@ JSONObject Session::sendEvents(FCGI::FCGIRequest* req)
 JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
 {
     // Nothing to tell currently?
-    if ( m_revisionsForDeltaListener.isEmpty() )
+    if ( m_changedDocIdsForDeltaListener.isEmpty() )
     {
         if ( m_deltaListener && m_deltaListener != req )
             m_deltaListener->replyNothing();
@@ -169,25 +170,19 @@ JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
         return JSONObject();
     }
     JSONObject result(true);
-    foreach( QString id, m_revisionsForDeltaListener.keys() )
+    foreach( QString id, m_changedDocIdsForDeltaListener )
     {
         WaveId wid(id);
-        if ( wid.isNull())
-        {
-            qDebug("Malformed id");
-            result.setAttribute("ok", false);
-            result.setAttribute("error", "Malformed ID");
-            return result;
-        }
+        Q_ASSERT( !wid.isNull());
         WaveContainer* c = WaveProvider::self()->container(wid);
         if ( !c )
         {
             qDebug("Strange, wave is open but could not be found %s", qPrintable(id));
             continue;
         }
-        QString rev = m_revisionsForEventListener[id];
-        qDebug("Get mutations for %s since %s", qPrintable(id), qPrintable(rev));
-        QList<DocumentMutation> mutations = c->getMutations(id, rev);
+        int rev = m_revisionsForEventListener[id];
+        qDebug("Get mutations for %s since %i", qPrintable(id), rev);
+        QList<DocumentMutation> mutations = c->getMutations(wid.documentId(), rev);
         JSONArray arr(true);
         foreach( DocumentMutation m, mutations )
         {
@@ -195,9 +190,11 @@ JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
             obj.removeAttribute("_id");
             arr.append( m.mutation().clone() );
         }
+        if ( !mutations.isEmpty() )
+            m_revisionsForEventListener[id] = mutations.last().revisionNumber();
         result.setAttribute(id, arr);
     }
-    m_revisionsForDeltaListener.clear();
+    m_changedDocIdsForDeltaListener.clear();
 
     if ( req == m_deltaListener )
         m_deltaListener = 0;

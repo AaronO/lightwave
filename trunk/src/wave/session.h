@@ -20,7 +20,7 @@ public:
     virtual JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
     virtual bool isRemote() const { return false; }
 
-    void notify( const QHash<QString,QString>& revisions );
+    void notify( const QHash<QString,int>& revisions );
 
 protected:
     virtual void onDocumentUpdate(WaveDocument* wdoc);
@@ -42,8 +42,10 @@ private:
       * a direct pointer to the wave itself.
       */
     QSet<QString> m_waves;
-    QHash<QString,QString> m_revisionsForEventListener;
-    QHash<QString,QString> m_revisionsForDeltaListener;
+
+    QHash<QString,int> m_revisionsForEventListener;
+    QHash<QString,int> m_revisionsForDeltaListener;
+    QSet<QString> m_changedDocIdsForDeltaListener;
 
     QHash<QString,QString> m_annotations;
     bool m_blockUpdate;

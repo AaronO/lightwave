@@ -94,8 +94,8 @@ bool WaveDocument::processMutation(DocumentMutation docop)
         }
 
         // TODO: Transform the mutation
-        QList<DocumentMutation> serverMutations = getMutations( docop.revision() );
-        if ( serverMutations.isEmpty() )
+        QList<DocumentMutation> serverMutations = getMutations( docop.revisionNumber() );
+        if ( serverMutations.isEmpty() || serverMutations.first().revision() != docop.revision() )
         {
             qDebug("The revision %s is unknown", qPrintable(docop.revision()) );
             return false;
@@ -195,29 +195,18 @@ bool WaveDocument::processMutationFromHost(DocumentMutation docop)
     return true;
 }
 
-QList<DocumentMutation> WaveDocument::getMutations( const QString& sinceRevision )
+QList<DocumentMutation> WaveDocument::getMutations( int sinceRevision )
 {
-    // All mutations?
-    if ( sinceRevision.isEmpty() )
-        return m_mutations;
-
-    if ( !s_revRegExp->exactMatch(sinceRevision) )
+    if ( sinceRevision >= m_revNumberOffset + m_mutations.count() || sinceRevision < m_revNumberOffset )
     {
-        qDebug("Malformed revision number");
+        qDebug("Revision number out of range");
         return QList<DocumentMutation>();
     }
 
     QList<DocumentMutation> result;
-    int revNumber = s_revRegExp->cap(1).toInt();
-    if ( revNumber >= m_revNumberOffset + m_mutations.count() || revNumber < m_revNumberOffset )
+    for( int i = sinceRevision - m_revNumberOffset; i < m_mutations.count(); ++i )
     {
-        qDebug("Revision number out of range");
-        return result;
-    }
-
-    for( int i = revNumber; i < m_mutations.count(); ++i )
-    {
-        result.append(m_mutations.at(i - m_revNumberOffset));
+        result.append(m_mutations.at(i));
     }
     return result;
 }

@@ -50,7 +50,7 @@ public:
     void registerSession( const QString& sessionId );
     void deregisterSession( const QString& sessionId );
 
-    QList<DocumentMutation> getMutations( const QString& docKind, const QString& sinceRevision = QString::null );
+    QList<DocumentMutation> getMutations( const QString& docKind, int sinceRevision = 0 );
 
     virtual bool isRemote() const;
 
@@ -100,6 +100,7 @@ private:
     void sendErrorToClient();
 
     FCGI::FCGIRequest* m_clientRequest;
+    WaveId m_waveId;
     QByteArray m_data;
     QNetworkReply* m_serverReply;
 };
