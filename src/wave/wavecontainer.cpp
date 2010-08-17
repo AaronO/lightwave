@@ -54,7 +54,10 @@ JSONObject WaveContainer::put(JSONObject doc, const QString& docKind, FCGI::FCGI
     {
         Q_ASSERT(req);
         qDebug("Put document remote");
-        new SubmitToHostJob(this, req, docKind, doc);
+        WaveId wid = metaDocument()->waveId();
+        wid.setDocumentId(docKind);
+        wid.normalize();
+        new SubmitToHostJob(this, req, wid, doc);
         return JSONObject();
     }
 
@@ -125,7 +128,7 @@ JSONObject WaveContainer::put(JSONObject doc, const QString& docKind, FCGI::FCGI
         }
     }
 
-    // Tell all sessions which are listing that the wave has changed
+    // Tell all sessions which are listening that the wave has changed
     notifySessions(wdoc, is_initial);
 
     //
@@ -354,10 +357,10 @@ void WaveContainer::registerSession( const QString& sessionId )
     m_sessions.insert(sessionId);
 
     // Tell the session about all document versions in this wave
-    QHash<QString,QString> revisions;
+    QHash<QString,int> revisions;
     foreach( WaveDocument* doc, m_documents.values() )
     {
-        revisions[doc->waveId().toString()] = doc->revision();
+        revisions[doc->waveId().toString()] = doc->revisionNumber();
     }
     s->notify(revisions);
 }
@@ -369,10 +372,10 @@ void WaveContainer::deregisterSession( const QString& sessionId )
 
 void WaveContainer::notifySessions(WaveDocument* doc, bool sendMetaDoc)
 {
-    QHash<QString,QString> revisions;
-    revisions[doc->waveId().toString()] = doc->revision();
+    QHash<QString,int> revisions;
+    revisions[doc->waveId().toString()] = doc->revisionNumber();
     if ( sendMetaDoc )
-        revisions[metaDocument()->documentId()] = metaDocument()->revision();
+        revisions[metaDocument()->waveId().toString()] = metaDocument()->revisionNumber();
 
     foreach( QString sid, m_sessions )
     {
@@ -388,7 +391,7 @@ void WaveContainer::notifySessions(WaveDocument* doc, bool sendMetaDoc)
     }
 }
 
-QList<DocumentMutation> WaveContainer::getMutations( const QString& docId, const QString& sinceRevision )
+QList<DocumentMutation> WaveContainer::getMutations( const QString& docId, int sinceRevision )
 {
     WaveDocument* wdoc = m_documents.value(docId);
     if ( !wdoc )
@@ -434,7 +437,7 @@ void WaveContainer::onDocumentUpdate(WaveDocument* wdoc)
 ////////////////////////////////////////////////////////
 
 SubmitToHostJob::SubmitToHostJob(WaveContainer* parent, FCGI::FCGIRequest* req, const WaveId& waveId, JSONObject data)
-    : QObject(parent), m_clientRequest(req)
+    : QObject(parent), m_clientRequest(req), m_waveId(waveId)
 {
     QUrl url("http://" + parent->hostContainer()->name() + "/wave/_host");
     qDebug("Sending to host: %s", qPrintable(url.toString()));
@@ -483,7 +486,8 @@ void SubmitToHostJob::onFinished()
         else
             qDebug("Answer from hosting server: %s", qPrintable(doc.toJSON()));
 
-        if ( doc.attribute("ok").toBool() == true )
+        QString key = m_waveId.toString();
+        if ( doc.attributeObject(key).attribute("ok").isBool() && doc.attributeObject(key).attribute("ok").toBool() == true )
         {
             if ( m_clientRequest )
                 m_clientRequest->replyJson(data);
