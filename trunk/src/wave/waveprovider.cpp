@@ -8,6 +8,7 @@
 #include "json/jsonscanner.h"
 #include "viewcontainer.h"
 #include "usercontainer.h"
+#include "user.h"
 
 WaveProvider* WaveProvider::s_self = 0;
 
@@ -35,6 +36,16 @@ WaveProvider* WaveProvider::self()
     if ( !s_self )
         s_self = new WaveProvider();
     return s_self;
+}
+
+User* WaveProvider::user(const QString& userId, bool create) const
+{
+    User* user = static_cast<User*>(m_userContainer->childContainer(userId));
+    if ( user )
+        return user;
+    if ( !create )
+        return 0;
+    return static_cast<User*>(m_userContainer->createWaveContainer(userId));
 }
 
 Session* WaveProvider::session(const QString& sessionId) const

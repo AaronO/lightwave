@@ -430,6 +430,11 @@ void WaveContainer::onDocumentUpdate(WaveDocument* wdoc)
     Q_UNUSED(wdoc)
 }
 
+WaveDocument* WaveContainer::createDocument(const QString& docId)
+{
+    return new WaveDocument(this, docId);
+}
+
 ////////////////////////////////////////////////////////
 //
 // SubmitToHostJob

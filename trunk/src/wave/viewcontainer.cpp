@@ -7,10 +7,16 @@ ViewContainer::ViewContainer(RootContainer* parent, const QString& name)
 {
 }
 
-WaveContainer* ViewContainer::createWaveContainer(const QString& name)
+WaveDocument* ViewContainer::createDocument(const QString& docId)
 {
-    Q_ASSERT(childContainer(name) == 0);
-    View* v = new View(this, name);
-    v->makePersistent();
-    return v;
+    return new View(this, docId);
+}
+
+void ViewContainer::onDocumentUpdate(WaveDocument* wdoc)
+{
+    View* v = dynamic_cast<View*>(wdoc);
+    if ( !v )
+        return;
+
+    v->update();
 }

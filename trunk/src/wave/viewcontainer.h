@@ -14,7 +14,8 @@ public:
     bool isRemote() const { return false; }
 
 protected:
-    virtual WaveContainer* createWaveContainer(const QString& name);
+    WaveDocument* createDocument(const QString& docId);
+    void onDocumentUpdate(WaveDocument* wdoc);
 };
 
 #endif // VIEWCONTAINER_H
