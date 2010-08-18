@@ -3,7 +3,7 @@
 #include <QRegExp>
 
 QRegExp* WaveId::s_waveUriRegExp = 0;
-QRegExp* WaveId::s_sessionUriRegExp = 0;
+QRegExp* WaveId::s_specialUriRegExp = 0;
 
 WaveId::WaveId()
 {
@@ -15,11 +15,11 @@ WaveId::WaveId(const QString& id)
     _init();
     if ( !s_waveUriRegExp->exactMatch(id) )
     {
-        if ( !s_sessionUriRegExp->exactMatch(id))
+        if ( !s_specialUriRegExp->exactMatch(id))
             return;
-        m_host = "session";
-        m_pathItems.append( s_sessionUriRegExp->cap(1));
-        m_docId = s_sessionUriRegExp->cap(2);
+        m_host = s_specialUriRegExp->cap(1);
+        m_pathItems.append( s_specialUriRegExp->cap(2));
+        m_docId = s_specialUriRegExp->cap(3);
         if ( !m_docId.isEmpty() )
             m_docId = m_docId.mid(1);
         return;
@@ -50,8 +50,8 @@ void WaveId::_init()
 {
     if ( !s_waveUriRegExp )
         s_waveUriRegExp = new QRegExp("([+A-Za-z0-9.-]+)(/[+/A-Za-z0-9.-]+)(/_[+A-Za-z0-9.-_/]+)?");
-    if ( !s_sessionUriRegExp )
-        s_sessionUriRegExp = new QRegExp("_session/([+A-Za-z0-9.-]+)(/_[+A-Za-z0-9.-]+)?");
+    if ( !s_specialUriRegExp )
+        s_specialUriRegExp = new QRegExp("_(session|view|user)/([+A-Za-z0-9.-]+)(/_[+A-Za-z0-9.-]+)?");
 }
 
 WaveId& WaveId::operator=(const WaveId& id)

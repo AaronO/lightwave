@@ -6,6 +6,8 @@
 #include "session.h"
 #include "json/jsonobject.h"
 #include "json/jsonscanner.h"
+#include "viewcontainer.h"
+#include "usercontainer.h"
 
 WaveProvider* WaveProvider::s_self = 0;
 
@@ -19,6 +21,12 @@ WaveProvider::WaveProvider()
     // Create a container for sessions
     m_sessionContainer = new SessionContainer(m_rootContainer, "session");
     m_sessionContainer->makePersistent();
+    // Create a container for views
+    m_viewContainer = new ViewContainer(m_rootContainer, "view");
+    m_viewContainer->makePersistent();
+    // Create a container for users
+    m_userContainer = new UserContainer(m_rootContainer, "user");
+    m_userContainer->makePersistent();
     qDebug("===================================");
 }
 

@@ -2,7 +2,7 @@
 #include "fcgiprotocol.h"
 #include "fcgi.h"
 #include "wave/waveprovider.h"
-
+#include "auth/auth.h"
 #include <QByteArray>
 
 FCGI::FCGIRequest::FCGIRequest(FCGIProtocol* driver, quint16 id, Role role, bool kc)
@@ -90,14 +90,36 @@ void FCGI::FCGIRequest::appendParam( const std::string& name, const std::string&
 
 void FCGI::FCGIRequest::process()
 {
-    // Try to parse the data sent as a JSON protobuf
-    QByteArray ba( QByteArray::fromRawData( m_stdinStream.data(), m_stdinStream.length() ) );
+    // Try to authenticate the user by its cookie
+    if ( !Authenticator::self()->authenticateByCookie(this) )
+        return;
 
 //    qDebug("Request %s", ba.constData());
 //    foreach( QString key, m_params.keys() )
 //        qDebug("%s=%s", qPrintable(key), qPrintable(m_params[key]));
 //
-    if ( requestMethod() == "PUT")
+    if ( requestMethod() == "POST")
+    {
+        if ( requestUri() == "_login")
+        {
+            QByteArray ba( QByteArray::fromRawData( m_stdinStream.data(), m_stdinStream.length() ) );
+            QString cookie = Authenticator::self()->authenticate(ba);
+            if ( !cookie.isEmpty() )
+            {
+                qDebug("Cookie is %s", qPrintable(cookie));
+                std::ostringstream os;
+                os << "Content-type: application/json\r\n"
+                   << "Set-Cookie: AuthSession=" << cookie.toStdString() << "; Version=1; Path=/; HttpOnly\r\n"
+                   << "\r\n"
+                   << "{\"ok\":true}";
+                write(os.str().data(), os.str().size());
+                endRequest(0, FCGIRequest::REQUEST_COMPLETE);
+                return;
+            }
+        }
+        errorReply("Uri does not exist or method is not supported on Uri.");
+    }
+    else if ( requestMethod() == "PUT")
     {
         qDebug("Putting");
         WaveProvider::self()->put(this);

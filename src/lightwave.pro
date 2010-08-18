@@ -1,7 +1,8 @@
 # -------------------------------------------------
 # Project created by QtCreator 2010-07-22T01:41:45
 # -------------------------------------------------
-QT += network
+QT += network \
+    script
 QT -= gui
 TARGET = lightwave
 CONFIG += console
@@ -41,7 +42,12 @@ SOURCES += main.cpp \
     wave/waveid.cpp \
     wave/hostcontainer.cpp \
     wave/rootcontainer.cpp \
-    wave/sessioncontainer.cpp
+    wave/sessioncontainer.cpp \
+    wave/viewcontainer.cpp \
+    wave/view.cpp \
+    wave/usercontainer.cpp \
+    wave/user.cpp \
+    auth/auth.cpp
 HEADERS += json/jsonabstractobject.h \
     json/jsonobject.h \
     json/jsonarray.h \
@@ -78,4 +84,9 @@ HEADERS += json/jsonabstractobject.h \
     wave/hostcontainer.h \
     wave/rootcontainer.h \
     wave/session.h \
-    wave/sessioncontainer.h
+    wave/sessioncontainer.h \
+    wave/viewcontainer.h \
+    wave/view.h \
+    wave/usercontainer.h \
+    wave/user.h \
+    auth/auth.h

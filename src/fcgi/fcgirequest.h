@@ -43,6 +43,12 @@ namespace FCGI
 
         QString requestUri() const;
         QString requestMethod() const;
+
+        QString cookie() const { return m_params["HTTP_COOKIE"]; }
+        void setAuthUser(const QString& user) { m_authUser = user; }
+        QString authUser() const { return m_authUser; }
+        bool isAuthenticated() const { return !m_authUser.isEmpty(); }
+
         std::string m_stdinStream;
 
     protected:
@@ -77,6 +83,7 @@ namespace FCGI
         bool m_stdinEOF;
         bool m_aborted;
         FCGIProtocol* m_driver;       
+        QString m_authUser;
     };
 }
 
