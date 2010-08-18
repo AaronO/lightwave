@@ -57,7 +57,6 @@ bool WaveDocument::setContent(JSONObject obj)
     QByteArray json = obj.toJSON().toUtf8();
     QCryptographicHash hash(QCryptographicHash::Md5);
     hash.addData(json);
-    QString checksum = QString(hash.result());
 
     if ( !m_rev.isEmpty() )
     {

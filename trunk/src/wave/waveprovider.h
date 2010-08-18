@@ -12,6 +12,8 @@ class Session;
 class RootContainer;
 class WaveContainer;
 class SessionContainer;
+class ViewContainer;
+class UserContainer;
 
 class WaveProvider : public QObject
 {
@@ -34,6 +36,8 @@ private:
 
     RootContainer* m_rootContainer;
     SessionContainer* m_sessionContainer;
+    ViewContainer* m_viewContainer;
+    UserContainer* m_userContainer;
 
     static WaveProvider* s_self;
 };

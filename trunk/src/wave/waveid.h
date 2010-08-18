@@ -30,6 +30,10 @@ public:
     void setDocumentId(const QString& docId) { m_docId = docId; }
     QString host() const { return m_host; }
 
+    bool isView() const { return m_host == "view"; }
+    bool isSession() const { return m_host == "session"; }
+    bool isUser() const { return m_host == "user"; }
+
     QString toString() const;
 
 private:
@@ -40,7 +44,7 @@ private:
     QString m_docId;
 
     static QRegExp* s_waveUriRegExp;
-    static QRegExp* s_sessionUriRegExp;
+    static QRegExp* s_specialUriRegExp;
 };
 
 #endif // WAVEID_H
