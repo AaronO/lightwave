@@ -61,6 +61,7 @@ public:
 protected:
     void addContainer( WaveContainer* child );
     virtual void onDocumentUpdate(WaveDocument* wdoc);
+    virtual WaveDocument* createDocument(const QString& docId);
 
 private:
     void updateFromMetaDocument();

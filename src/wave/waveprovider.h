@@ -14,6 +14,7 @@ class WaveContainer;
 class SessionContainer;
 class ViewContainer;
 class UserContainer;
+class User;
 
 class WaveProvider : public QObject
 {
@@ -27,6 +28,7 @@ public:
 
     Session* session(const QString& sessionId) const;
     WaveContainer* container(const WaveId& waveId) const;
+    User* user(const QString& userId, bool create = false) const;
 
 private:
     QHash<QString, Session*> m_sessions;
