@@ -23,5 +23,12 @@ void View::update()
 
 QScriptValue View::parseFunction(const QString& js)
 {
-    return m_scriptEngine.evaluate(js, waveId().toString());
+    QScriptValue v = m_scriptEngine.evaluate(js, waveId().toString());
+    if ( m_scriptEngine.hasUncaughtException() )
+    {
+        qDebug("Malformed JS");
+        return QScriptValue();
+    }
+    qDebug("Javascript parsed successful");
+    return v;
 }
