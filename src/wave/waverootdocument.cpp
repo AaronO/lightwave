@@ -34,7 +34,7 @@ bool WaveMetaDocument::addDocument(WaveDocument* wdoc)
     docop.setDocumentId(documentId());
     docop.setRevision(revision());
 
-    qDebug("OP=%s", qPrintable(docop.mutation().toJSON()));
+    // qDebug("OP=%s", qPrintable(docop.mutation().toJSON()));
 
     JSONObject result = container()->put(docop.mutation().toObject(), documentId());
     return result.attribute("ok").toBool();
@@ -61,7 +61,7 @@ bool WaveMetaDocument::addContainer(WaveContainer* c)
     docop.setDocumentId(documentId());
     docop.setRevision(revision());
 
-    qDebug("OP=%s", qPrintable(docop.mutation().toJSON()));
+    // qDebug("OP=%s", qPrintable(docop.mutation().toJSON()));
 
     JSONObject result = container()->put(docop.mutation().toObject(), documentId());
     return result.attribute("ok").toBool();

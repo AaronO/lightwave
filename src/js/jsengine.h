@@ -5,6 +5,8 @@
 #include <QScriptValue>
 #include "json/jsonobject.h"
 
+class WaveContainer;
+
 class JSEngine : public QScriptEngine
 {
 public:
@@ -12,6 +14,13 @@ public:
 
     QScriptValue fromJSON(JSONAbstractObject obj);
     JSONAbstractObject toJSON(const QScriptValue& value);
+
+    QScriptValue invokeOnContainer( const QScriptValue& func, WaveContainer* container );
+
+    static JSEngine* engine();
+
+private:
+    static JSEngine* s_self;
 };
 
 #endif

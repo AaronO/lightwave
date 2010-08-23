@@ -48,7 +48,8 @@ SOURCES += main.cpp \
     wave/usercontainer.cpp \
     wave/user.cpp \
     auth/auth.cpp \
-    js/jsengine.cpp
+    js/jsengine.cpp \
+    js/jswavecontainer.cpp
 HEADERS += json/jsonabstractobject.h \
     json/jsonobject.h \
     json/jsonarray.h \
@@ -91,4 +92,5 @@ HEADERS += json/jsonabstractobject.h \
     wave/usercontainer.h \
     wave/user.h \
     auth/auth.h \
-    js/jsengine.h
+    js/jsengine.h \
+    js/jswavecontainer.h

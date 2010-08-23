@@ -14,3 +14,12 @@ WaveContainer* SessionContainer::createWaveContainer(const QString& name)
     s->makePersistent();
     return s;
 }
+
+void SessionContainer::broadcastViewChanged(const QString& viewId, int revisionNumber )
+{
+    foreach(WaveContainer* c, childContainers() )
+    {
+        Session* s = static_cast<Session*>(c);
+        s->viewChanged(viewId, revisionNumber);
+    }
+}

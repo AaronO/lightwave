@@ -8,12 +8,14 @@
 #include <QList>
 #include <QNetworkReply>
 #include <QByteArray>
+#include <QScriptValue>
 
 #include "wavedocument.h"
 #include "waverootdocument.h"
 #include "waveid.h"
 #include "ot/documentmutation.h"
 #include "json/jsonobject.h"
+#include "json/jsonarray.h"
 #include "fcgi/fcgirequest.h"
 #include "utils/jid.h"
 
@@ -30,7 +32,9 @@ public:
     ~WaveContainer();
 
     QString name() const { return m_name; }
+    WaveId waveId() const;
 
+    QList<WaveContainer*> childContainers() const { return m_children.values(); }
     WaveContainer* childContainer( const QString& name ) { return m_children.value(name); }
     WaveContainer* parentContainer() const { return static_cast<WaveContainer*>(parent()); }
     HostContainer* hostContainer() const;
@@ -44,6 +48,7 @@ public:
     JSONObject putSnapshotFromHost( JSONObject data, const QString& docKind );
     JSONObject putFromRemote( JSONObject data, const QString& docKind );
 
+    QList<WaveDocument*> documents() const { return m_documents.values(); }
     WaveDocument* document(const QString& docKind) const { return m_documents.value(docKind); }
     WaveMetaDocument* metaDocument() const  { return static_cast<WaveMetaDocument*>(m_documents.value("_meta")); }
 
@@ -53,17 +58,30 @@ public:
     QList<DocumentMutation> getMutations( const QString& docKind, int sinceRevision = 0 );
 
     virtual bool isRemote() const;
+    virtual bool buildsDigest() const { return true; }
 
     virtual WaveContainer* createWaveContainer(const QString& name);
+
+    void addView(const QString& viewId, int revisionNumber ) { m_views.insert(viewId, revisionNumber); }
 
     static QNetworkAccessManager* networkManager();
 
 protected:
     void addContainer( WaveContainer* child );
+    /**
+      * Invoked when a document changes.
+      * The default implementation triggers and update of the digest and indices.
+      */
     virtual void onDocumentUpdate(WaveDocument* wdoc);
     virtual WaveDocument* createDocument(const QString& docId);
+    virtual void updateDigest();
+    virtual void updateDigestReduce(const QString& viewId );
 
 private:
+    /**
+      * Called when the meta document has changed to sync internal data structures
+      * with the new meta document content.
+      */
     void updateFromMetaDocument();
     void notifySessions(WaveDocument* doc, bool sendMetaDoc);
 
@@ -78,6 +96,24 @@ private:
     QSet<QString> m_sessions;
     QSet<QString> m_authors;
     QSet<QString> m_remoteHosts;
+
+    /**
+      * The key is the waveid of the view and the value is the revision that
+      * has been used to build digest and indices.
+      */
+    QHash<QString,int> m_views;
+    /**
+      * The key is the view name and the value is the result of digest mapping.
+      */
+    QHash<QString,QScriptValue> m_digestMap;
+    /**
+      * The key is the view name concatenated with "/" and the index name and the value is the result of digest reduction.
+      */
+    QHash<QString,QScriptValue> m_digestReduce;
+    /**
+      * The key is the view name concatenated with "/" and the index name and the value is the result of index mapping.
+      */
+    QHash<QString,JSONArray> m_indices;
 
     static QNetworkAccessManager* s_networkManager;
 };

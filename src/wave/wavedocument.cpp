@@ -3,6 +3,8 @@
 #include "hostcontainer.h"
 #include "rootcontainer.h"
 #include "sessioncontainer.h"
+#include "usercontainer.h"
+#include "viewcontainer.h"
 #include "ot/transformation.h"
 #include "session.h"
 #include <QCryptographicHash>
@@ -74,7 +76,7 @@ bool WaveDocument::setContent(JSONObject obj)
 
     // Store the new content
     m_json = obj;
-    qDebug("DOC: %s", qPrintable(m_json.toJSON()));
+    // qDebug("DOC: %s", qPrintable(m_json.toJSON()));
 
     return true;
 }
@@ -118,26 +120,26 @@ bool WaveDocument::processMutation(DocumentMutation docop)
                 }
                 break;
             }
-            qDebug("Transforming\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
+            // qDebug("Transforming\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
             t.xform(s, c);
             if ( t.hasError() )
             {
                 qDebug("Error: transforming mutation: %s", qPrintable(t.errorText()));
                 return false;
             }
-            qDebug("result is\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
+            // qDebug("result is\n s: %s\n c: %s", qPrintable(s.toJSON()), qPrintable(c.toJSON()));
         }
     }
 
     bool ok;
-    qDebug("Apply\n %s\nto\n %s", qPrintable(docop.mutation().toJSON()), qPrintable(m_json.toJSON()));
+    // qDebug("Apply\n %s\nto\n %s", qPrintable(docop.mutation().toJSON()), qPrintable(m_json.toJSON()));
     JSONObject result = docop.apply(m_json, &ok);
     if ( !ok )
     {
         qDebug("Error: Could not apply mutation");
         return false;
     }
-    qDebug("Result is %s", qPrintable(result.toJSON()));
+    // qDebug("Result is %s", qPrintable(result.toJSON()));
 
     // Store the document and that's it
     if ( !setContent(result) )
@@ -173,14 +175,14 @@ bool WaveDocument::processMutationFromHost(DocumentMutation docop)
     int num = s_revRegExp->cap(1).toInt();
 
     bool ok;
-    qDebug("Apply\n %s\nto\n %s", qPrintable(docop.mutation().toJSON()), qPrintable(m_json.toJSON()));
+    // qDebug("Apply\n %s\nto\n %s", qPrintable(docop.mutation().toJSON()), qPrintable(m_json.toJSON()));
     JSONObject result = docop.apply(m_json, &ok);
     if ( !ok )
     {
         qDebug("Error: Could not apply mutation");
         return false;
     }
-    qDebug("Result is %s", qPrintable(result.toJSON()));
+    // qDebug("Result is %s", qPrintable(result.toJSON()));
 
     // Store the document and that's it
     m_revNumber = num;
@@ -215,7 +217,11 @@ WaveId WaveDocument::waveId() const
     if ( dynamic_cast<const HostContainer*>(container()))
         return WaveId( container()->name(), QStringList(), m_docId);
     if ( dynamic_cast<const SessionContainer*>(container()))
-        return WaveId( container()->name(), QStringList(), m_docId);
+        return WaveId( "_session", QStringList(), m_docId);
+    if ( dynamic_cast<const ViewContainer*>(container()))
+        return WaveId( "_view", QStringList(), m_docId);
+    if ( dynamic_cast<const UserContainer*>(container()))
+        return WaveId( "_user", QStringList(), m_docId);
     if ( dynamic_cast<const RootContainer*>(container()))
         return WaveId( QString::null, QStringList(), m_docId);
     
@@ -232,6 +238,16 @@ WaveId WaveDocument::waveId() const
         if ( dynamic_cast<SessionContainer*>(c) )
         {
             host = "_session";
+            break;
+        }
+        if ( dynamic_cast<ViewContainer*>(c) )
+        {
+            host = "_view";
+            break;
+        }
+        if ( dynamic_cast<UserContainer*>(c) )
+        {
+            host = "_user";
             break;
         }
         pathItems.prepend(c->name());

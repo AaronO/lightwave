@@ -9,6 +9,9 @@ public:
     User(UserContainer* parent, const QString& name);
 
     bool isRemote() const { return false; }
+    bool buildsDigest() const { return false; }
+
+    WaveContainer* createWaveContainer(const QString& name);
 };
 
 #endif // USER_H

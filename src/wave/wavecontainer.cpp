@@ -2,10 +2,15 @@
 #include "waverootdocument.h"
 #include "waveprovider.h"
 #include "hostcontainer.h"
+#include "usercontainer.h"
+#include "viewcontainer.h"
+#include "sessioncontainer.h"
 #include "json/jsonscanner.h"
 #include "ot/abstractmutation.h"
 #include "session.h"
 #include "utils/settings.h"
+#include "view.h"
+#include "js/jsengine.h"
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -82,7 +87,7 @@ JSONObject WaveContainer::put(JSONObject doc, const QString& docKind, FCGI::FCGI
         }
         // Create the document
         if ( !wdoc )
-            wdoc = new WaveDocument(this, docKind);
+            wdoc = createDocument(docKind);
 
         // Apply the initial mutation
         AbstractMutation m(doc);
@@ -213,7 +218,7 @@ JSONObject WaveContainer::putSnapshotFromHost( JSONObject doc, const QString& do
         }
 
         // Create the document
-        wdoc = new WaveDocument(this, docKind);
+        wdoc = createDocument(docKind);
         m_documents[docKind] = wdoc;
     }
     wdoc->setSnapshotFromHost(doc);
@@ -428,11 +433,88 @@ QNetworkAccessManager* WaveContainer::networkManager()
 void WaveContainer::onDocumentUpdate(WaveDocument* wdoc)
 {
     Q_UNUSED(wdoc)
+    updateDigest();
 }
 
 WaveDocument* WaveContainer::createDocument(const QString& docId)
 {
     return new WaveDocument(this, docId);
+}
+
+WaveId WaveContainer::waveId() const
+{
+    QStringList pathItems;
+    const WaveContainer* c = this;
+    QString host;
+    while(c)
+    {
+        if ( dynamic_cast<const HostContainer*>(c) )
+        {
+            host = c->name();
+            break;
+        }
+        if ( dynamic_cast<const SessionContainer*>(c) )
+        {
+            host = "_session";
+            break;
+        }
+        if ( dynamic_cast<const UserContainer*>(c) )
+        {
+            host = "_user";
+            break;
+        }
+        if ( dynamic_cast<const ViewContainer*>(c) )
+        {
+            host = "_view";
+            break;
+        }
+        pathItems.prepend(c->name());
+        c = c->parentContainer();
+    }
+    Q_ASSERT(c);
+
+    return WaveId( host, pathItems, QString::null);
+}
+
+void WaveContainer::updateDigestReduce(const QString& viewId )
+{
+    if ( !buildsDigest() )
+        return;
+
+    View* v = WaveProvider::self()->view(viewId);
+    if ( !v )
+        return;
+
+    QScriptValue r = v->computeDigestReduce(this);
+    m_digestReduce.insert( viewId, r);
+    qDebug("Digest reduce for %s is %s", qPrintable(waveId().toString()), qPrintable( r.toString()));
+    if ( parentContainer() )
+        parentContainer()->updateDigestReduce(viewId);
+}
+
+void WaveContainer::updateDigest()
+{
+    qDebug("Update digest 1");
+    if ( !buildsDigest() )
+        return;
+    qDebug("Update digest 2");
+    foreach( QString viewId, m_views.keys() )
+    {        
+        qDebug("Update digest 3 %s", qPrintable(viewId));
+        View* v = WaveProvider::self()->view(viewId);
+        if ( !v || v->isMalformed() )
+        {
+            m_views.remove(viewId);
+            continue;
+        }
+        qDebug("Update digest 4 %s", qPrintable(viewId));
+
+        QScriptValue d = v->computeDigestMap(this);
+        qDebug("Digest map for %s is %s", qPrintable(waveId().toString()), qPrintable( d.toString()));
+        // qDebug("Digest for %s is %i", qPrintable(waveId().toString()), d.toInt32());
+        m_digestMap.insert( viewId, d );
+        updateDigestReduce(viewId);
+    }
 }
 
 ////////////////////////////////////////////////////////
