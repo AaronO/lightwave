@@ -32,19 +32,14 @@ QScriptValue JSWaveContainerClass::property( const QScriptValue& object, const Q
     Q_ASSERT ( data.isObject() );
     QScriptValue cache = data.property(name, QScriptValue::ResolveLocal);
     if ( cache.isValid() )
-    {
-        qDebug("...b %s", qPrintable(cache.toString()));
         return cache;
-    }
-    qDebug("...1 %s", qPrintable(data.property("waveid", QScriptValue::ResolveLocal).toString()));
+
     WaveContainer* c = WaveProvider::self()->container( WaveId( data.property("waveid", QScriptValue::ResolveLocal).toString() ));
     if ( !c )
         return QScriptValue();
-    qDebug("...2");
     WaveDocument* doc = c->document(name);
     if ( !doc )
         return QScriptValue();
-    qDebug("...3");
     QScriptValue v = JSEngine::engine()->fromJSON(doc->jsonObject());
     if ( data.isUndefined() )
         data = object.engine()->newObject();
