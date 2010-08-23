@@ -30,6 +30,10 @@ QScriptValue JSWaveContainerClass::property( const QScriptValue& object, const Q
 
     QScriptValue data = object.data();
     Q_ASSERT ( data.isObject() );
+
+    if ( name.toString() == "waveId")
+        return data.property("waveid", QScriptValue::ResolveLocal);
+
     QScriptValue cache = data.property(name, QScriptValue::ResolveLocal);
     if ( cache.isValid() )
         return cache;
