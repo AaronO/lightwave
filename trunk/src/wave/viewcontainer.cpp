@@ -23,12 +23,6 @@ void ViewContainer::onDocumentUpdate(WaveDocument* wdoc)
     v->update();
 }
 
-void ViewContainer::onViewChanged(View* view)
-{
-    // Inform all sessions. If the session contains such a view, it will tell the wave containers to refresh
-    // WaveProvider::self()->sessionContainer()->broadcastViewChanged(view->documentId(), view->revisionNumber());
-}
-
 QList<View*> ViewContainer::views() const
 {
     QList<View*> result;

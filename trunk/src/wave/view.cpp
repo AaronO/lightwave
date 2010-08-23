@@ -47,7 +47,6 @@ void View::update()
     }
 
     m_malformed = false;
-    viewContainer()->onViewChanged(this);
 }
 
 QScriptValue View::parseFunction(const QString& js)
