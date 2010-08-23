@@ -17,11 +17,8 @@ public:
 
     QList<View*> views() const;
 
-    void onViewChanged(View* view);
-
-    WaveContainer* createWaveContainer(const QString& name);
-
 protected:
+    WaveContainer* createWaveContainer(const QString& name);
     WaveDocument* createDocument(const QString& docId);
     void onDocumentUpdate(WaveDocument* wdoc);
 };

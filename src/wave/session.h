@@ -24,11 +24,8 @@ public:
 
     void notify( const QHash<QString,int>& revisions );
 
-    void viewChanged(const QString& viewId, int revisionNumber);
-
-    WaveContainer* createWaveContainer(const QString& name);
-
 protected:
+    WaveContainer* createWaveContainer(const QString& name);
     virtual void onDocumentUpdate(WaveDocument* wdoc);
 
 private:

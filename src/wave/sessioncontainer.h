@@ -14,8 +14,6 @@ public:
     bool isRemote() const { return false; }
     bool buildsDigest() const { return false; }
 
-    void broadcastViewChanged(const QString& viewId, int revisionNumber );
-
 protected:
     virtual WaveContainer* createWaveContainer(const QString& name);
 };
