@@ -207,3 +207,15 @@ void Session::onDocumentUpdate(WaveDocument* wdoc)
     if ( wdoc == doc() )
         update();
 }
+
+void Session::viewChanged(const QString& viewId, int revisionNumber)
+{
+    // Send the user
+}
+
+WaveContainer* Session::createWaveContainer(const QString& name)
+{
+    Q_UNUSED(name);
+
+    return 0;
+}

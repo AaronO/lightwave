@@ -1,5 +1,7 @@
 #include "viewcontainer.h"
 #include "rootcontainer.h"
+// #include "sessioncontainer.h"
+#include "waveprovider.h"
 #include "view.h"
 
 ViewContainer::ViewContainer(RootContainer* parent, const QString& name)
@@ -19,4 +21,30 @@ void ViewContainer::onDocumentUpdate(WaveDocument* wdoc)
         return;
 
     v->update();
+}
+
+void ViewContainer::onViewChanged(View* view)
+{
+    // Inform all sessions. If the session contains such a view, it will tell the wave containers to refresh
+    // WaveProvider::self()->sessionContainer()->broadcastViewChanged(view->documentId(), view->revisionNumber());
+}
+
+QList<View*> ViewContainer::views() const
+{
+    QList<View*> result;
+    foreach( WaveDocument* doc, documents() )
+    {
+        if ( doc == metaDocument() )
+            continue;
+        Q_ASSERT(dynamic_cast<View*>(doc) != 0);
+        result.append(static_cast<View*>(doc));
+    }
+    return result;
+}
+
+WaveContainer* ViewContainer::createWaveContainer(const QString& name)
+{
+    Q_UNUSED(name);
+
+    return 0;
 }

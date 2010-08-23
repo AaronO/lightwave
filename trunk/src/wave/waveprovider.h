@@ -15,6 +15,7 @@ class SessionContainer;
 class ViewContainer;
 class UserContainer;
 class User;
+class View;
 
 class WaveProvider : public QObject
 {
@@ -26,8 +27,11 @@ public:
     void put(FCGI::FCGIRequest* req);
     void get(FCGI::FCGIRequest* req);
 
+    SessionContainer* sessionContainer() const { return m_sessionContainer; }
     Session* session(const QString& sessionId) const;
     WaveContainer* container(const WaveId& waveId) const;
+    View* view(const QString& viewId) const;
+    ViewContainer* viewContainer() const { return m_viewContainer; }
     User* user(const QString& userId, bool create = false) const;
 
 private:

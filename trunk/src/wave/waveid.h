@@ -45,6 +45,7 @@ private:
 
     static QRegExp* s_waveUriRegExp;
     static QRegExp* s_specialUriRegExp;
+    static QRegExp* s_viewUriRegExp;
 };
 
 #endif // WAVEID_H

@@ -9,6 +9,7 @@
 #include "viewcontainer.h"
 #include "usercontainer.h"
 #include "user.h"
+#include "view.h"
 
 WaveProvider* WaveProvider::s_self = 0;
 
@@ -16,9 +17,6 @@ WaveProvider::WaveProvider()
     : m_hostUriRegExp("_host"), m_remoteUriRegExp("_remote")
 {
     m_rootContainer = new RootContainer();
-    // Create a container for local waves
-    HostContainer* h = new HostContainer(m_rootContainer, Settings::settings()->domain(), true);
-    h->makePersistent();
     // Create a container for sessions
     m_sessionContainer = new SessionContainer(m_rootContainer, "session");
     m_sessionContainer->makePersistent();
@@ -28,6 +26,9 @@ WaveProvider::WaveProvider()
     // Create a container for users
     m_userContainer = new UserContainer(m_rootContainer, "user");
     m_userContainer->makePersistent();
+    // Create a container for local waves
+    HostContainer* h = new HostContainer(m_rootContainer, Settings::settings()->domain(), true);
+    h->makePersistent();
     qDebug("===================================");
 }
 
@@ -51,6 +52,11 @@ User* WaveProvider::user(const QString& userId, bool create) const
 Session* WaveProvider::session(const QString& sessionId) const
 {
     return static_cast<Session*>(m_sessionContainer->childContainer(sessionId));
+}
+
+View* WaveProvider::view(const QString& viewId) const
+{
+    return static_cast<View*>(m_viewContainer->document(viewId));
 }
 
 WaveContainer* WaveProvider::container(const WaveId& waveId) const

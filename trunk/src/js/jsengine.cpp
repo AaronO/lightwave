@@ -1,7 +1,13 @@
 #include "jsengine.h"
+#include "jswavecontainer.h"
 #include "json/jsonarray.h"
 #include "json/jsonconstant.h"
+#include "wave/wavecontainer.h"
+#include "wave/waveid.h"
 #include <QScriptValueIterator>
+#include <QScriptValueList>
+
+JSEngine* JSEngine::s_self = 0;
 
 JSEngine::JSEngine( QObject* parent)
     : QScriptEngine(parent)
@@ -86,3 +92,20 @@ JSONAbstractObject JSEngine::toJSON(const QScriptValue& value)
     return JSONAbstractObject();
 }
 
+JSEngine* JSEngine::engine()
+{
+    if ( !s_self)
+        s_self = new JSEngine();
+    return s_self;
+}
+
+QScriptValue JSEngine::invokeOnContainer( const QScriptValue& func, WaveContainer* container )
+{
+    QScriptValue f( func );
+    QScriptValueList args;
+    args.append( JSWaveContainerClass::createWrapper(this, container->waveId()));
+    QScriptValue result = f.call( QScriptValue(), args);
+    if ( this->hasUncaughtException() )
+        qDebug("JavaScript Error: %s", qPrintable(this->uncaughtException().toString()));
+    return result;
+}

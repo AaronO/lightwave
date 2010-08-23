@@ -17,10 +17,16 @@ class Session : public WaveContainer
 public:
     Session(SessionContainer* parent, const QString& sessionId);
 
-    virtual JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
-    virtual bool isRemote() const { return false; }
+    JSONObject get(FCGI::FCGIRequest* req, const QString& docKind);
+
+    bool isRemote() const { return false; }
+    bool buildsDigest() const { return false; }
 
     void notify( const QHash<QString,int>& revisions );
+
+    void viewChanged(const QString& viewId, int revisionNumber);
+
+    WaveContainer* createWaveContainer(const QString& name);
 
 protected:
     virtual void onDocumentUpdate(WaveDocument* wdoc);
@@ -38,7 +44,7 @@ private:
 
     /**
       * A set of all currently opened waves.
-      * To allow for garbage collection of inactive waves, we store only the string and not
+      * To allow for garbage collection of inactive waves, we store only the waveId string and not
       * a direct pointer to the wave itself.
       */
     QSet<QString> m_waves;

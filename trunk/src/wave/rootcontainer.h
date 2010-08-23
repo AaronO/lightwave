@@ -19,6 +19,7 @@ public:
     WaveContainer* container(const WaveId& waveId) const { return const_cast<RootContainer*>(this)->getOrCreateContainer(waveId, false); }
 
     bool isRemote() const { return false; }
+    bool buildsDigest() const { return false; }
 
 protected:
     virtual WaveContainer* createWaveContainer(const QString& name);

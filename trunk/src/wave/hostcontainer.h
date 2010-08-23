@@ -12,6 +12,9 @@ public:
 
     bool isLocal() const { return m_local; }
     bool isRemote() const { return !m_local; }
+    bool buildsDigest() const { return false; }
+
+    WaveContainer* createWaveContainer(const QString& name);
 
 private:
     bool m_local;

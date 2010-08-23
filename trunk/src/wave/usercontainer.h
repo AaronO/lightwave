@@ -12,6 +12,7 @@ public:
     UserContainer(RootContainer* parent, const QString& name);
 
     virtual bool isRemote() const { return false; }
+    virtual bool buildsDigest() const { return false; }
 
 protected:
     friend class WaveProvider;
