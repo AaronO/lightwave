@@ -10,8 +10,10 @@
 JSEngine* JSEngine::s_self = 0;
 
 JSEngine::JSEngine( QObject* parent)
-    : QScriptEngine(parent)
+    : QScriptEngine(parent), m_emitClass(this)
 {
+    QScriptValue e = newObject(&m_emitClass);
+    globalObject().setProperty("emit", e);
 }
 
 QScriptValue JSEngine::fromJSON(JSONAbstractObject obj)
@@ -99,11 +101,39 @@ JSEngine* JSEngine::engine()
     return s_self;
 }
 
-QScriptValue JSEngine::invokeOnContainer( const QScriptValue& func, WaveContainer* container )
+QScriptValue JSEngine::invokeMapOnContainer( const QScriptValue& func, WaveContainer* container )
 {
     QScriptValue f( func );
     QScriptValueList args;
-    args.append( JSWaveContainerClass::createWrapper(this, container->waveId()));
+    args.append( JSWaveContainerClass::createWrapper(this, container->waveId()) );
+    QScriptValue result = f.call( QScriptValue(), args);
+    if ( this->hasUncaughtException() )
+        qDebug("JavaScript Error: %s", qPrintable(this->uncaughtException().toString()));
+    return result;
+}
+
+QScriptValue JSEngine::invokeReduceOnContainer( const QString& viewId, const QScriptValue& func, WaveContainer* container )
+{
+    QScriptValue f( func );
+    QScriptValueList args;
+    args.append(container->digestMapping(viewId));
+    QScriptValue children = newObject();
+    foreach( WaveContainer* c, container->childContainers())
+    {
+        children.setProperty(c->name(), c->digestReduction(viewId));
+    }
+    args.append(children);
+    QScriptValue result = f.call( QScriptValue(), args);
+    if ( this->hasUncaughtException() )
+        qDebug("JavaScript Error: %s", qPrintable(this->uncaughtException().toString()));
+    return result;
+}
+
+QScriptValue JSEngine::invokeMapOnDigest( const QScriptValue& func, const QScriptValue& digest )
+{
+    QScriptValue f( func );
+    QScriptValueList args;
+    args.append(digest);
     QScriptValue result = f.call( QScriptValue(), args);
     if ( this->hasUncaughtException() )
         qDebug("JavaScript Error: %s", qPrintable(this->uncaughtException().toString()));

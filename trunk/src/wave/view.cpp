@@ -80,10 +80,10 @@ void View::clearIndices()
 
 QScriptValue View::computeDigestMap(WaveContainer* c)
 {
-    return JSEngine::engine()->invokeOnContainer( m_digestMapFunction, c );
+    return JSEngine::engine()->invokeMapOnContainer( m_digestMapFunction, c );
 }
 
 QScriptValue View::computeDigestReduce(WaveContainer* c)
 {
-    return JSEngine::engine()->invokeOnContainer( m_digestReduceFunction, c );
+    return JSEngine::engine()->invokeReduceOnContainer( this->documentId(), m_digestReduceFunction, c );
 }

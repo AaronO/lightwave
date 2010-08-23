@@ -4,6 +4,7 @@
 #include <QScriptEngine>
 #include <QScriptValue>
 #include "json/jsonobject.h"
+#include "jsemitclass.h"
 
 class WaveContainer;
 
@@ -15,11 +16,15 @@ public:
     QScriptValue fromJSON(JSONAbstractObject obj);
     JSONAbstractObject toJSON(const QScriptValue& value);
 
-    QScriptValue invokeOnContainer( const QScriptValue& func, WaveContainer* container );
+    QScriptValue invokeMapOnContainer( const QScriptValue& func, WaveContainer* container );
+    QScriptValue invokeReduceOnContainer( const QString& viewId, const QScriptValue& func, WaveContainer* container );
+    QScriptValue invokeMapOnDigest( const QScriptValue& func, const QScriptValue& digest );
 
     static JSEngine* engine();
 
 private:
+    JSEmitClass m_emitClass;
+
     static JSEngine* s_self;
 };
 

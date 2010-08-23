@@ -64,6 +64,9 @@ public:
 
     void addView(const QString& viewId, int revisionNumber ) { m_views.insert(viewId, revisionNumber); }
 
+    QScriptValue digestMapping(const QString& viewId) const { return m_digestMap.value(viewId); }
+    QScriptValue digestReduction(const QString& viewId) const { return m_digestReduce.value(viewId); }
+
     static QNetworkAccessManager* networkManager();
 
 protected:
