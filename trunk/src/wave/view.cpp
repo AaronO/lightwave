@@ -1,5 +1,8 @@
 #include "view.h"
 #include "js/jsengine.h"
+#include "session.h"
+#include "waveprovider.h"
+#include <QUuid>
 
 View::View(ViewContainer* parent, const QString& docId)
     : WaveDocument(parent, docId), m_malformed(true)
@@ -36,7 +39,7 @@ void View::update()
     JSONObject index = jsonObject().attributeObject("index");
     foreach( QString name, index.attributeNames() )
     {
-        QString map = digest.attributeString("map");
+        QString map = index.attributeString("map");
         if ( map.isEmpty() )
             return;
         QScriptValue func = parseFunction(map);
@@ -86,4 +89,45 @@ QScriptValue View::computeDigestMap(WaveContainer* c)
 QScriptValue View::computeDigestReduce(WaveContainer* c)
 {
     return JSEngine::engine()->invokeReduceOnContainer( this->documentId(), m_digestReduceFunction, c );
+}
+
+QString View::registerSessionQuery( const Query& query )
+{
+    QString qid = QUuid::createUuid().toString();
+    m_sessionQueries.insert(qid, query);
+    return qid;
+}
+
+void View::notifySessionQueries( QHash<QString,IndexItemList> newIndexItems )
+{
+    foreach( QString qid, m_sessionQueries.keys() )
+    {
+        QHash<QString,IndexItemList> news;
+        foreach( QString dbId, newIndexItems.keys() )
+        {
+            foreach( IndexItem item, newIndexItems.value(dbId) )
+            {
+                Query q = m_sessionQueries.value(qid);
+                if ( q.userJID() == item.key().at(0).toString())
+                {
+                    if ( !news.contains(dbId))
+                        news.insert(dbId, IndexItemList());
+                    news[dbId].append(item);
+                }
+            }
+        }
+
+        if ( !news.isEmpty() )
+        {
+            QString sessionId = m_sessionQueries.value(qid).sessionID();
+            // Get a pointer to the session
+            Session *s = WaveProvider::self()->session(sessionId);
+            if ( !s )
+            {
+                qDebug("Oooops, new session is already dead: %s", qPrintable(sessionId));
+                continue;
+            }
+            s->notify(documentId(), qid, newIndexItems);
+        }
+    }
 }

@@ -25,12 +25,12 @@ SkipMutation::SkipMutation(const SkipMutation& mutation)
 
 int SkipMutation::count() const
 {
-    return toObject().attribute("_skip").toInt();
+    return toObject().attribute("$skip").toInt();
 }
 
 void SkipMutation::setCount( int count )
 {
     if ( isNull() )
         becomeObject();
-    toObject().setAttribute("_skip", count);
+    toObject().setAttribute("$skip", count);
 }

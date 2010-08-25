@@ -11,7 +11,7 @@ ArrayMutation::ArrayMutation(bool create_empty)
     if ( create_empty )
     {
         becomeObject();
-        toObject().setAttribute("_array", JSONArray(true));
+        toObject().setAttribute("$array", JSONArray(true));
     }
 }
 
@@ -29,12 +29,12 @@ ArrayMutation::ArrayMutation(const ArrayMutation& mutation)
 
 JSONArray ArrayMutation::content() const
 {
-    return toObject().attributeArray("_array");
+    return toObject().attributeArray("$array");
 }
 
 void ArrayMutation::setContent( const JSONArray& arr )
 {
     if ( isNull() )
         becomeObject();
-    toObject().setAttribute("_array", arr);
+    toObject().setAttribute("$array", arr);
 }

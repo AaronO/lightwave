@@ -11,7 +11,7 @@ RichTextMutation::RichTextMutation(bool create_empty)
     if ( create_empty )
     {
         becomeObject();
-        toObject().setAttribute("_richtext", JSONArray(true));
+        toObject().setAttribute("$richtext", JSONArray(true));
     }
 }
 
@@ -29,6 +29,6 @@ RichTextMutation::RichTextMutation(const RichTextMutation& mutation)
 
 JSONArray RichTextMutation::content() const
 {
-    return toObject().attributeArray("_richtext");
+    return toObject().attributeArray("$richtext");
 }
 

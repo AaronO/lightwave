@@ -11,7 +11,7 @@ TextMutation::TextMutation(bool create_empty)
     if ( create_empty )
     {
         becomeObject();
-        toObject().setAttribute("_text", JSONArray(true));
+        toObject().setAttribute("$text", JSONArray(true));
     }
 }
 
@@ -29,5 +29,5 @@ TextMutation::TextMutation(const TextMutation& mutation)
 
 JSONArray TextMutation::content() const
 {
-    return toObject().attributeArray("_text");
+    return toObject().attributeArray("$text");
 }

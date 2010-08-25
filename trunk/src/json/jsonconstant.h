@@ -27,6 +27,7 @@ public:
         QString toJSON() const;
         Data* clone() const;
         bool equals( Data* data );
+        virtual bool lessThan( const Data* data ) const;
     };
 
     JSONConstant(ConstantData* data) : JSONAbstractObject(data) { }

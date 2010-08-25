@@ -39,7 +39,7 @@ void Transformation::xform_pass0(ObjectMutation s, ObjectMutation c)
 
     foreach( QString name, sobj.attributeNames() )
     {
-        if ( name[0] == '_')
+        if ( name[0] == '$')
             continue;
 
         AbstractMutation sm(sobj.attribute(name));
@@ -469,7 +469,7 @@ void Transformation::xform_pass1(ObjectMutation s, ObjectMutation c)
 
     foreach( QString name, sobj.attributeNames() )
     {        
-        if ( name[0] == '_')
+        if ( name[0] == '$')
             continue;
         // Both mutations modify the same attribute? If not -> skip
         if ( !cobj.hasAttribute(name) )

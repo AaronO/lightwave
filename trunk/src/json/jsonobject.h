@@ -48,6 +48,7 @@ public:
         QString toJSON() const;
         Data* clone() const;
         bool equals( Data* data );
+        virtual bool lessThan( const Data* data ) const;
 
         QString stringify( const QString& str ) const;
     };

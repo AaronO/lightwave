@@ -26,42 +26,42 @@ AbstractMutation::AbstractMutation(const JSONAbstractObject& mutation)
 
 bool AbstractMutation::isObjectMutation() const
 {
-    return !toObject().attribute("_object").isNull();
+    return !toObject().attribute("$object").isNull();
 }
 
 bool AbstractMutation::isArrayMutation() const
 {
-    return !toObject().attribute("_array").isNull();
+    return !toObject().attribute("$array").isNull();
 }
 
 bool AbstractMutation::isTextMutation() const
 {
-    return !toObject().attribute("_text").isNull();
+    return !toObject().attribute("$text").isNull();
 }
 
 bool AbstractMutation::isRichTextMutation() const
 {
-    return !toObject().attribute("_richtext").isNull();
+    return !toObject().attribute("$richtext").isNull();
 }
 
 bool AbstractMutation::isSkipMutation() const
 {
-    return !toObject().attribute("_skip").isNull();
+    return !toObject().attribute("$skip").isNull();
 }
 
 bool AbstractMutation::isDeleteMutation() const
 {
-    return !toObject().attribute("_delete").isNull();
+    return !toObject().attribute("$delete").isNull();
 }
 
 bool AbstractMutation::isLiftMutation() const
 {
-    return !toObject().attribute("_lift").isNull();
+    return !toObject().attribute("$lift").isNull();
 }
 
 bool AbstractMutation::isSqueezeMutation() const
 {
-    return !toObject().attribute("_squeeze").isNull();
+    return !toObject().attribute("$squeeze").isNull();
 }
 
 bool AbstractMutation::isInsertMutation() const
@@ -74,21 +74,21 @@ bool AbstractMutation::isInsertMutation() const
     JSONObject obj = toObject();
     if ( obj.isNull() )
         return false;
-    if ( !obj.attribute("_object").isNull() )
+    if ( !obj.attribute("$object").isNull() )
         return false;
-    if ( !obj.attribute("_array").isNull() )
+    if ( !obj.attribute("$array").isNull() )
         return false;
-    if ( !obj.attribute("_text").isNull() )
+    if ( !obj.attribute("$text").isNull() )
         return false;
-    if ( !obj.attribute("_richtext").isNull() )
+    if ( !obj.attribute("$richtext").isNull() )
         return false;
-    if ( !obj.attribute("_skip").isNull() )
+    if ( !obj.attribute("$skip").isNull() )
         return false;
-    if ( !obj.attribute("_delete").isNull() )
+    if ( !obj.attribute("$delete").isNull() )
         return false;
-    if ( !obj.attribute("_lift").isNull() )
+    if ( !obj.attribute("$lift").isNull() )
         return false;
-    if ( !obj.attribute("_squeeze").isNull() )
+    if ( !obj.attribute("$squeeze").isNull() )
         return false;
     return true;
 }

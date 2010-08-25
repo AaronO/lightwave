@@ -24,12 +24,12 @@ DeleteMutation::DeleteMutation( const DeleteMutation& mutation )
 
 int DeleteMutation::count() const
 {
-    return toObject().attribute("_delete").toInt();
+    return toObject().attribute("$delete").toInt();
 }
 
 void DeleteMutation::setCount( int count )
 {
     if ( isNull() )
         becomeObject();
-    toObject().setAttribute("_delete", count);
+    toObject().setAttribute("$delete", count);
 }
