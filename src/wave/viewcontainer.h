@@ -15,7 +15,14 @@ public:
     bool isRemote() const { return false; }
     bool buildsDigest() const { return false; }
 
+    /**
+      * A convenience function for documents().
+      */
     QList<View*> views() const;
+    /**
+      * A convenience function for document().
+      */
+    View* view(const QString& viewId) const;
 
 protected:
     WaveContainer* createWaveContainer(const QString& name);

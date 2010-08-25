@@ -8,7 +8,7 @@ SqueezeMutation::SqueezeMutation()
 SqueezeMutation::SqueezeMutation(const QString& id)
 {
     becomeObject();
-    toObject().setAttribute("_squeeze", id);
+    toObject().setAttribute("$squeeze", id);
 }
 
 SqueezeMutation::SqueezeMutation(const JSONAbstractObject& mutation)
@@ -25,5 +25,5 @@ SqueezeMutation::SqueezeMutation(const SqueezeMutation& mutation)
 
 QString SqueezeMutation::id() const
 {
-    return toObject().attributeString("_squeeze");
+    return toObject().attributeString("$squeeze");
 }

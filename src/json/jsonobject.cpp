@@ -208,3 +208,8 @@ bool JSONObject::ObjectData::equals( JSONAbstractObject::Data* data )
     }
     return true;
 }
+
+bool JSONObject::ObjectData::lessThan( const JSONAbstractObject::Data* data ) const
+{
+    return this->toJSON() < data->toJSON();
+}

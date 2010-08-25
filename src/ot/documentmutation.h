@@ -55,7 +55,7 @@ private:
     void check(JSONAbstractObject dest, TextMutation mutation, Data* data);
     void check(JSONAbstractObject dest, RichTextMutation mutation, Data* data);
     void check(JSONAbstractObject dest, LiftMutation mutation, Data* data);
-    void check(InsertMutation mutation, Data* data, bool ignore_underscore = false);
+    void check(InsertMutation mutation, Data* data);
     void check(SqueezeMutation mutation, Data* data);
 
     JSONAbstractObject apply(JSONAbstractObject dest, AbstractMutation mutation, Data* data);

@@ -44,7 +44,7 @@ JSONObject DocumentMutation::apply(JSONObject obj, bool* ok)
             return obj;
         }
 
-        check(m_mutation.toInsertMutation(), &data, true);
+        check(m_mutation.toInsertMutation(), &data);
 
         if ( data.hasError() )
             return JSONObject();
@@ -130,7 +130,7 @@ void DocumentMutation::check(JSONAbstractObject dest, ObjectMutation mutation, D
     JSONObject m = mutation.toObject();
     foreach( QString name, m.attributeNames() )
     {
-        if ( name[0] == '_' )
+        if ( name[0] == '$' )
             continue;
         JSONAbstractObject value = destobj.attribute(name);
         AbstractMutation mut( m.attribute(name));
@@ -331,7 +331,7 @@ void DocumentMutation::check(JSONAbstractObject dest, RichTextMutation mutation,
         return;
     }
 
-    JSONArray destText = dest.toObject().attributeArray("_r");
+    JSONArray destText = dest.toObject().attributeArray("$r");
     int index = 0;
     int inside = 0;
 
@@ -372,7 +372,7 @@ void DocumentMutation::check(JSONAbstractObject dest, RichTextMutation mutation,
                         inside = 0;
                     }
                 }
-                else if ( destText[index].toObject().hasAttribute("_format"))
+                else if ( destText[index].toObject().hasAttribute("$format"))
                 {
                     // Intentionally do nothing here
                     index++;
@@ -393,7 +393,7 @@ void DocumentMutation::check(JSONAbstractObject dest, RichTextMutation mutation,
             return;
         }
 
-        if ( destText[index].toObject().hasAttribute("_format"))
+        if ( destText[index].toObject().hasAttribute("$format"))
         {
             // Intentionally do nothing here
             index++;
@@ -431,7 +431,7 @@ void DocumentMutation::check(JSONAbstractObject dest, RichTextMutation mutation,
     }
 }
 
-void DocumentMutation::check(InsertMutation mutation, Data* data, bool ignore_underscore)
+void DocumentMutation::check(InsertMutation mutation, Data* data)
 {
     if ( mutation.isConstant() )
         return;
@@ -440,10 +440,9 @@ void DocumentMutation::check(InsertMutation mutation, Data* data, bool ignore_un
         JSONObject obj = mutation.toObject();
         foreach( QString name, obj.attributeNames() )
         {
-            if ( name[0] == '_')
+            // TODO
+            if ( name[0] == '$')
             {
-                if ( ignore_underscore )
-                    continue;
                 data->setError();
                 return;
             }
@@ -549,7 +548,7 @@ JSONAbstractObject DocumentMutation::apply(JSONAbstractObject dest, ObjectMutati
     JSONObject m = mutation.toObject();
     foreach( QString name, m.attributeNames() )
     {
-        if ( name[0] == '_' )
+        if ( name[0] == '$' )
             continue;
         JSONAbstractObject value = destobj.attribute(name);        
         if ( m.attribute(name).isNullValue() )
@@ -618,32 +617,6 @@ JSONAbstractObject DocumentMutation::apply(JSONAbstractObject dest, ArrayMutatio
     return destarr;
 }
 
-//JSONAbstractObject DocumentMutation::apply(InsertMutation mutation, Data* data)
-//{
-//    if ( mutation.isConstant() )
-//        return mutation;
-//    if ( mutation.isObject() )
-//    {
-//        JSONObject m = mutation.toObject();
-//        JSONObject destobj(true);
-//        foreach( QString name, m.attributeNames() )
-//        {
-//            destobj.setAttribute(name, apply( InsertMutation(m.attribute(name)), data ) );
-//        }
-//        return destobj;
-//    }
-//    if ( mutation.isArray() )
-//    {
-//        JSONArray arr = mutation.toArray();
-//        JSONArray destarr(true);
-//        for( int i = 0; i < arr.count(); ++i )
-//            destarr.append( apply( InsertMutation(arr[i]), data));
-//        return destarr;
-//    }
-//    data->setError();
-//    return JSONAbstractObject();
-//}
-
 JSONAbstractObject DocumentMutation::apply(JSONAbstractObject dest, TextMutation mutation, Data* data)
 {
     Q_UNUSED(data);
@@ -673,7 +646,7 @@ JSONAbstractObject DocumentMutation::apply(JSONAbstractObject dest, TextMutation
 
 JSONAbstractObject DocumentMutation::apply(JSONAbstractObject dest, RichTextMutation mutation, Data* data)
 {
-    JSONArray destText = dest.toObject().attributeArray("_r");
+    JSONArray destText = dest.toObject().attributeArray("$r");
 
     int index = 0;
     int inside = 0;

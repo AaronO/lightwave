@@ -8,7 +8,7 @@ LiftMutation::LiftMutation()
 LiftMutation::LiftMutation(const QString& id)
 {
     becomeObject();
-    toObject().setAttribute("_lift", id);
+    toObject().setAttribute("$lift", id);
 }
 
 LiftMutation::LiftMutation(const JSONAbstractObject& mutation)
@@ -25,22 +25,22 @@ LiftMutation::LiftMutation(const LiftMutation& mutation)
 
 QString LiftMutation::id() const
 {
-    return toObject().attributeString("_lift");
+    return toObject().attributeString("$lift");
 }
 
 AbstractMutation LiftMutation::mutation() const
 {
-    return AbstractMutation(toObject().attribute("_mutation"));
+    return AbstractMutation(toObject().attribute("$mutation"));
 }
 
 void LiftMutation::setMutation( const AbstractMutation& mutation)
 {
     if ( isNull() )
         becomeObject();
-    toObject().setAttribute( "_mutation", mutation );
+    toObject().setAttribute( "$mutation", mutation );
 }
 
 bool LiftMutation::hasMutation() const
 {
-    return !toObject().attribute("_mutation").isNull();
+    return !toObject().attribute("$mutation").isNull();
 }

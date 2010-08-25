@@ -10,7 +10,7 @@ ObjectMutation::ObjectMutation(bool create_empty)
     if ( create_empty )
     {
         becomeObject();
-        toObject().setAttribute("_object", true);
+        toObject().setAttribute("$object", true);
     }
 }
 
@@ -31,7 +31,7 @@ void ObjectMutation::setMutation( const QString& name, const AbstractMutation& m
     if ( isNull() )
     {
         becomeObject();
-        toObject().setAttribute("_object", true);
+        toObject().setAttribute("$object", true);
     }
     toObject().setAttribute(name, m);
 }

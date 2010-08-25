@@ -16,9 +16,13 @@ public:
     ~JSONAbstractObject();
 
     JSONAbstractObject& operator=(const JSONAbstractObject& obj);
-    bool operator==(const JSONAbstractObject obj) const { return m_data == obj.m_data; }
-    bool operator!=(const JSONAbstractObject obj) const { return m_data != obj.m_data; }
+    bool operator==(const JSONAbstractObject& obj) const { return m_data == obj.m_data; }
+    bool operator!=(const JSONAbstractObject& obj) const { return m_data != obj.m_data; }
     bool equals(const JSONAbstractObject& obj) const;
+    bool operator<(const JSONAbstractObject& obj) const { if ( m_data == obj.m_data ) return false; if ( !m_data ) return true; if ( !obj.m_data ) return false; return m_data->lessThan(obj.m_data); }
+    bool operator<=(const JSONAbstractObject& obj) const { if ( equals(obj) ) return true; if ( !m_data ) return true; if ( !obj.m_data ) return false; return m_data->lessThan(obj.m_data); }
+    bool operator>(const JSONAbstractObject& obj) const { return !equals(obj) && !(*this < obj); }
+    bool operator>=(const JSONAbstractObject& obj) const { return !(*this < obj); }
 
     bool isNull() const { return m_data == 0; }
     bool isObject() const;
@@ -64,6 +68,7 @@ public:
         virtual void removeChild(Data* d) = 0;
         virtual QString toJSON() const = 0;
         virtual bool equals( Data* data ) = 0;
+        virtual bool lessThan( const Data* data ) const = 0;
     };
 
     JSONAbstractObject(Data* data) : m_data(data) { if ( m_data) m_data->counter++; }

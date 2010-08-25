@@ -116,7 +116,7 @@ private:
     /**
       * The key is the view name concatenated with "/" and the index name and the value is the result of index mapping.
       */
-    QHash<QString,JSONArray> m_indices;
+    // QHash<QString,JSONArray> m_indices;
 
     static QNetworkAccessManager* s_networkManager;
 };

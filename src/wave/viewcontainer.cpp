@@ -42,3 +42,8 @@ WaveContainer* ViewContainer::createWaveContainer(const QString& name)
 
     return 0;
 }
+
+View* ViewContainer::view(const QString& viewId) const
+{
+    return dynamic_cast<View*>(document(viewId));
+}

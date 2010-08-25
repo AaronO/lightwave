@@ -160,3 +160,20 @@ bool JSONArray::ArrayData::equals( JSONAbstractObject::Data* data )
     }
     return true;
 }
+
+bool JSONArray::ArrayData::lessThan( const JSONAbstractObject::Data* data ) const
+{
+    const JSONArray::ArrayData* d = dynamic_cast<const JSONArray::ArrayData*>(data);
+    if ( !d )
+        return this->toJSON() < data->toJSON();
+
+    int len = qMin( arr.length(), d->arr.length() );
+    for( int i = 0; i < len; i++ )
+    {
+        if ( arr.at(i) < d->arr.at(i) )
+            return true;
+        if ( !arr.at(i).equals( d->arr.at(i) ) )
+            return false;
+    }
+    return arr.length() < d->arr.length();
+}
