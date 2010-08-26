@@ -64,8 +64,8 @@ public:
 
     void addView(const QString& viewId, int revisionNumber ) { m_views.insert(viewId, revisionNumber); }
 
-    QScriptValue digestMapping(const QString& viewId) const { return m_digestMap.value(viewId); }
-    QScriptValue digestReduction(const QString& viewId) const { return m_digestReduce.value(viewId); }
+//    QScriptValue digestMapping(const QString& viewId) const { return m_digestMap.value(viewId); }
+//    QScriptValue digestReduction(const QString& viewId) const { return m_digestReduce.value(viewId); }
 
     static QNetworkAccessManager* networkManager();
 
@@ -78,7 +78,7 @@ protected:
     virtual void onDocumentUpdate(WaveDocument* wdoc);
     virtual WaveDocument* createDocument(const QString& docId);
     virtual void updateDigest();
-    virtual void updateDigestReduce(const QString& viewId );
+    // virtual void updateDigestReduce(const QString& viewId );
 
 private:
     /**
@@ -105,14 +105,14 @@ private:
       * has been used to build digest and indices.
       */
     QHash<QString,int> m_views;
-    /**
-      * The key is the view name and the value is the result of digest mapping.
-      */
-    QHash<QString,QScriptValue> m_digestMap;
-    /**
-      * The key is the view name concatenated with "/" and the index name and the value is the result of digest reduction.
-      */
-    QHash<QString,QScriptValue> m_digestReduce;
+//    /**
+//      * The key is the view name and the value is the result of digest mapping.
+//      */
+//    QHash<QString,QScriptValue> m_digestMap;
+//    /**
+//      * The key is the view name concatenated with "/" and the index name and the value is the result of digest reduction.
+//      */
+//    QHash<QString,QScriptValue> m_digestReduce;
     /**
       * The key is the view name concatenated with "/" and the index name and the value is the result of index mapping.
       */
