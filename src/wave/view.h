@@ -20,11 +20,7 @@ public:
 
     ViewContainer* viewContainer() const { return static_cast<ViewContainer*>(parent()); }
 
-    QScriptValue digestMapFunction() const { return m_digestMapFunction; }
-    QScriptValue digestReduceFunction() const { return m_digestReduceFunction; }
-
-    QScriptValue computeDigestMap(WaveContainer* c);
-    QScriptValue computeDigestReduce(WaveContainer* c);
+    void updateDigest(WaveContainer* c);
 
     class Index
     {
@@ -80,9 +76,14 @@ public:
 
 private:
     void clearIndices();
-
+    void computeDigestMap(WaveContainer* c);
+    void computeDigestReduce(WaveContainer* c);
+    void updateDigestReduce(WaveContainer* c);
     QScriptValue parseFunction(const QString& js);
 
+    /**
+      * This variable is true if the JSON object that defines this view is malformed.
+      */
     bool m_malformed;
     QScriptValue m_digestMapFunction;
     QScriptValue m_digestReduceFunction;
@@ -98,6 +99,14 @@ private:
       * The key is the dataBaseDocumentId which generated the item.
       */
     QHash<QString,IndexItemList> m_indexItems;
+    /**
+      * The key is the waveid of the container for which the digest has been created.
+      */
+    QHash<QString,QScriptValue> m_digestMap;
+    /**
+      * The key is the waveid of the container for which the digest has been created and reduced.
+      */
+    QHash<QString,QScriptValue> m_digestReduce;
 };
 
 #endif // VIEW_H

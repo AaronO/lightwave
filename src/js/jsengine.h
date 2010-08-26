@@ -17,7 +17,7 @@ public:
     JSONAbstractObject toJSON(const QScriptValue& value);
 
     QScriptValue invokeMapOnContainer( const QScriptValue& func, WaveContainer* container );
-    QScriptValue invokeReduceOnContainer( const QString& viewId, const QScriptValue& func, WaveContainer* container );
+    QScriptValue invokeReduceOnContainer( const QScriptValue& func, WaveContainer* container, const QScriptValue& containerDigest, const QScriptValue& children );
     QScriptValue invokeMapOnDigest( const QScriptValue& func, const QScriptValue& digest );
 
     static JSEngine* engine();

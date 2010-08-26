@@ -81,14 +81,43 @@ void View::clearIndices()
     m_indices.clear();
 }
 
-QScriptValue View::computeDigestMap(WaveContainer* c)
+void View::updateDigestReduce(WaveContainer* c)
 {
-    return JSEngine::engine()->invokeMapOnContainer( m_digestMapFunction, c );
+    if ( !c->buildsDigest() )
+        return;
+
+    computeDigestReduce(c);
+    if ( c->parentContainer() )
+        updateDigestReduce( c->parentContainer() );
 }
 
-QScriptValue View::computeDigestReduce(WaveContainer* c)
+void View::updateDigest(WaveContainer* c)
 {
-    return JSEngine::engine()->invokeReduceOnContainer( this->documentId(), m_digestReduceFunction, c );
+    if ( m_malformed )
+        return;
+
+    computeDigestMap(c);
+    updateDigestReduce(c);
+}
+
+void View::computeDigestMap(WaveContainer* c)
+{
+    QScriptValue v = JSEngine::engine()->invokeMapOnContainer( m_digestMapFunction, c );
+    qDebug("Digest map for %s is %s", qPrintable(c->waveId().toString()), qPrintable( v.toString()));
+    m_digestMap.insert(c->waveId().toString(), v);
+}
+
+void View::computeDigestReduce(WaveContainer* c)
+{
+    QScriptValue children = JSEngine::engine()->newObject();
+    foreach( const WaveContainer* child, c->childContainers())
+    {
+        children.setProperty(child->name(), m_digestReduce.value(child->waveId().toString()));
+    }
+
+    QScriptValue v = JSEngine::engine()->invokeReduceOnContainer( m_digestReduceFunction, c, m_digestMap.value(c->waveId().toString()), children );
+    qDebug("Digest reduce for %s is %s", qPrintable(c->waveId().toString()), qPrintable( v.toString()));
+    m_digestReduce.insert(c->waveId().toString(), v);
 }
 
 QString View::registerSessionQuery( const Query& query )

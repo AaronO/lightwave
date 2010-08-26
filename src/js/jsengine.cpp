@@ -112,16 +112,13 @@ QScriptValue JSEngine::invokeMapOnContainer( const QScriptValue& func, WaveConta
     return result;
 }
 
-QScriptValue JSEngine::invokeReduceOnContainer( const QString& viewId, const QScriptValue& func, WaveContainer* container )
+QScriptValue JSEngine::invokeReduceOnContainer( const QScriptValue& func, WaveContainer* container, const QScriptValue& containerDigest, const QScriptValue& children )
 {
+    Q_UNUSED(container);
+
     QScriptValue f( func );
     QScriptValueList args;
-    args.append(container->digestMapping(viewId));
-    QScriptValue children = newObject();
-    foreach( WaveContainer* c, container->childContainers())
-    {
-        children.setProperty(c->name(), c->digestReduction(viewId));
-    }
+    args.append(containerDigest);
     args.append(children);
     QScriptValue result = f.call( QScriptValue(), args);
     if ( this->hasUncaughtException() )
