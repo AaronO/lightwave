@@ -64,9 +64,6 @@ public:
 
     void addView(const QString& viewId, int revisionNumber ) { m_views.insert(viewId, revisionNumber); }
 
-//    QScriptValue digestMapping(const QString& viewId) const { return m_digestMap.value(viewId); }
-//    QScriptValue digestReduction(const QString& viewId) const { return m_digestReduce.value(viewId); }
-
     static QNetworkAccessManager* networkManager();
 
 protected:
@@ -105,18 +102,6 @@ private:
       * has been used to build digest and indices.
       */
     QHash<QString,int> m_views;
-//    /**
-//      * The key is the view name and the value is the result of digest mapping.
-//      */
-//    QHash<QString,QScriptValue> m_digestMap;
-//    /**
-//      * The key is the view name concatenated with "/" and the index name and the value is the result of digest reduction.
-//      */
-//    QHash<QString,QScriptValue> m_digestReduce;
-    /**
-      * The key is the view name concatenated with "/" and the index name and the value is the result of index mapping.
-      */
-    // QHash<QString,JSONArray> m_indices;
 
     static QNetworkAccessManager* s_networkManager;
 };
