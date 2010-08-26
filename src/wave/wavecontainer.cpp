@@ -476,44 +476,20 @@ WaveId WaveContainer::waveId() const
     return WaveId( host, pathItems, QString::null);
 }
 
-//void WaveContainer::updateDigestReduce(const QString& viewId )
-//{
-//    if ( !buildsDigest() )
-//        return;
-//
-//    View* v = WaveProvider::self()->view(viewId);
-//    if ( !v )
-//        return;
-//
-//    QScriptValue r = v->computeDigestReduce(this);
-//    m_digestReduce.insert( viewId, r);
-//    qDebug("Digest reduce for %s is %s", qPrintable(waveId().toString()), qPrintable( r.toString()));
-//    if ( parentContainer() )
-//        parentContainer()->updateDigestReduce(viewId);
-//}
-
 void WaveContainer::updateDigest()
 {
-    qDebug("Update digest 1");
     if ( !buildsDigest() )
         return;
-    qDebug("Update digest 2");
+    qDebug("Update digest");
     foreach( QString viewId, m_views.keys() )
     {        
-        qDebug("Update digest 3 %s", qPrintable(viewId));
         View* v = WaveProvider::self()->view(viewId);
         if ( !v || v->isMalformed() )
         {
             m_views.remove(viewId);
             continue;
         }
-        qDebug("Update digest 4 %s", qPrintable(viewId));
         v->updateDigest(this);
-//        QScriptValue d = v->computeDigestMap(this);
-//        qDebug("Digest map for %s is %s", qPrintable(waveId().toString()), qPrintable( d.toString()));
-//        // qDebug("Digest for %s is %i", qPrintable(waveId().toString()), d.toInt32());
-//        m_digestMap.insert( viewId, d );
-//        updateDigestReduce(viewId);
     }
 }
 
