@@ -241,7 +241,7 @@ JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
             qDebug("Strange, wave is open but could not be found %s", qPrintable(id));
             continue;
         }
-        int rev = m_revisionsForEventListener[id];
+        int rev = m_revisionsForDeltaListener[id];
         qDebug("Get mutations for %s since %i", qPrintable(id), rev);
         QList<DocumentMutation> mutations = c->getMutations(wid.documentId(), rev);
         JSONArray arr(true);
@@ -252,7 +252,7 @@ JSONObject Session::sendDeltas(FCGI::FCGIRequest* req)
             arr.append( m.mutation().clone() );
         }
         if ( !mutations.isEmpty() )
-            m_revisionsForEventListener[id] = mutations.last().revisionNumber();
+            m_revisionsForDeltaListener[id] = mutations.last().revisionNumber();
         result.setAttribute(id, arr);
     }
     m_changedDocIdsForDeltaListener.clear();
