@@ -13,6 +13,7 @@ import (
 // --------------------------------------------------------
 // Helper functions
 
+// Creates a HTTP error response
 func makeErrorResponse(res http.ResponseWriter, errorText string) {
   log.Println(errorText)
   m := make(map[string]interface{})
@@ -32,11 +33,18 @@ func makeErrorResponse(res http.ResponseWriter, errorText string) {
 // --------------------------------------------------------
 // Requests
 
+// A base class for incoming requests, i.e. HTTP POST or HTTP GET
 type Request struct {
   Response http.ResponseWriter
+  // The URL query string (if any)
   RawQuery string
+  // Send to this channel if the request has been completed.
+  // Send true to indicate success and false to indicate that an error occurred.
   FinishSignal chan bool
+  // Either FederationOrigin or ClientOrigin to indicate the origin of the request.
   Origin int32
+  // A unique identifier of the destination of this request, i.e. it identifies a Node
+  URI URI
 }
 
 const (
@@ -44,6 +52,7 @@ const (
   ClientOrigin
 )
 
+// Call this after the request has been completed
 func (self Request) SendFinishSignal(result bool) {
   self.FinishSignal <- result
 }
@@ -54,14 +63,12 @@ func (self Request) GetResponseWriter() http.ResponseWriter {
 
 type PostRequest struct {
   Request
-  URI URI
   Data []byte
   MimeType string
 }
 
 type GetRequest struct {
   Request
-  URI URI
 }
 
 const (
@@ -88,6 +95,7 @@ type Subscriber interface {
 // -------------------------------------------
 // Node interface
 
+// All nodes in the document tree must implement this interface
 type Node interface {
   Name() string
   URI() string
@@ -103,6 +111,7 @@ type Node interface {
 // -------------------------------------------
 // NodeBase
 
+// A partial implementation of the Node interface
 type NodeBase struct {
   parent Node
   name string

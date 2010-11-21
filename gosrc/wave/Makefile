@@ -1,9 +1,13 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=path/to/example
+TARG=wave
 GOFILES=\
 	wave.pb.go\
-	waveot.go
+	waveot.go \
+	jsonprotobuf.go
+
+GC += -I ../lib/_obj
+LD += -L ../lib/_obj
 
 include $(GOROOT)/src/Make.pkg
 include $(GOROOT)/src/pkg/goprotobuf.googlecode.com/hg/Make.protobuf

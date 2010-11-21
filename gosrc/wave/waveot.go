@@ -240,6 +240,24 @@ type ElementEnd struct {
   Format DocumentFormat
 }
 
+// ---------------------------------------------------------
+// ProtocolHashedVersion
+
+func (self *ProtocolHashedVersion) Equals(v *ProtocolHashedVersion) bool {
+  if *self.Version != *v.Version {
+	return false
+  }
+  if len(self.HistoryHash) != len(v.HistoryHash) {
+	return false
+  }
+  for i, b := range self.HistoryHash {
+	if b != v.HistoryHash[i] {
+	  return false
+	}
+  }
+  return true
+}
+
 //----------------------------------------------------------
 // ProtocolDocumentOperation
 

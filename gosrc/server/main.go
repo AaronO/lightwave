@@ -16,6 +16,12 @@ func errorHandler(writer http.ResponseWriter, req *http.Request, errorText strin
   fmt.Fprintf(writer, "<p>%s</p>", errorText)
 }
 
+// Maps wave federation requests to requests of the generalized federation protocol.
+// Therefore, this handler is just performing some URL rewriting
+func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
+  // TODO
+}
+
 func clientHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
   host := r.Host
@@ -36,7 +42,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
   // GET handler
   if r.Method == "GET" {
 	ch := make(chan bool)
-	req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin}, uri}
+	req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin, uri}}
 	server.Get( req )
 	<- ch
 	log.Println("GET finished")
@@ -54,7 +60,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	  return
 	}
 	ch := make(chan bool)
-	req := &lightwave.PostRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin}, uri, buffer, ""}
+	req := &lightwave.PostRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin, uri}, buffer, ""}
 	if req.MimeType, ok = r.Header["Content-Type"]; !ok {
 	  errorHandler(w, r, "Content-Type is missing in POST")
 	  return
@@ -87,7 +93,7 @@ func federationHandler(w http.ResponseWriter, r *http.Request) {
   // GET handler
   if r.Method == "GET" {
 	ch := make(chan bool)
-	req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin}, uri}
+	req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin, uri}}
 	server.Get( req )
 	<- ch
 	log.Println("GET finished")
@@ -105,7 +111,7 @@ func federationHandler(w http.ResponseWriter, r *http.Request) {
 	  return
 	}
 	ch := make(chan bool)
-	req := &lightwave.PostRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin}, uri, buffer, ""}
+	req := &lightwave.PostRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin, uri}, buffer, ""}
 	if req.MimeType, ok = r.Header["Content-Type"]; !ok {
 	  errorHandler(w, r, "Content-Type is missing in POST")
 	  return
@@ -129,6 +135,9 @@ func main() {
   servers["sony"] = server2
   go server2.Run()
 
+  // Behave like a wave server with HTTP transport
+  http.HandleFunc("/wave/fed/", waveFederationHandler)
+  // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
   http.HandleFunc("/fed/", federationHandler)
   http.HandleFunc("/client/", clientHandler)
   http.ListenAndServe(":8080", nil)
