@@ -6,7 +6,7 @@ import (
   "strings"
   vec "container/vector"
 )
-  
+
 //----------------------------------------------------------------------
 // WaveUrl
 
@@ -42,6 +42,21 @@ func NewWaveUrl(url string) (result *WaveUrl, err os.Error) {
       result.WaveDomain = wave[:i]
       result.WaveId = wave[i+1:]
   }    
+  // TODO: Check that only allowed characters are used
+  return result, nil
+}
+
+func NewWaveUrlFromId(id string) (result *WaveUrl, err os.Error) {
+  split := strings.Split(id, "/", -1)
+  if len(split) != 4 {
+	return nil, os.NewError("Malformed wavelet-id")
+  }
+  result = &WaveUrl{}
+  result.WaveDomain = split[0]
+  result.WaveId = split[1]
+  result.WaveletDomain = split[2]
+  result.WaveletId = split[3]
+  // TODO: Check that only allowed characters are used
   return result, nil
 }
 
