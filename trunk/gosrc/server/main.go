@@ -46,7 +46,7 @@ func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
 	errorHandler(w, r, "Error parsing wave ID")
 	return
   }
-  uri, _ := lightwave.NewURI("/" + waveurl.WaveletDomain + "/" + waveurl.WaveId + "$" + waveurl.WaveDomain + "$" + waveurl.WaveletId)
+  uri, _ := lightwave.NewURI("/" + waveurl.WaveletDomain + "/" + waveurl.WaveDomain + "$" + waveurl.WaveId + "$" + waveurl.WaveletId)
   // GET handler
   if r.Method == "GET" {
 	ch := make(chan bool)
@@ -191,6 +191,10 @@ func main() {
   servers["sony"] = server2
   go server2.Run()
 
+  lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
+  lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
+  lightwave.RegisterNodeFactory("application/json", lightwave.NewDocumentNode)
+  
   // Behave like a wave server with HTTP transport
   http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard

@@ -4,6 +4,7 @@ TARG=wave
 GOFILES=\
 	wave.pb.go\
 	waveot.go \
+	wavenode.go \
 	jsonprotobuf.go
 
 GC += -I ../lib/_obj
