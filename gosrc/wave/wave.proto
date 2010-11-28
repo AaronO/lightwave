@@ -243,3 +243,41 @@ message ProtocolSignerInfo {
   // by the CA) is last.
   repeated bytes certificate = 3;
 }
+
+message ProtocolSubmitRequest {
+    required bytes delta = 1;
+    repeated ProtocolSignature signature = 2;
+    optional ProtocolSignerInfo signer = 3;
+}
+
+message ProtocolSubmitResponse {
+    required int32 operations_applied = 1;
+    optional string error_message = 2;
+    optional ProtocolHashedVersion hashed_version_after_application = 3;
+    optional int64 application_timestamp = 4;
+}
+
+message ProtocolWaveletUpdate {
+	required string wavelet_name = 1;
+    repeated ProtocolAppliedWaveletDelta deltas = 2;
+    // Tells up to which version the deltas have been committed to persistent storage
+    optional int64 commit_notice = 3;
+}
+
+message ClientSubmitRequest {
+	required ProtocolWaveletDelta delta = 1;
+}
+
+message ClientSubmitResponse {
+    required int32 operations_applied = 1;
+    optional string error_message = 2;
+    optional ProtocolHashedVersion hashed_version_after_application = 3;
+    optional int64 application_timestamp = 4;
+}
+
+message ClientWaveletUpdate {
+	required string wavelet_name = 1;
+    repeated ProtocolWaveletDelta deltas = 2;
+    // Tells up to which version the deltas have been committed to persistent storage
+    optional int64 commit_notice = 3;
+}

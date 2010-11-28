@@ -17,7 +17,7 @@ func Marshal(val interface{}, buffer *bytes.Buffer) os.Error {
   }
   v := reflect.Indirect(reflect.NewValue(val)).(*reflect.StructValue)
   typ := v.Type().(*reflect.StructType)
-  return enc_struct_message(v, typ, buffer)
+  return enc_struct(v, typ, buffer)
 }
   
 func enc(val reflect.Value, typ reflect.Type, buffer *bytes.Buffer, req bool) (encoded bool, err os.Error) {  
@@ -53,7 +53,7 @@ func enc(val reflect.Value, typ reflect.Type, buffer *bytes.Buffer, req bool) (e
 	case *reflect.FloatType:
 	  buffer.WriteString( strconv.Ftoa64( val.(*reflect.FloatValue).Get(), 'e', -1 ) )
 	case *reflect.StructType:
-	  enc_struct_message( val.(*reflect.StructValue), typ.(*reflect.StructType), buffer)
+	  enc_struct( val.(*reflect.StructValue), typ.(*reflect.StructType), buffer)
 	case *reflect.SliceType:
 	  st := typ.(*reflect.SliceType).Elem()
 	  sv := val.(*reflect.SliceValue)
@@ -81,8 +81,9 @@ func enc(val reflect.Value, typ reflect.Type, buffer *bytes.Buffer, req bool) (e
   return true, nil
 }
 
-func enc_struct_message(val *reflect.StructValue, typ *reflect.StructType, buffer *bytes.Buffer) os.Error {  
+func enc_struct(val *reflect.StructValue, typ *reflect.StructType, buffer *bytes.Buffer) os.Error {  
   buffer.WriteString("{")
+  first := true
   for i := 0; i < typ.NumField(); i++ {
 	f := typ.Field(i)
 	if f.Tag == "" {
@@ -90,7 +91,7 @@ func enc_struct_message(val *reflect.StructValue, typ *reflect.StructType, buffe
 	}
 	tags := strings.Split(f.Tag[3:len(f.Tag)-1], ",", -1)
 	l := buffer.Len()
-	if i == 0 {
+	if first {
 	  buffer.WriteString( fmt.Sprintf("\"%v\":", tags[1] ) )
 	} else {
 	  buffer.WriteString( fmt.Sprintf(",\"%v\":", tags[1] ) )
@@ -101,6 +102,8 @@ func enc_struct_message(val *reflect.StructValue, typ *reflect.StructType, buffe
 	}
 	if !written {
 	  buffer.Truncate(l)
+	} else {
+	  first = false
 	}
   }
   buffer.WriteString("}")

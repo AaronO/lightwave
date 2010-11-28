@@ -5,6 +5,7 @@ import (
   "os"
   "strings"
   vec "container/vector"
+  proto "goprotobuf.googlecode.com/hg/proto"  
 )
 
 //----------------------------------------------------------------------
@@ -93,6 +94,7 @@ type Wavelet struct {
 func NewWavelet(url *WaveUrl) (result *Wavelet) {
   result = &Wavelet{Url:url}
   result.HashedVersion.HistoryHash = []byte( url.String() )
+  result.HashedVersion.Version = proto.Int64(0)
   result.Documents = make(map[string]*WaveletDocument)
   return result
 }
@@ -157,7 +159,7 @@ func (self *Wavelet) ApplyDelta( delta *ProtocolWaveletDelta ) os.Error {
 	  }
     }
     if op.MutateDocument != nil {
-	  doc := self.Documents[*op.MutateDocument.DocumentId]
+	  doc := self.Document(*op.MutateDocument.DocumentId)
       docop := op.MutateDocument.DocumentOperation
       if err := docop.ApplyTo( doc ); err != nil {
 		return err
@@ -169,9 +171,6 @@ func (self *Wavelet) ApplyDelta( delta *ProtocolWaveletDelta ) os.Error {
 
 //----------------------------------------------------------
 // WaveletDocument
-
-type DocumentNode interface {
-}
 
 type DocumentFormat map[string]string
 
@@ -292,7 +291,7 @@ func (self *ProtocolDocumentOperation) ApplyTo(doc *WaveletDocument) (err os.Err
   // var updatedAnnotation DocumentFormat
   // The annotation update that applies to the right of the current document position  
   // var annotationUpdate DocumentFormat        
-  var c DocumentNode
+  var c interface{}
   
   // Loop until all ops are processed
   for _, op := range self.Component {

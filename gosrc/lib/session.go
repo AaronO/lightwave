@@ -61,8 +61,8 @@ type SessionNode struct {
   // The content of the session
   doc map[string]interface{}
   // The key is the URI of a node that has sent an update.
-  // The value is the document describing this update, i.e. a JSON document
-  queue map[string][]interface{}
+  // The value is the document describing this update, i.e. a serialized JSON document
+  queue map[string][]string
   // This channel is used by document nodes to send updates to the session
   updateChannel chan *UpdateMsg
   poll *GetRequest
@@ -70,7 +70,7 @@ type SessionNode struct {
 
 func NewSessionNode(parent *SessionRootNode, user string, session string) *SessionNode {
   s := &SessionNode{NodeBase:NodeBase{parent:parent, name:user + "/" + session, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool)}, user:user, session:session, doc:make(map[string]interface{})}
-  s.queue = make(map[string][]interface{})
+  s.queue = make(map[string][]string)
   s.updateChannel = make(chan *UpdateMsg)
   s.doc["_meta"] = make(map[string]interface{})
   s.doc["_data"] = make(map[string]interface{})
@@ -101,11 +101,22 @@ func (self *SessionNode) Update(msg *UpdateMsg) {
   self.updateChannel <- msg
 }
 
+func (self *SessionNode) marshalQueue() []byte {
+  str := "{"
+  for name, mut := range self.queue {
+	if str != "{" {
+	  str += ","
+	}
+	str += fmt.Sprintf(`"%v":%v`, name, mut)
+  }
+  return []byte(str)
+}
+
 func (self *SessionNode) update(msg *UpdateMsg) {
   log.Println("Update for session ", self.session, " from URI ", msg.URI)
   lst, ok := self.queue[msg.URI]
   if !ok {
-	lst = []interface{}{msg.Mutation}
+	lst = []string{msg.Mutation}
 	self.queue[msg.URI] = lst
   } else {
 	self.queue[msg.URI] = append(lst, msg.Mutation)
@@ -113,12 +124,8 @@ func (self *SessionNode) update(msg *UpdateMsg) {
   
   // Is somebody polling for this?
   if self.poll != nil {
-	str, err := json.Marshal(self.queue)
-	if err != nil {
-	  panic("Failed marshaling to json")
-	}
 	self.poll.Response.SetHeader("Content-Type", "application/json")
-	_, err = self.poll.Response.Write( str )
+	_, err := self.poll.Response.Write( self.marshalQueue() )
 	if err != nil {
 	  self.poll = nil;
 	  log.Println("Failed writing HTTP response")
@@ -254,44 +261,41 @@ func (self *SessionNode) get(req *GetRequest) {
   if uri.Special != "" {
 	switch uri.Special {
 	  case "_update":
-		str, err := json.Marshal(self.queue)
-		if err != nil {
-		  panic("Failed marshaling to json")
-		}
 		req.Response.SetHeader("Content-Type", "application/json")
-		_, err = req.Response.Write( str )
+		_, err := req.Response.Write( self.marshalQueue() )
 		if err != nil {
 		  log.Println("Failed writing HTTP response")
 		  req.FinishSignal <- false
 		  return
 		}
 		self.queue = nil
-		req.FinishSignal <- false
+		req.FinishSignal <- true
 	  case "_poll":
+		log.Println("Polling")
 		if self.queue != nil && len(self.queue) != 0 {
-		  str, err := json.Marshal(self.queue)
-		  if err != nil {
-			panic("Failed marshaling to json")
-		  }
+		  log.Println("Poll response")
 		  req.Response.SetHeader("Content-Type", "application/json")
-		  _, err = req.Response.Write( str )
+		  _, err := req.Response.Write( self.marshalQueue() )
 		  if err != nil {
 			log.Println("Failed writing HTTP response")
 			req.FinishSignal <- false
 			return
 		  }
 		  self.queue = nil
-		  req.FinishSignal <- false
+		  req.FinishSignal <- true
 		} else {
+		  log.Println("Poll wait")
 		  if self.poll != nil {
 			self.poll.Response.SetHeader("Content-Type", "application/json")
 			self.poll.Response.Write( []byte("{}") )
+			self.poll.FinishSignal <- true
 		  }
 		  self.poll = req
 		}
 	  default:
 		// TODO: Return a 404 instead
 		makeErrorResponse(req.Response, "Unknown URL")
+		req.FinishSignal <- false
 	}
 	return
   }

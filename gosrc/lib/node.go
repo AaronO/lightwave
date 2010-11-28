@@ -8,6 +8,7 @@ import (
   "strings"
   "sync"
   "strconv"
+  "os"
 )
 
 // --------------------------------------------------------
@@ -85,7 +86,8 @@ type PubSubRequest struct {
 
 type UpdateMsg struct {
   URI string
-  Mutation map[string]interface{}
+  // JSON encoded mutation
+  Mutation string
 }
 
 type Subscriber interface {
@@ -169,6 +171,25 @@ func (self *NodeBase) URI() string {
 }
 
 // -------------------------------------------
+// NodeFactory
+
+type NodeFactory func(parent Node, name string, level int) Node
+
+var factories map[string]NodeFactory = make(map[string]NodeFactory)
+
+func RegisterNodeFactory(mimeType string, factory NodeFactory) {
+  factories[mimeType] = factory;
+}
+
+func CreateNode(parent Node, name string, level int, mimeType string) (node Node, err os.Error) {
+  fac, ok := factories[mimeType]
+  if !ok {
+	return nil, os.NewError("Unsupported mimeType: " + mimeType)
+  }
+  return fac(parent, name, level), nil
+}
+
+// -------------------------------------------
 // DocumentNode
 
 type Subscription struct {
@@ -187,7 +208,7 @@ type DocumentNode struct {
   history *DocumentHistory
 }
 
-func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
+func NewDocumentNode(parent Node, name string, level int) Node {
   d := &DocumentNode{children:make(map[string]Node), level:level, NodeBase:NodeBase{parent:parent, name:name,postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   d.subscriptions = make(map[string]Subscription)
   d.doc = make(map[string]interface{})
@@ -239,7 +260,8 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 	self.doc["_endHash"] = "TODOHASH"
 	// Send message to subscribers
 	for _, s := range self.subscriptions {
-	  s.Subscriber.Update( &UpdateMsg{self.URI(), m})
+	  jsonmsg, _ := json.Marshal(m)
+	  s.Subscriber.Update( &UpdateMsg{self.URI(), string(jsonmsg)})
 	}
   } else {
 	panic("Not implemented yet")
@@ -525,7 +547,8 @@ func (self *DocumentNode) pubSub(req* PubSubRequest) {
 		log.Println("Subscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{req.Subscriber, req.Filter}
 		// Send a snapshot to the subscriber
-		req.Subscriber.Update( &UpdateMsg{self.URI(), cloneJsonObject(self.doc)} )
+		m, _ := json.Marshal(self.doc)
+		req.Subscriber.Update( &UpdateMsg{self.URI(), string(m)} )
 	  case Unsubscribe:
 		log.Println("Unsubscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{}, false
@@ -600,21 +623,30 @@ func (self *HostNode) post(req *PostRequest) {
   
   docuri := req.URI.(DocumentURI)
   // A document of the desired name exists?
-  doc, ok := self.children[docuri.NameSeq[0]]
+  existing_doc, ok := self.children[docuri.NameSeq[0]]
   if ok {
-	doc.Post(req)
+	existing_doc.Post(req)
 	return
   }
-  // Create a document?
+  // Create a document? In this case the destination document must be a direct
+  // child of the current node.
   if len(docuri.NameSeq) != 1 {
 	makeErrorResponse(req.Response, "ERROR" )
 	req.FinishSignal <- false
 	return
   }
+  
+  doc, err := CreateNode(self, docuri.NameSeq[0], 1, req.MimeType)
+  if err != nil {
+	makeErrorResponse(req.Response, err.String())
+	req.FinishSignal <- false
+	return
+  }  
+
   oldfinish := req.FinishSignal
   finish := make(chan bool)
   req.FinishSignal = finish
-  doc = NewDocumentNode(self, docuri.NameSeq[0], 1)
+
   go doc.Run()
   doc.Post(req)
   ok = <-finish
@@ -685,6 +717,10 @@ func NewServer(manifest *ServerManifest) *Server {
   // Launch the server, i.e. start processing messages
   go r.sessions.Run()
   return r
+}
+
+func (self *Server) Capabilities() *ServerManifest {
+  return self.manifest
 }
 
 func (self *Server) Gateway(domain string) *FederationGateway {

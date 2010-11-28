@@ -14,4 +14,7 @@ GOFILES=\
 	history.go \
 	capabilities_store.go
 
+GC += -I ../wave/_obj
+LD += -L ../wave/_obj
+
 include $(GOROOT)/src/Make.pkg

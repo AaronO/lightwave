@@ -3,14 +3,62 @@ package wave
 import (
   . "lightwave"
   "strings"
+  "log"
+  "http"
+  "strconv"
+  "json"
+  "bytes"
   proto "goprotobuf.googlecode.com/hg/proto"  
 )
+
+// --------------------------------------------------------
+// Helper functions
+
+// Creates a HTTP error response
+func makeErrorResponse(res http.ResponseWriter, errorText string) {
+  log.Println(errorText)
+  m := make(map[string]interface{})
+  m["ok"] = false
+  m["error"] = errorText
+  json, err := json.Marshal(m)
+  if err != nil {
+	panic("Failed marshaling to json")
+  }
+  res.SetHeader("Content-Type", "application/json")
+  _, err = res.Write( json )
+  if err != nil {
+	log.Println("Failed writing HTTP response")
+  }
+}
+
+func makeClientErrorResponse(res http.ResponseWriter, errorText string) {
+  log.Println(errorText)
+  response := &ClientSubmitResponse{}
+  response.OperationsApplied = proto.Int( 0 )
+  response.ErrorMessage = proto.String(errorText)
+  var buffer bytes.Buffer
+  err := Marshal(response, &buffer)
+  if err != nil {
+	panic("Failed marshaling")
+  }
+  res.SetHeader("Content-Type", "application/json")
+  _, err = res.Write( buffer.Bytes() )
+  if err != nil {
+	log.Println("Failed writing HTTP response")
+  }
+}
+
 
 // -------------------------------------------
 // WaveletNode
 
 type WaveletNode struct {
-  NodeBase
+  parent Node
+  name string
+  postChannel chan *PostRequest
+  getChannel chan *GetRequest
+  stopChannel chan bool
+  pubSubChannel chan *PubSubRequest
   wavelet *Wavelet
   level int
   subscriptions map[string]Subscription
@@ -19,19 +67,66 @@ type WaveletNode struct {
   // TODO history *DocumentHistory
 }
 
-func NewWaveletNode(parent Node, name string, level int) *WaveletNode {
-  namesplit := strings.Split(name, "$")
+func NewWaveletNode(parent Node, name string, level int) Node {
+  namesplit := strings.Split(name, "$", -1)
   if len(namesplit) != 3 {
 	log.Println("Invalid name for a wavelet node ", name)
 	return nil
   }
-  d := &DocumentNode{children:make(map[string]Node), level:level, NodeBase:NodeBase{parent:parent, name:name,postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
+  d := &WaveletNode{level:level, parent:parent, name:name,postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}
   d.subscriptions = make(map[string]Subscription)  
-  wurl := &WaveUrl{namesplit[1],namesplit[0], self.Host().Name(), namesplit[2]}
+  wurl := &WaveUrl{WaveDomain:namesplit[0],WaveId:namesplit[1], WaveletDomain:d.Host().Name(), WaveletId:namesplit[2]}
   d.wavelet = NewWavelet(wurl)
   d.federatedDomains = make(map[string]bool)
   // TODO d.history = NewDocumentHistory()
   return d
+}
+
+func (self *WaveletNode) Server() *Server {
+  if self.parent == nil {
+	return nil
+  }
+  if s, ok := self.parent.(*Server); ok {
+	return s
+  }
+  return self.parent.Server()
+}
+
+func (self *WaveletNode) Host() *HostNode {
+  if self.parent == nil {
+	return nil
+  }
+  if s, ok := self.parent.(*HostNode); ok {
+	return s
+  }
+  return self.parent.Host()
+}
+
+func (self *WaveletNode) Post(req *PostRequest) {
+  self.postChannel <- req
+}
+
+func (self *WaveletNode) Get(req *GetRequest) {
+  self.getChannel <- req
+}
+
+func (self *WaveletNode) Stop() {
+  self.stopChannel <- true
+}
+
+func (self *WaveletNode) PubSub(req *PubSubRequest) {
+    self.pubSubChannel <- req
+}
+
+func (self *WaveletNode) Name() string {
+  return self.name
+}
+
+func (self *WaveletNode) URI() string {
+  if self.parent != nil {
+	return self.parent.URI() + "/" + self.name	
+  }
+  return ""
 }
 
 func (self *WaveletNode) Run() {
@@ -50,21 +145,30 @@ func (self *WaveletNode) Run() {
 }
 
 func (self *WaveletNode) apply( delta *ProtocolWaveletDelta ) bool {
-  if self.HashedVersion.Equals( delta.HashedVersion ) {
+  if self.wavelet.HashedVersion.Equals( delta.HashedVersion ) {
 	err := self.wavelet.ApplyDelta(delta)
 	if err != nil {
 	  log.Println("Failed applying delta: ", err)
 	  return false
 	}
-	self.wavelet.HashedVersion.Version += len(delta.Operation)
+	*self.wavelet.HashedVersion.Version += int64(len(delta.Operation))
 	// TODO: Calculate new hash
 
 	// Send message to subscribers
-	for _, s := range self.subscriptions {
-	  // TODO: Send JSON encoding 
-	  // s.Subscriber.Update( &UpdateMsg{self.URI(), m})
+	if len(self.subscriptions) > 0 {
+	  update := &ClientWaveletUpdate{}
+	  update.WaveletName = proto.String(self.wavelet.Url.String())
+	  update.Deltas = [...]*ProtocolWaveletDelta{delta}[:]
+	  // Send JSON encoding 
+	  var buffer bytes.Buffer
+	  Marshal( update, &buffer )
+	  for _, s := range self.subscriptions {
+		s.Subscriber.Update( &UpdateMsg{self.URI(), buffer.String()})
+	  }
 	}
   } else {
+	log.Println(string(self.wavelet.HashedVersion.HistoryHash))
+	log.Println(string(delta.HashedVersion.HistoryHash))
 	panic("Not implemented yet")
   }
   // TODO history self.history.Append(m)
@@ -84,7 +188,7 @@ func (self *WaveletNode) apply( delta *ProtocolWaveletDelta ) bool {
 	u := NewUserId(s)
 	if u != nil {
 	  // If this is a remote user, we must federate
-	  if u.Domain != server.manifest.Domain {
+	  if u.Domain != server.Capabilities().Domain {
 		self.federatedDomains[u.Domain] = true
 	  }
 	}
@@ -107,7 +211,7 @@ func (self *WaveletNode) apply( delta *ProtocolWaveletDelta ) bool {
 }
 
 func (self *WaveletNode) Revision() int64 {
-  return self.wavelet.HashedVersion.Version
+  return *self.wavelet.HashedVersion.Version
 }
  
 func (self *WaveletNode) IsLocal() bool {
@@ -128,24 +232,34 @@ func (self *WaveletNode) post(req *PostRequest) {
   switch req.Origin {
 	// A message from the client. It must be a ProtocolWaveletDelta
 	case ClientOrigin:
-	  switch req.MimeType {
-		case "application/protobuf":	  
-		  delta := &ProtocolWaveletDelta{}
-		  if err := proto.Unmarshal(req.Data, delta); err != nil {
-			makeErrorResponse(req.Response, "Cannot parse HTTP body. No valid ProtoBuf or wrong message type")
-			req.FinishSignal <- false
-			return
-		  }
-		  if !self.apply(delta) {
-			makeErrorResponse(req.Response, "Could not apply document mutation")
-			req.FinishSignal <- false
-			return
-		  }
-		  req.FinishSignal <- true
-		default:
-		  makeErrorResponse(req.Response, "Data type " + req.MimeType + " not allowed for put/post")
-		  req.FinishSignal <- false
+	  if req.MimeType != "application/json-wave" {
+		makeClientErrorResponse(req.Response, "Data type " + req.MimeType + " not allowed for put/post")
+		req.FinishSignal <- false
 	  }
+	  submit := &ClientSubmitRequest{}
+	  if err := Unmarshal(req.Data, submit); err != nil {
+		makeClientErrorResponse(req.Response, "Cannot parse HTTP body. No valid ProtoBuf or wrong message type: " + err.String())
+		req.FinishSignal <- false
+		return
+	  }
+	  if !self.apply(submit.Delta) {
+		makeClientErrorResponse(req.Response, "Could not apply document mutation")
+		req.FinishSignal <- false
+		return
+	  }
+	  response := &ClientSubmitResponse{}
+	  response.OperationsApplied = proto.Int( len(submit.Delta.Operation) )
+	  // TODO: time stamp
+	  response.HashedVersionAfterApplication = &self.wavelet.HashedVersion
+	  var buffer bytes.Buffer
+	  Marshal(response, &buffer)
+	  req.Response.SetHeader("Content-Type", "application/json")
+	  if _, err := req.Response.Write( buffer.Bytes() ); err != nil {
+		log.Println("Failed writing HTTP response")
+		req.FinishSignal <- false
+		return
+	  }
+	  req.FinishSignal <- true
 	// A message via federation
 	case FederationOrigin:
 	  if self.IsLocal() {
@@ -238,6 +352,7 @@ func (self *WaveletNode) get(req *GetRequest) {
 	  return
 	}	  
 	  // Retrieve the history
+	  log.Println(v1,v2,limit,v1hash,v2hash)
 	  /* TODO
 	  result, err := self.history.Range(int64(v1), v1hash[0], int64(v2), v2hash[0], int64(limit))
 	  if err != nil {
@@ -277,7 +392,7 @@ func (self *WaveletNode) pubSub(req* PubSubRequest) {
 	  log.Println("Subscribing node ", self.URI())
 	  self.subscriptions[req.Filter.Id] = Subscription{req.Subscriber, req.Filter}
 	  // Send a snapshot to the subscriber
-	  req.Subscriber.Update( &UpdateMsg{self.URI(), cloneJsonObject(self.doc)} )
+	  // TODO req.Subscriber.Update( &UpdateMsg{self.URI(), cloneJsonObject(self.doc)} )
 	case Unsubscribe:
 	  log.Println("Unsubscribing node ", self.URI())
 	  self.subscriptions[req.Filter.Id] = Subscription{}, false
