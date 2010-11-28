@@ -109,6 +109,7 @@ func (self *SessionNode) marshalQueue() []byte {
 	}
 	str += fmt.Sprintf(`"%v":%v`, name, mut)
   }
+  str += "}"
   return []byte(str)
 }
 

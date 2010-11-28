@@ -333,4 +333,25 @@ func TestSubmit(t *testing.T) {
 	return
   }
   log.Println(string(msg))
+  
+  m := make(map[string]interface{})
+  err := json.Unmarshal(msg, &m)
+  if err != nil {
+	t.Errorf("Expected Json: %v", err)
+	return
+  }
+  tmp, ok := m["/localhost/localhost$w+abc$conv+root"]
+  if !ok {
+	t.Errorf("Expected to see deltas for the wavelet")
+	return
+  }
+  deltas, ok := tmp.([]interface{})
+  if !ok {
+	t.Errorf("Expected to see a list of deltas")
+	return
+  }
+  if len(deltas) != 2 {
+	t.Errorf("Expected to see a list of two deltas")
+	return
+  }
 }
