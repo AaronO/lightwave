@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<!-- saved from url=(0035)http://fleetinbeing.net/tensor-v1/# -->
+<html lang="en" class=" js flexbox canvas canvastext no-webgl no-touch geolocation postmessage websqldatabase no-indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients cssreflections csstransforms no-csstransforms3d csstransitions fontface video audio localstorage sessionstorage webworkers applicationcache svg inlinesvg smil svgclippaths"><!--<![endif]--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style type="text/css"></style>
+  <meta charset="utf-8">
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame 
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Tensor | Lightwave Interface Concept</title>
+  <meta name="description" content="">
+  <meta name="author" content="Kai Chang and Mary Becica">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Place favicon.ico & apple-touch-icon.png in the root of your domain and delete these references
+  <link rel="shortcut icon" href="http://fleetinbeing.net/favicon.ico">
+  <link rel="apple-touch-icon" href="http://fleetinbeing.net/apple-touch-icon.png">  -->
+
+  <!-- CSS : implied media="all" -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Uncomment if you are specifically targeting less enabled mobile browsers
+  <link rel="stylesheet" media="handheld" href="css/handheld.css?v=2">  -->
+ 
+  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
+  <script async="" src="./scripts/tensor/ga.js"></script>
+  <script src="./scripts/tensor/modernizr-1.6.min.js"></script>
+
+</head>
+
+<body>
+
+  <div id="container">
+    <header style="top: -150px; ">
+      <div class="outer">
+        <p>This is a cabinet.</p>
+        <p>Cabinets are for changing application settings and updating one's user profile.</p>
+        <p>A single cabinet may be opened at once.</p>
+      </div>
+      <div class="inner">
+        <ul>
+          <li><a href="#" class="">Dashboard</a></li>
+          <li><a href="#">Activity</a></li>
+          <li><a href="#" class="active">Navigator</a></li>
+        </ul>
+        <ul class="right">
+          <li>
+            <form action="#search" method="get">
+              <input name="search" results="0" type="text" value="Search Waves">
+              <input type="submit" value="Search">
+            </form>
+          </li>
+          <li><p>kai@acmewave.com</p></li>
+          <li><a href="#">Profile</a></li>
+          <li><a href="#">Settings</a></li>
+          <li><a href="#" id="logout">Logout</a></li>
+        </ul>
+      </div>
+    </header>
+    
+    <div id="main">
+
+      <div class="inner">
+        <div id="hello">
+          <p style="font-weight:bold;">Hi wavers, I'm Tensor!  A user interface concept for Wave in a Box.</p>
+          <p style="font-weight:bold;">This is my navigational view.</p>
+          <p>I use <a href="http://en.wikipedia.org/wiki/Miller_Columns">Miller Columns</a> to traverse complex tree structures and network graphs.</p>
+          <p>You may think I have only three columns, but don't worry.  Miller columns are a renewable resource!</p>
+          <p>The content is static for now.  Use your imagination as you descend into blips and change folders.</p>
+          <p>Please contribute your ideas and critiques to the Wave Protocol mailing list!</p>
+          <p style="color:red; font-weight:bold">Notice!  This version of Tensor is out-of-date.  Find the development version <a href="http://fleetinbeing.net/tensor">here</a>.</p>
+        </div>
+        <div id="content">
+          <div id="leftcol" class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Projects                  
+                <span class="tuck">
+                  <a href="#">+ New project</a>
+                </span>
+              </h2>
+            </div>
+            <div id="list-1" class="list">
+              <div class="selected hidden"></div>
+              <div class="wave new">
+                <h3>Connect Shapes
+                  <span class="updates">
+                    (4)
+                  </span>
+                  <span class="date">
+                    Nov 22 
+                  </span>
+                </h3>
+                <h4>Organizational graphing prototype</h4>
+              </div>
+              <div class="wave new">
+                <h3>Wave in a Box
+                  <span class="updates">
+                    (6)
+                  </span>
+                  <span class="date">
+                    Nov 19
+                  </span>
+                </h3>
+                <h4>Wave Protocol server and client</h4>
+              </div>
+              <div class="wave new">
+                <h3>Programming
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 16 
+                  </span>
+                </h3>
+                <h4>Tutorials, documentation and other resources</h4>
+              </div>
+              <div class="wave">
+                <h3>Machine Learning
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Artificial intelligence resources</h4>
+              </div>
+              <div class="wave">
+                <h3>Wave Summit
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 4 
+                  </span>
+                </h3>
+                <h4>San Francisco conference</h4>
+              </div>
+            </div>
+          </div>              
+          <div id="midcol" class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Waves
+                <span class="tuck">
+                  <a href="#">+ New wave</a> 
+                <span>
+              </span></span></h2>
+            </div>
+            <div id="list-2" class="list">
+              <div class="selected hidden"></div>
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally"> <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>Network Diagrams
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>Data Importer Brainstor
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+            </div>
+          </div>
+          <div id="rightcol" class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Blips
+                <span class="tuck">
+                  <a href="#">+ New blip</a>
+                </span>
+              </h2>
+            </div>
+            <div id="list-3" class="list">
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+            </div>
+          </div>              
+          <div class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Blips
+                <span class="tuck">
+                  <a href="#">+ New blip</a>
+                </span>
+              </h2>
+            </div>
+            <div id="list-4" class="list">
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+            </div>
+          </div>              
+          <div class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Blips
+                <span class="tuck">
+                  <a href="#">+ New blip</a>
+                </span>
+              </h2>
+            </div>
+            <div id="list-5" class="list">
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+            </div>
+          </div>              
+          <div class="col">
+            <div class="colDragger"></div>
+            <div class="head">
+              <h2>Blips
+                <span class="tuck">
+                  <a href="#">+ New blip</a>
+                </span>
+              </h2>
+            </div>
+            <div id="list-6" class="list">
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+              </div>
+            </div>
+          </div>              
+        </div>
+
+      </div>
+      
+      <div class="meta">
+        <ul class="bar">
+          <li><a href="#" class="button">Metadata</a></li>
+          <li><p><strong>Author:</strong></p></li>
+          <li><a href="#">Jubal Early</a></li>
+          <li><p><strong>Tags:</strong></p></li>
+          <li><a href="#">Beauty</a></li>
+          <li><a href="#">Substance</a></li>
+          <li><a href="#">Existence</a></li>
+          <li><a href="#">Sartre</a></li>
+          <li><a href="#">Design</a></li>
+          <li><a href="#">Pyromaniac Midget</a></li>
+          <li><a href="#"></a></li>
+          <li><p><strong>Folder:</strong></p></li>
+          <li><a href="#">Bounties</a></li>
+        </ul>
+        <div class="clearfix"></div>
+        <div class="outer">
+          <p>This is meta space.</p>
+          <p>Information about the current item displays here, so the contents of this bar constantly shift.</p>
+          <p>Machine Learning algorithms might use this space to display their findings.</p>
+        </div>
+      </div>
+
+    </div>
+    
+    <footer>
+      <div class="inner">
+        <ul>
+          <li><a href="#">Waves</a></li>
+          <li><a href="#">Folders</a></li>
+          <li><a href="#">Spaces</a></li>
+          <li><a href="#">Contacts</a></li>
+          <li><a href="#">Groups</a></li>
+          <li><a href="#">Gadgets</a></li>
+          <li><a href="#">Robots</a></li>
+        </ul>
+      </div>
+      <div class="outer">
+        <p>This is a drawer.</p>
+        <p>A list of Waves, Folders, Contacts, Groups, Gadgets, or Robots goes here.</p>
+        <p>Multiple drawers may be opened at once.  They stack on top of each other, newest ones at the top.</p>
+      </div>
+    </footer>
+  </div> <!--! end of #container -->
+
+
+  <!-- Javascript at the bottom for fast page loading -->
+
+  <!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>   
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./scripts/tensor/jquery-1.4.2.js"%3E%3C/script%3E'))</script>
+    
+  <!-- scripts concatenated and minified via ant build script-->
+  <script src="./scripts/tensor/plugins.js"></script>
+  <script src="./scripts/tensor/script.js"></script>
+  <!-- end concatenated and minified scripts-->
+  
+  
+  <!--[if lt IE 7 ]>
+    <script src="js/libs/dd_belatedpng.js"></script>
+    <script> DD_belatedPNG.fix('img, .png_bg'); //fix any <img> or .png_bg background-images </script>
+  <![endif]-->
+
+</body></html>
