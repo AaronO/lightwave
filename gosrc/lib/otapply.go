@@ -16,7 +16,10 @@ func uniqueId() string {
   idcounter++
   return fmt.Sprintf("id%d", idcounter)
 }
-  
+
+// ---------------------------------------------------------
+// Helper functions
+
 func cloneJsonArray(arr []interface{}) []interface{} {
   a := make([]interface{}, len(arr))
   for i, val := range arr {
@@ -44,6 +47,9 @@ func cloneJsonObject(obj map[string]interface{}) map[string]interface{} {
   }
   return m
 }
+
+// ---------------------------------------------------------
+// Document Mutation
 
 // A single mutation of a document
 type DocumentMutation map[string]interface{}
@@ -76,6 +82,9 @@ func (self DocumentMutation) ResultingHash() string {
   return self["_endHash"].(string)
 }
 
+// Applies this document mutation to an object.
+// Returns true on success.
+// If the application fails then the object remains unchanged.
 func (self DocumentMutation) Apply(obj map[string]interface{}, flags uint32) bool {
   data, okdata := self.DataMutation()
   if okdata {
