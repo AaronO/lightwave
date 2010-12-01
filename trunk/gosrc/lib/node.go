@@ -244,29 +244,43 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   }
   m := DocumentMutation(mutation)
 
+  // TODO: Check that the delta has the right hash
+  
   // Apply the mutation at the most recent version of the document?
   if m.AppliedAtRevision() == self.Revision() {
 	if !m.Apply(self.doc, NoFlags) {
 	  log.Println("Failed applying delta")
 	  return false
 	}	
-	// TODO
-	m["_hash"] = "TODOHASH"
-	m["_rev"] =  float64(self.Revision() + 1)
-	self.doc["_rev"] = float64(self.Revision() + 1)
-	log.Println("Resulting version is ", self.Revision())
-	// Send message to subscribers
-	for _, s := range self.subscriptions {
-	  jsonmsg, _ := json.Marshal(m)
-	  s.Subscriber.Update( &UpdateMsg{self.URI(), string(jsonmsg)})
-	}
+  } else if m.AppliedAtRevision() > self.Revision() {
+	// Delta from the future -> error
+	log.Println("Seen delta from the future")
+	return false
   } else {
 	// OT is required
-	
-	panic("Not implemented yet")
+	var ot Transformer
+	deltas := self.history.Tail( m.AppliedAtRevision() )
+	for _, d := range deltas {
+	  log.Println("Transforming ", d, m )
+	  err := ot.Transform( d.Clone(), m )
+	  if err != nil {
+		log.Println("OT Error: ", err)
+		return false
+	  }
+	}
   }
+  self.doc["_rev"] = float64(self.Revision() + 1)
+  log.Println("Resulting version is ", self.Revision())
+  // TODO
+  m["_endHash"] = "TODOHASH"
+  m["_endRev"] =  float64(self.Revision())
   self.history.Append(m)
-  // At this point we know that the mutation is applied.
+  // Send message to subscribers
+  for _, s := range self.subscriptions {
+	jsonmsg, _ := json.Marshal(m)
+	s.Subscriber.Update( &UpdateMsg{self.URI(), string(jsonmsg)})
+  }
+// At this point we know that the mutation is applied.
 
   // If this is just a remote server for this document, we are done
   if !self.Host().IsLocal() {
@@ -546,7 +560,12 @@ func (self *DocumentNode) pubSub(req* PubSubRequest) {
 		log.Println("Subscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{req.Subscriber, req.Filter}
 		// Send a snapshot to the subscriber
-		m, _ := json.Marshal(self.doc)
+		clone := cloneJsonObject(self.doc)
+		clone["_endRev"] = clone["_rev"]
+		clone["_endHash"] = clone["_hash"]
+		clone["_rev"] = 0
+		clone["_hash"] = "TODOHASH"
+		m, _ := json.Marshal(clone)
 		req.Subscriber.Update( &UpdateMsg{self.URI(), string(m)} )
 	  case Unsubscribe:
 		log.Println("Unsubscribing node ", self.URI())

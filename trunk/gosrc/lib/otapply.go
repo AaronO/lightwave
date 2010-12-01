@@ -64,6 +64,11 @@ func (self DocumentMutation) MetaMutation() (result interface{}, ok bool) {
   return m, ok
 }
 
+// Creates a deep copy. This is required because OT changes a DocumentMutation
+func (self DocumentMutation) Clone() DocumentMutation {
+  return DocumentMutation( cloneJsonObject(self) )
+}
+
 func (self DocumentMutation) AppliedAtRevision() int64 {
   return int64(self["_rev"].(float64))
 }

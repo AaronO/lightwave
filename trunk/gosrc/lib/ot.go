@@ -6,6 +6,7 @@ package lightwave
 import (
   "os"
   "math"
+  "fmt"
   vec "container/vector"
 )
 
@@ -96,12 +97,12 @@ func IsTextMutation( obj interface{} ) bool {
 func isSkipOrDeleteMutation( obj interface{}, kind string ) bool {
   switch t := obj.(type) {
 	case map[string]interface{}:
-	  o, err := obj.(map[string]interface{})[kind]
-	  if !err {
+	  o, ok := obj.(map[string]interface{})[kind]
+	  if !ok {
 		return false
 	  }
-	  n, err := o.(float64)
-	  if !err || n < 0 || math.Ceil(n) != n {
+	  n, ok := o.(float64)
+	  if !ok || n < 0 || math.Ceil(n) != n {
 		return false
 	  }
 	  return true
@@ -203,9 +204,9 @@ func toSkipMutation( m interface{} ) SkipMutation {
   return SkipMutation( m.(map[string]interface{}) )
 }
 
-func NewSkipMutation(count int) SkipMutation {
-  s := SkipMutation( make(map[string]interface{}) )
-  s.SetCount(count)
+func NewSkipMutation(count int) map[string]interface{} {
+  s := make(map[string]interface{})
+  s["$skip"] = float64(count)
   return s
 }
 
@@ -223,9 +224,9 @@ func (self DeleteMutation) SetCount(count int) {
   self["$delete"] = float64(count)
 }
 
-func NewDeleteMutation(count int) DeleteMutation {
-  s := DeleteMutation( make(map[string]interface{}) )
-  s.SetCount(count)
+func NewDeleteMutation(count int) map[string]interface{} {
+  s := make(map[string]interface{})
+  s["$delete"] = float64(count)
   return s
 }
 
@@ -294,12 +295,13 @@ func (self Transformer) Transform( s, c DocumentMutation ) os.Error {
 	} else if IsInsertMutation(c_tmp) {
 	  // If the server has an insert mutation it will win
 	  s["_data"] = nil, false
-	}
-	if !IsObjectMutation(c_tmp) {
-	  return os.NewError("The client-side mutation is not an object or insert mutation")
-	}
-	if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
-	  return err
+	} else {
+	  if !IsObjectMutation(c_tmp) {
+		return os.NewError("The client-side mutation is not an object or insert mutation")
+	  }
+	  if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
+		return err
+	  }
 	}
   }
 
@@ -313,12 +315,13 @@ func (self Transformer) Transform( s, c DocumentMutation ) os.Error {
 	} else if IsInsertMutation(c_tmp) {
 	  // If the server has an insert mutation it will win
 	  s["_data"] = nil, false
-	}
-	if !IsObjectMutation(c_tmp) {
-	  return os.NewError("The client-side mutation is not an object or insert mutation")
-	}
-	if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
-	  return err
+	} else {
+	  if !IsObjectMutation(c_tmp) {
+		return os.NewError("The client-side mutation is not an object or insert mutation")
+	  }
+	  if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
+		return err
+	  }
 	}
   }
 
@@ -969,7 +972,20 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) os.Error
 		cindex++
 	  }
 	} else {
-	  return os.NewError("Mutation not allowed in a text mutation")
+	  switch t := cmut.(type) {
+		case map[string]interface{}:
+		  o, err := cmut.(map[string]interface{})["$skip"]
+		  if !err {
+			panic("1")
+		  }
+		  _, err = o.(float64)
+		  if !err {
+			panic("2")
+		  }
+		default:
+		  panic("3")
+	  }
+	  return os.NewError(fmt.Sprintf("Mutation not allowed in a text mutation:\n%v %v\n%v %v", smut, IsSkipMutation(smut), cmut, IsSkipMutation(cmut)))
 	}
   }
 
