@@ -75,6 +75,8 @@ func (self *StaticNode) get(req *GetRequest) {
 	req.Response.SetHeader("Content-Type", "image/png")
   } else if strings.HasSuffix(filename, ".gif" ) {
 	req.Response.SetHeader("Content-Type", "image/gif")
+  } else if strings.HasSuffix(filename, ".css" ) {
+	req.Response.SetHeader("Content-Type", "text/css")
   } else {
 	req.Response.SetHeader("Content-Type", "application/octet-stream")
   }
