@@ -244,6 +244,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   }
   m := DocumentMutation(mutation)
 
+  // Apply the mutation at the most recent version of the document?
   if m.AppliedAtRevision() == self.Revision() {
 	if !m.Apply(self.doc, NoFlags) {
 	  log.Println("Failed applying delta")
@@ -260,6 +261,8 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 	  s.Subscriber.Update( &UpdateMsg{self.URI(), string(jsonmsg)})
 	}
   } else {
+	// OT is required
+	
 	panic("Not implemented yet")
   }
   self.history.Append(m)

@@ -20,7 +20,7 @@ func IntMin(j, i int) int {
 }
 
 // ------------------------------------------------------------------------------
-// Operational Transformation
+// Functions for type-checking JSON-encoded mutations
 
 func IsInsertMutation( obj interface{} ) bool {
   switch t := obj.(type) {
@@ -56,12 +56,12 @@ func IsInsertMutation( obj interface{} ) bool {
 func IsObjectMutation( obj interface{} ) bool {
   switch t := obj.(type) {
 	case map[string]interface{}:
-	  o, err := obj.(map[string]interface{})["$object"]
-	  if !err {
+	  o, ok := obj.(map[string]interface{})["$object"]
+	  if !ok {
 		return false
 	  }
-	  b, err := o.(bool)
-	  if !err || !b {
+	  b, ok := o.(bool)
+	  if !ok || !b {
 		return false
 	  }
 	  return true
@@ -279,13 +279,66 @@ type Transformer struct {
   cLiftCounterpart map[string]Mutation
 }
 
-func (self Transformer) Transform( s, c ObjectMutation ) os.Error {
-  self.transform_pass0_object( s, c )
-  self.transform_pass1_object( s, c )
+func (self Transformer) Transform( s, c DocumentMutation ) os.Error {
+  // Safety check
+  if s.AppliedAtRevision() != c.AppliedAtRevision() {
+	return os.NewError("Mutations must be applicable to the same document version to be transformed")
+  }
+  s_tmp, s_ok := s.DataMutation()
+  c_tmp, c_ok := c.DataMutation()
+  // Both have a data mutation?
+  if s_ok && c_ok {
+	if IsInsertMutation(s_tmp) {
+	  // If the server has an insert mutation it will win
+	  c["_data"] = nil, false
+	} else if IsInsertMutation(c_tmp) {
+	  // If the server has an insert mutation it will win
+	  s["_data"] = nil, false
+	}
+	if !IsObjectMutation(c_tmp) {
+	  return os.NewError("The client-side mutation is not an object or insert mutation")
+	}
+	if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
+	  return err
+	}
+  }
+
+  s_tmp, s_ok = s.MetaMutation()
+  c_tmp, c_ok = c.MetaMutation()
+  // Both have a data mutation?
+  if s_ok && c_ok {
+	if IsInsertMutation(s_tmp) {
+	  // If the server has an insert mutation it will win
+	  c["_data"] = nil, false
+	} else if IsInsertMutation(c_tmp) {
+	  // If the server has an insert mutation it will win
+	  s["_data"] = nil, false
+	}
+	if !IsObjectMutation(c_tmp) {
+	  return os.NewError("The client-side mutation is not an object or insert mutation")
+	}
+	if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
+	  return err
+	}
+  }
+
+  s["_rev"] = s["_rev"].(float64) + 1
+  c["_rev"] = c["_rev"].(float64) + 1
+  
   return nil
 }
 
-func (self Transformer) transform_pass0_object( sobj, cobj ObjectMutation ) {  
+func (self Transformer) transform( s, c ObjectMutation ) os.Error {
+  if err := self.transform_pass0_object( s, c ); err != nil {
+	return err
+  }
+  if err := self.transform_pass1_object( s, c ); err != nil {
+	return err
+  }
+  return nil
+}
+
+func (self Transformer) transform_pass0_object( sobj, cobj ObjectMutation ) os.Error {  
   for name, sval := range sobj {
 	// Do not handle the $object attribute
 	if name == "$object" {
@@ -301,18 +354,23 @@ func (self Transformer) transform_pass0_object( sobj, cobj ObjectMutation ) {
 	if IsInsertMutation(sval) || IsInsertMutation(cval) {
 	  continue
 	} else if ( IsObjectMutation(sval) && IsObjectMutation(cval) ) {
-	  self.transform_pass0_object( toObjectMutation( sval ), toObjectMutation( cval ) )
+	  if err := self.transform_pass0_object( toObjectMutation( sval ), toObjectMutation( cval ) ); err != nil {
+		return err
+	  }
 	} else if ( IsArrayMutation(sval) && IsArrayMutation(cval) ) {
-	  self.transform_pass0_array( toArrayMutation( sval ), toArrayMutation( cval ) )
+	  if err := self.transform_pass0_array( toArrayMutation( sval ), toArrayMutation( cval ) ); err != nil {
+		return err
+	  }
 	} else if ( IsTextMutation(sval) && IsTextMutation(cval) ) {
 	  continue
 	} else {
-	  panic("The two mutations of the object are not compatible")
+	  return os.NewError("The two mutations of the object are not compatible")
 	}
   }
+  return nil
 }
 
-func (self Transformer) transform_pass0_array( sobj, cobj ArrayMutation ) {
+func (self Transformer) transform_pass0_array( sobj, cobj ArrayMutation ) os.Error {
   var (
     sindex int = 0
     cindex int = 0
@@ -450,12 +508,14 @@ func (self Transformer) transform_pass0_array( sobj, cobj ArrayMutation ) {
 	  cindex++;
 	  sindex++;
 	} else {
-	  panic("The two mutations in the array do not match")
+	  return os.NewError("The two mutations in the array do not match")
 	}
-  }  
+  }
+  
+  return nil
 }
 
-func (self Transformer) transform_pass0_lift( s, c Mutation ) {
+func (self Transformer) transform_pass0_lift( s, c Mutation ) os.Error {
   if IsObjectMutation(s) && IsObjectMutation(c) {
 	self.transform_pass0_object(toObjectMutation(s), toObjectMutation(c))
 	self.transform_pass1_object(toObjectMutation(s), toObjectMutation(c))
@@ -465,13 +525,13 @@ func (self Transformer) transform_pass0_lift( s, c Mutation ) {
   } else if IsTextMutation(s) && IsTextMutation(c) {
 	self.transform_pass1_text(toTextMutation(s), toTextMutation(c) )
   } else {
-	panic("The two mutations are either incompatible or they are not allowed inside a lift")
+	return os.NewError("The two mutations are either incompatible or they are not allowed inside a lift")
   }
+  return nil
 }
 
-func (self Transformer) transform_pass1_object( sobj, cobj ObjectMutation ) {
-  for name, smut := range sobj {
-	
+func (self Transformer) transform_pass1_object( sobj, cobj ObjectMutation ) os.Error {
+  for name, smut := range sobj {	
 	if name == "$object" {
 	  continue;
 	}
@@ -484,35 +544,43 @@ func (self Transformer) transform_pass1_object( sobj, cobj ObjectMutation ) {
 	  cobj.RemoveAttribute(name);
 	} else if IsObjectMutation(smut) {
 	  if IsObjectMutation(cmut) {
-		self.transform_pass1_object(toObjectMutation(smut), toObjectMutation(cmut) )
+		if err := self.transform_pass1_object(toObjectMutation(smut), toObjectMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else if IsInsertMutation(cmut) {
 		sobj.RemoveAttribute(name)
 	  } else {
-		panic("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
+		return os.NewError("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
 	  }
 	} else if IsArrayMutation(smut) {
 	  if IsArrayMutation(cmut) {
-		self.transform_pass1_array(toArrayMutation(smut), toArrayMutation(cmut) )
+		if err := self.transform_pass1_array(toArrayMutation(smut), toArrayMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else if IsInsertMutation(cmut) {
 		sobj.RemoveAttribute(name)
 	  } else {
-		panic("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
+		return os.NewError("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
 	  }
 	} else if IsTextMutation(smut) {
 	  if IsTextMutation(cmut) {
-		self.transform_pass1_text(toTextMutation(smut), toTextMutation(cmut) )
+		if err := self.transform_pass1_text(toTextMutation(smut), toTextMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else if IsInsertMutation(cmut) {
 		sobj.RemoveAttribute(name);
 	  } else {
-		panic("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
+		return os.NewError("The two mutations are not compatible and/or not allowed inside an object mutation. This should have been detected in pass 0")
 	  }
 	} else {
-	  panic("This mutation is not allowed inside an object mutation. This should have been detected in pass 0")
+	  return os.NewError("This mutation is not allowed inside an object mutation. This should have been detected in pass 0")
 	}
   }
+  
+  return nil
 }
 
-func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) {
+func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) os.Error {
   var (
 	sarr vec.Vector = sobj.Array()
 	carr vec.Vector = cobj.Array()
@@ -647,7 +715,7 @@ func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) {
 	  break
 	}	
 	if sindex == len(sarr) || cindex == len(carr) {
-	  panic("The mutations do not have equal length")
+	  return os.NewError("The mutations do not have equal length")
 	}
 
 	//
@@ -766,13 +834,19 @@ func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) {
 	  }
 	} else {
 	  if IsObjectMutation(smut) && IsObjectMutation(cmut) {
-		self.transform_pass1_object(toObjectMutation(smut), toObjectMutation(cmut) )
+		if err := self.transform_pass1_object(toObjectMutation(smut), toObjectMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else if IsArrayMutation(smut) && IsArrayMutation(cmut) {
-		self.transform_pass1_array(toArrayMutation(smut), toArrayMutation(cmut) )
+		if err := self.transform_pass1_array(toArrayMutation(smut), toArrayMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else if IsTextMutation(smut) && IsTextMutation(cmut) {
-		self.transform_pass1_text(toTextMutation(smut), toTextMutation(cmut) )
+		if err := self.transform_pass1_text(toTextMutation(smut), toTextMutation(cmut) ); err != nil {
+		  return err
+		}
 	  } else {
-		  panic("The mutations are not compatible or not allowed inside an array mutation")
+		  return os.NewError("The mutations are not compatible or not allowed inside an array mutation")
 	  }
 	  sindex++
 	  cindex++
@@ -781,9 +855,11 @@ func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) {
 
   sobj.SetArray(sarr)
   cobj.SetArray(carr)
+  
+  return nil
 }
 
-func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) {
+func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) os.Error {
   var (
 	sarr vec.Vector = sobj.Array()
 	carr vec.Vector = cobj.Array()
@@ -835,7 +911,7 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) {
 
 	  str, err := cmut.(string)
 	  if !err {
-		panic("Only strings allowed inside a text mutation")
+		return os.NewError("Only strings allowed inside a text mutation")
 	  }
 	  cindex++
 	  if len(str) > 0 {
@@ -849,7 +925,7 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) {
 	  break
 	}	
 	if sindex == len(sarr) || cindex == len(carr) {
-	  panic("The mutations do not have equal length")
+	  return os.NewError("The mutations do not have equal length")
 	}
 
 	if IsDeleteMutation(smut) && IsDeleteMutation(cmut) {
@@ -893,12 +969,14 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) {
 		cindex++
 	  }
 	} else {
-	  panic("Mutation not allowed in a text mutation")
+	  return os.NewError("Mutation not allowed in a text mutation")
 	}
   }
 
   sobj.SetArray(sarr)
   cobj.SetArray(carr)
+  
+  return nil
 }
 
 func (self Transformer) split( arr vec.Vector, index, inside int ) {
