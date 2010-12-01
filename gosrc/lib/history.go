@@ -19,6 +19,10 @@ func (self *DocumentHistory) Append(mutation DocumentMutation) {
   self.history = append(self.history, mutation)
 }
 
+func (self *DocumentHistory) Tail(startVersion int64) []DocumentMutation {
+  return self.history[startVersion:]
+}
+
 func (self *DocumentHistory) Range(startVersion int64, startHash string, endVersion int64, endHash string, limit int64) (result string, err os.Error) {
   // Error checking
   if startVersion < 0 || startVersion == int64(len(self.history)) {

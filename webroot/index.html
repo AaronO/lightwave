@@ -10,6 +10,11 @@ function foo()
   LW.Rpc.post( "/client/localhost/foo", '{"_rev":0, "_data":{"foo":"bar"}}', cb )
 }
 
+function foo2()
+{
+  LW.Rpc.post( "/client/localhost/foo", '{"_rev":1, "_data":{"$object":true, "foo":{"$text":[{"$skip":3}, "gain"]}}}', cb )
+}
+
 function cb(txt)
 {
   document.getElementById("result").innerHTML = txt;
@@ -18,6 +23,7 @@ function cb(txt)
 	</script>
 	<h1>Hello Lightwave</h1>
 	<input type="button" value="clickme" onclick="foo()" />
+	<input type="button" value="clickme 2" onclick="foo2()" />
 	<p id="result">...</p>
   </body>
 </html>

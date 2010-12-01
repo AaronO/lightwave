@@ -130,6 +130,9 @@ func (self *SessionNode) marshalQueue() []byte {
 
 func (self *SessionNode) update(msg *UpdateMsg) {
   log.Println("Update for session ", self.session, " from URI ", msg.URI)
+  if self.queue == nil {
+	self.queue = make(map[string][]string)
+  }
   lst, ok := self.queue[msg.URI]
   if !ok {
 	lst = []string{msg.Mutation}
