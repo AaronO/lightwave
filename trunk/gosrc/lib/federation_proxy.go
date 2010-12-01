@@ -59,6 +59,11 @@ func (self *FederationProxy) Submit(req FederationRequest) {
 
 func (self *FederationProxy) Run() {
   self.manifest = Discover(self.domain)
+  if self.manifest == nil {
+	log.Println("Discovery failed")
+	// TODO: Do something reasonable. Try again several times and then ...
+	return
+  }
   log.Println("Discovery finished")
   for {
 	select {

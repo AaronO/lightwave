@@ -216,10 +216,7 @@ func NewDocumentNode(parent Node, name string, level int) Node {
   d.doc["_data"] = make(map[string]interface{})
   d.doc["_rev"] = float64(0)
   // TODO
-  d.doc["_hash"] = "TODOHASH"
-  d.doc["_endRev"] = float64(0)
-  // TODO
-  d.doc["_endHash"] = "TODOHASH"
+  // d.doc["_hash"] = "TODOHASH"
   d.federatedDomains = make(map[string]bool)
   d.history = NewDocumentHistory()
   return d
@@ -253,11 +250,10 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 	  return false
 	}	
 	// TODO
-	m["_endHash"] = "TODOHASH"
-	m["_endRev"] =  float64(self.Revision() + 1)
-	self.doc["_endRev"] = float64(self.Revision() + 1)
-	// TODO
-	self.doc["_endHash"] = "TODOHASH"
+	m["_hash"] = "TODOHASH"
+	m["_rev"] =  float64(self.Revision() + 1)
+	self.doc["_rev"] = float64(self.Revision() + 1)
+	log.Println("Resulting version is ", self.Revision())
 	// Send message to subscribers
 	for _, s := range self.subscriptions {
 	  jsonmsg, _ := json.Marshal(m)
@@ -313,7 +309,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 }
 
 func (self *DocumentNode) Revision() int64 {
-  return int64(self.doc["_endRev"].(float64))
+  return int64(self.doc["_rev"].(float64))
 }
 
 func (self *DocumentNode) addChild(child Node) {
@@ -370,7 +366,7 @@ func (self *DocumentNode) post(req *PostRequest) {
 		  return
 		}
 		req.Response.SetHeader("Content-Type", "application/json")
-		if _, err := req.Response.Write( []byte(fmt.Sprintf("{\"ok\":true, \"appliedAt\":%d}", self.Revision())) ); err != nil {
+		if _, err := req.Response.Write( []byte(fmt.Sprintf("{\"ok\":true, \"version\":%d}", self.Revision())) ); err != nil {
 		  log.Println("Failed writing HTTP response")
 		  req.FinishSignal <- false
 		  return
@@ -750,7 +746,9 @@ func (self *Server) Run() {
   }
 }
 
-func (self *Server) addChild(child Node) {
+// The child being added must already feature an active run method, i.e. it
+// is expected to handle events
+func (self *Server) AddChild(child Node) {
   self.children[child.Name()] = child
 }
 
@@ -773,7 +771,7 @@ func (self *Server) post(req *PostRequest) {
 	  h.Post(req)
 	  ok = <-finish
 	  if ok {
-		self.addChild(h)
+		self.AddChild(h)
 	  } else {
 		h.Stop()
 	  }
@@ -803,6 +801,17 @@ func (self *Server) get(req *GetRequest) {
 		return
 	  }
 	  h.Get(req)
+	  return
+	case StaticURI:
+	  _, ok := req.URI.(*StaticURI)
+	  // Check for the static node
+	  n, ok := self.children["_static"]
+	  if !ok {
+		makeErrorResponse(req.Response, "No static documents on this server")
+		req.FinishSignal <- false
+		return
+	  }
+	  n.Get(req)
 	  return
 	case SessionURI:
 	  self.sessions.Get(req)

@@ -264,6 +264,12 @@ message ProtocolWaveletUpdate {
     optional int64 commit_notice = 3;
 }
 
+message ProtocolWaveletHistory {
+    repeated bytes deltas = 1;
+    optional int64 truncated = 2;
+    optional int64 commit_notice = 3;
+}
+
 message ClientSubmitRequest {
 	required ProtocolWaveletDelta delta = 1;
 }

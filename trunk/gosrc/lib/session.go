@@ -10,7 +10,7 @@ import (
 // SessionData
 
 type SessionData struct {
-  Filters []*NodeFilter
+  Filters map[string]*NodeFilter
 }
 
 func (self *SessionData) contains(id string) bool {
@@ -38,7 +38,6 @@ func (self *SessionData) find(id string) *NodeFilter {
 type NodeFilter struct {
   Id string "_id"
   Rev float64 "_rev"
-  // A  of a document node URI
   Prefix string
   // If true, all children of matching document nodes are considered.
   Recursive bool
@@ -46,6 +45,22 @@ type NodeFilter struct {
   MimeTypes []string
   // Restrictions on the desired schema
   Schemas []string
+}
+
+func NewNodeFilter(prefix string, val interface{}) *NodeFilter {
+  m, ok := val.(map[string]interface{})
+  if !ok {
+	return nil
+  }
+  f := &NodeFilter{}
+  bytes, _ := json.Marshal(m)
+  err := json.Unmarshal(bytes, f)
+  if err != nil {
+	log.Println(err)
+	return nil
+  }
+  f.Prefix = prefix
+  return f
 }
 
 // ------------------------------------------------------
@@ -123,7 +138,7 @@ func (self *SessionNode) update(msg *UpdateMsg) {
 	self.queue[msg.URI] = append(lst, msg.Mutation)
   }
   
-  // Is somebody polling for this?
+  // Is somebody polling?
   if self.poll != nil {
 	self.poll.Response.SetHeader("Content-Type", "application/json")
 	_, err := self.poll.Response.Write( self.marshalQueue() )
@@ -141,18 +156,25 @@ func (self *SessionNode) update(msg *UpdateMsg) {
 
 func (self *SessionNode) parseSessionData() *SessionData {
   s := new(SessionData)
+  s.Filters = make(map[string]*NodeFilter)
   d, ok := self.doc["_data"]
   if !ok {
 	return s
   }
-  bytes, err := json.Marshal(d)
-  if err != nil {
-	panic("Cannot serialize my own documents")
+  f, ok := d.(map[string]interface{})["filters"]
+  if !ok {
+	return s
   }
-  err = json.Unmarshal(bytes, s)
-  if err != nil {
-	panic(fmt.Sprintf("Cannot serialize my own documents: %v %v", err, string(bytes)))
-	return nil
+  filters, ok := f.(map[string]interface{})
+  if !ok {
+	return s
+  }
+  for prefix, val := range filters {
+	filter := NewNodeFilter(prefix, val)
+	if filter == nil {
+	  continue
+	}
+	s.Filters[prefix] = filter
   }
   return s
 }
@@ -169,7 +191,6 @@ func (self *SessionNode) apply( mutation map[string]interface{} ) bool {
 	panic("Cannot parse my own data")
   }
   
-  // Parse the session data
   if m.AppliedAtRevision() == self.Revision() {
 	rev := float64(self.Revision() + 1)
 	m["_rev"] = rev
@@ -182,6 +203,7 @@ func (self *SessionNode) apply( mutation map[string]interface{} ) bool {
 	newdata := self.parseSessionData()
 	if newdata == nil {
 	  log.Println("The last delta messed up the session. The session is now broken")
+	  return false;
 	  // TODO: unsubscribe everything and mark the session as dead
 	  // TODO: This could be avoided with a schema checker
 	}
@@ -245,7 +267,7 @@ func (self *SessionNode) post(req *PostRequest) {
 		return
 	  }
 	  req.Response.SetHeader("Content-Type", "application/json")
-	  if _, err := req.Response.Write( []byte(fmt.Sprintf("{\"ok\":true, \"appliedAt\":%d}", self.Revision())) ); err != nil {
+	  if _, err := req.Response.Write( []byte(fmt.Sprintf("{\"ok\":true, \"version\":%d}", self.Revision())) ); err != nil {
 		log.Println("Failed writing HTTP response")
 		req.FinishSignal <- false
 		return

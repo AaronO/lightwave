@@ -31,6 +31,32 @@ func findServer(host string) (server *lightwave.Server, err os.Error) {
   return server, nil
 }
 
+
+func fileHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+	errorHandler(w, r, err.String())
+	return
+  }
+  log.Println("URI is ", "/_static" + r.URL.Path)
+  // Parse the URI, prepend "/_static"
+  uri, ok := lightwave.NewURI("/_static" + r.URL.Path)
+  if !ok {
+	errorHandler(w, r, "Error parsing URI")
+	return
+  }
+  // GET handler
+  if r.Method != "GET" {
+	errorHandler(w, r, "Unsupported HTTP method")
+  }
+  ch := make(chan bool)
+  req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin, uri}}
+  server.Get( req )
+  <- ch
+  log.Println("GET finished")
+}
+
 // Maps wave federation requests to requests of the generalized federation protocol.
 // Therefore, this handler is performing some URL rewriting
 func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +131,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin, uri}}
 	server.Get( req )
 	<- ch
-	log.Println("GET finished")
+	log.Println("GET finished ", r.URL)
   // POST handler
   } else if r.Method == "POST" {
 	// TODO: Meaningful limit on the size of data
@@ -127,7 +153,7 @@ func clientHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	server.Post( req )
 	<- ch
-	log.Println("POST finished")
+	log.Println("POST finished ", r.URL)
   } else {
 	errorHandler(w, r, "Unsupported HTTP method")
   }
@@ -185,10 +211,16 @@ func main() {
 
   server := lightwave.NewServer(&lightwave.ServerManifest{Domain:"localhost", HostName:"localhost", Port:8080})
   servers["localhost"] = server
+  f := lightwave.NewStaticNode(server, "../webroot")
+  go f.Run()
+  server.AddChild(f)
   go server.Run()
 
   server2 := lightwave.NewServer(&lightwave.ServerManifest{Domain:"sony", HostName:"sony", Port:8080})
   servers["sony"] = server2
+  f2 := lightwave.NewStaticNode(server, "../webroot")
+  go f2.Run()
+  server2.AddChild(f2)
   go server2.Run()
 
   lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
@@ -200,5 +232,6 @@ func main() {
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
   http.HandleFunc("/fed/", federationHandler)
   http.HandleFunc("/client/", clientHandler)
+  http.HandleFunc("/", fileHandler)
   http.ListenAndServe(":8080", nil)
 }

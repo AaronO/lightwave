@@ -1,0 +1,23 @@
+<html>
+  <head>
+	<title>Lightwave</title>
+	<script type="text/javascript" src="scripts/io.js"></script>
+  </head>
+  <body onload="LW.Session.init()">
+	<script type="text/javascript">
+function foo()
+{
+  LW.Rpc.post( "/client/localhost/foo", '{"_rev":0, "_data":{"foo":"bar"}}', cb )
+}
+
+function cb(txt)
+{
+  document.getElementById("result").innerHTML = txt;
+}
+
+	</script>
+	<h1>Hello Lightwave</h1>
+	<input type="button" value="clickme" onclick="foo()" />
+	<p id="result">...</p>
+  </body>
+</html>
