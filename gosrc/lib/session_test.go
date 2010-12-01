@@ -7,6 +7,7 @@ import (
   "io"
   "bufio"
   "json"
+  "log"
 )
 
 func testPost(server *Server, uri string, jsonRequest string, jsonResponse string, t *testing.T) bool {
@@ -18,7 +19,7 @@ func testPost(server *Server, uri string, jsonRequest string, jsonResponse strin
   }  
   ch := make(chan bool)
   w := NewResponseWriter()
-  req := &PostRequest{Request{w, ch}, u, []byte(jsonRequest), "application/json"}
+  req := &PostRequest{Request{w, "", ch, ClientOrigin, u}, []byte(jsonRequest), "application/json"}
   server.Post( req )
   <- ch
   if w.StatusCode != 200 {
@@ -52,7 +53,7 @@ func testGet(server *Server, uri string, jsonResponse string, t *testing.T) bool
   }  
   ch := make(chan bool)
   w := NewResponseWriter()
-  req := &GetRequest{Request{w, ch}, u}
+  req := &GetRequest{Request{w, "", ch, ClientOrigin, u}}
   server.Get( req )
   <- ch	
   if w.StatusCode != 200 {
@@ -210,28 +211,31 @@ func (self *ResponseWriter) Hijack() (io.ReadWriteCloser, *bufio.ReadWriter, os.
 }
 
 func TestSession(t *testing.T) {
+  log.SetFlags( log.Lshortfile)
+
   // Create a root node
   server := NewServer(&ServerManifest{Domain:"localhost", HostName:"localhost", Port:8080})
   go server.Run()
+  RegisterNodeFactory("application/json", NewDocumentNode)
 
   // Stop the root node
   defer server.Stop()
 
-  if !testPost(server, "/local/foo", `{"_rev":0, "_data":{"foo":"bar"}}`, `{"ok":true, "appliedAt":1}`, t) {
+  if !testPost(server, "/localhost/foo", `{"_rev":0, "_data":{"foo":"bar"}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
-  if !testPost(server, "/local/foo", `{"_rev":1, "_data":{"$object":true, "hoo":"gar"}}`, `{"ok":true, "appliedAt":2}`, t) {
+  if !testPost(server, "/localhost/foo", `{"_rev":1, "_data":{"$object":true, "hoo":"gar"}}`, `{"ok":true, "version":2}`, t) {
 	return
   }
-  if !testGet(server, "/local/foo", `{"_rev":2, "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{}}`, t) {
+  if !testGet(server, "/localhost/foo", `{"_rev":2, "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{}}`, t) {
 	return
   }
-  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":[{"prefix":"/local/foo", "recursive":true, "mimeTypes":[], "schemas":[]}]}}`, `{"ok":true, "appliedAt":1}`, t) {
+  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":{"/localhost/foo":{"recursive":true, "mimeTypes":[], "schemas":[]}}}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
 //  time.Sleep(10000)
 //  if !testGet(root, "/_session/weis/s1/_update", `{"/local/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
-  if !testGet(server, "/_session/weis/s1/_poll", `{"/local/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
+  if !testGet(server, "/_session/weis/s1/_poll", `{"/localhost/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
 	return
   }
 }

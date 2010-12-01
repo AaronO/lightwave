@@ -12,7 +12,8 @@ GOFILES=\
 	federation_gateway.go \
 	userid.go \
 	history.go \
-	capabilities_store.go
+	capabilities_store.go \
+	staticnode.go
 
 GC += -I ../wave/_obj
 LD += -L ../wave/_obj

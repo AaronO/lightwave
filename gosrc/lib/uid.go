@@ -73,6 +73,17 @@ func (self DocumentURI) String() string {
 }
 
 // -----------------------------------------------
+// StaticURI
+
+type StaticURI struct {
+  NameSeq []string
+}
+
+func (self StaticURI) String() string {
+  return "/_static/" + strings.Join(self.NameSeq, "/")
+}
+
+// -----------------------------------------------
 // Constructor
 
 func NewURI(uri string) (result URI, ok bool) {
@@ -83,11 +94,19 @@ func NewURI(uri string) (result URI, ok bool) {
   if uri == "_manifest" {
 	return ManifestURI{}, true
   }
+  // Strip a trailing slash
+  if strings.HasSuffix(uri, "/") {
+	uri = uri[0:len(uri)-1]
+  }
   slices := strings.Split( uri, "/", -1 )
   for _, s := range slices {
 	if s == "" {
 	  return nil, false
 	}
+  }
+  // TODO: Ensure that no ".." sequences are used
+  if slices[0] == "_static" {
+	return StaticURI{NameSeq:slices[1:]}, true
   }
   if len(slices) == 0 {
 	return nil, false
