@@ -76,6 +76,10 @@ $(function() {
       }
   });
 
+  $('.newproject').click( function() {
+	alert("You want a new project, cool");
+  } );
+  
   $('.wave').click( function() {
     list     = $(this).parent();
     col      = list.parent();
