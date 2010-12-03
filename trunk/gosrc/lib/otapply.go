@@ -443,16 +443,18 @@ func (self DocumentMutation) applyArrayMutation(arr []interface{}, mutation Arra
 
 func (self DocumentMutation) applyTextMutation(str string, mutation TextMutation, flags uint32) string {
   index := 0
-  for i, m := range mutation.Array() {
+  for _, m := range mutation.Array() {
 	switch {
 	  case IsDeleteMutation(m):
 		count := toDeleteMutation(m).Count()
-		str = str[:i] + str[i+count:]
+		str = str[:index] + str[index + count:]
 	  case IsSkipMutation(m):
 		index += toSkipMutation(m).Count()
 	  default:
 		// Must be an insert mutation, e.g. a string
-		str = str[:i] + m.(string) + str[i:]
+		s := m.(string)
+		str = str[:index] + s + str[index:]
+		index += len(s)
     }
   }
   
