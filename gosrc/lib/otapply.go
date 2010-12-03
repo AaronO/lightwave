@@ -428,6 +428,9 @@ func (self DocumentMutation) applyArrayMutation(arr []interface{}, mutation Arra
 	  case IsSqueezeMutation(m):
 		v.Insert(index, lifts[toSqueezeMutation(m).Id()])
 		index++
+	  case IsObjectMutation(m), IsArrayMutation(m), IsTextMutation(m):
+		v.Insert(index, self.apply( v[index], m, flags ))
+		index++		
 	  default:
 		// Must be an insert mutation
 		v.Insert(index, self.apply( nil, m, flags ))
