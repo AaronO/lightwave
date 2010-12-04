@@ -120,11 +120,19 @@ func (self *SessionNode) Update(msg *UpdateMsg) {
 
 func (self *SessionNode) marshalQueue() []byte {
   str := "{"
-  for name, mut := range self.queue {
+  for name, mutlist := range self.queue {
 	if str != "{" {
 	  str += ","
 	}
-	str += fmt.Sprintf(`"%v":%v`, name, mut)
+	q := "["
+	for _, m := range mutlist {
+	  if ( q != "[" ) {
+		q += ","
+	  }
+	  q += m
+	}
+	q += "]"
+	str += fmt.Sprintf(`"%v":%v`, name, q)
   }
   str += "}"
   return []byte(str)
