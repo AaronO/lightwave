@@ -7,6 +7,7 @@ import (
   "os"
   "math"
   "fmt"
+  "log"
   vec "container/vector"
 )
 
@@ -299,9 +300,11 @@ func (self Transformer) Transform( s, c DocumentMutation ) os.Error {
 	  if !IsObjectMutation(c_tmp) {
 		return os.NewError("The client-side mutation is not an object or insert mutation")
 	  }
+	  log.Println("Translating ", s_tmp, " | ", c_tmp)
 	  if err := self.transform(toObjectMutation(s_tmp), toObjectMutation(c_tmp)); err != nil {
 		return err
 	  }
+	  log.Println("Translated ", s_tmp, " | ", c_tmp)
 	}
   }
 

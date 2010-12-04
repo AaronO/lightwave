@@ -87,7 +87,7 @@ type PubSubRequest struct {
 type UpdateMsg struct {
   URI string
   // JSON encoded mutation
-  Mutation string
+  Mutation []string
 }
 
 type Subscriber interface {
@@ -216,7 +216,7 @@ func NewDocumentNode(parent Node, name string, level int) Node {
   d.doc["_data"] = make(map[string]interface{})
   d.doc["_rev"] = float64(0)
   // TODO
-  // d.doc["_hash"] = "TODOHASH"
+  d.doc["_hash"] = "TODOHASH"
   d.federatedDomains = make(map[string]bool)
   d.history = NewDocumentHistory()
   return d
@@ -278,7 +278,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   // Send message to subscribers
   for _, s := range self.subscriptions {
 	jsonmsg, _ := json.Marshal(m)
-	s.Subscriber.Update( &UpdateMsg{self.URI(), string(jsonmsg)})
+	s.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
   }
 // At this point we know that the mutation is applied.
 
@@ -378,7 +378,7 @@ func (self *DocumentNode) post(req *PostRequest) {
 		// }
 		// Try to apply the data
 		if !self.apply(m) {
-		  makeErrorResponse(req.Response, "Could not apply document mutation")
+		  makeErrorResponse(req.Response, "Could not apply document mutation" + string(req.Data))
 		  req.FinishSignal <- false
 		  return
 		}
@@ -559,14 +559,25 @@ func (self *DocumentNode) pubSub(req* PubSubRequest) {
 	  case Subscribe:
 		log.Println("Subscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{req.Subscriber, req.Filter}
-		// Send a snapshot to the subscriber
-		clone := cloneJsonObject(self.doc)
-		clone["_endRev"] = clone["_rev"]
-		clone["_endHash"] = clone["_hash"]
-		clone["_rev"] = 0
-		clone["_hash"] = "TODOHASH"
-		m, _ := json.Marshal(clone)
-		req.Subscriber.Update( &UpdateMsg{self.URI(), string(m)} )
+		if req.Filter.Snapshot {
+		  // Send a snapshot to the subscriber
+		  clone := cloneJsonObject(self.doc)
+		  clone["_endRev"] = clone["_rev"]
+		  clone["_endHash"] = clone["_hash"]
+		  clone["_rev"] = 0
+		  clone["_hash"] = "TODOHASH"
+		  m, _ := json.Marshal(clone)
+		  req.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(m)}} )
+		} else {
+		  // Send delta history to subscriber
+		  lst := make([]string, self.Revision())
+		  tail := self.history.Tail(0)
+		  for i, d := range tail {
+			m, _ := json.Marshal(d)
+			lst[i] = string(m);
+		  }
+		  req.Subscriber.Update( &UpdateMsg{self.URI(), lst} )
+		}
 	  case Unsubscribe:
 		log.Println("Unsubscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{}, false
