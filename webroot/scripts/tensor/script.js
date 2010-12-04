@@ -1,10 +1,75 @@
-/* Author: Kai Chang
- * Copyright: 2010
-  */
+/*
+ * Author: Kai Chang
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
+ */
 
 $(function() {
 
+  var deselect = function(nextlist, nextnextlist, list, selected) {
+    nextnextlist.fadeOut();
+    list.removeClass('grey');
+    selected.removeClass('selected');
+    nextlist.fadeOut(240, function() {
+      nextlist.removeClass('grey');
+      nextlist.children('.selected').removeClass('selected');
+    });
+  }
+  var select = function(nextlist, list, selected, item) {
+    list.addClass('grey');
+    selected.removeClass('selected'); 
+    item.addClass('selected');
+    $('#container').scrollTop(0);
+    nextlist.fadeIn(235);
+  }
+  var reload = function(nextlist, nextnextlist, selected, item) {
+    nextnextlist.fadeOut(300);
+    selected.removeClass('selected'); 
+    item.addClass('selected');
+    nextlist.fadeOut(300, function() {
+      nextlist.children('.selected').removeClass('selected');
+      nextlist.removeClass('grey');
+      // Change content here 
+    } );
+    $('html').scrollTop(0);
+    nextlist.fadeIn();
+  }
+  var shiftleft = function(col, nextlist) {
+    nextcol  = nextlist.parent();
+    colwidth = col.width();
+    $('#leftcol').attr('id', '');
+    $('#midcol').attr('id', 'leftcol');
+    $('#rightcol').attr('id', 'midcol');
+    nextcol.attr('id', 'rightcol');
+    $('#content').animate({left : '-=' + colwidth}, 340);
+  }
+  var shiftright = function(col, prevlist) {
+    prevcol  = prevlist.parent();
+    colwidth = col.width();
+    $('#rightcol').attr('id', '');
+    $('#midcol').attr('id', 'rightcol');
+    $('#leftcol').attr('id', 'midcol');
+    prevcol.attr('id', 'leftcol');
+    $('#content').animate({left : '+=' + colwidth}, 340);
+  }
   // Header pulldown
+  // TODO: Abstract this code to keep things DRY
   var headspace = 0;
   $('header a').toggle(
     function() {
@@ -76,48 +141,111 @@ $(function() {
       }
   });
 
-  $('.newproject').click( function() {
-	alert("You want a new project, cool");
-  } );
-  
   $('.wave').click( function() {
     list     = $(this).parent();
     col      = list.parent();
     selected = list.children('.selected');
 
-    num      = list.attr('id').substring(5);
-    nextnum  = ++num;
-    nextlist = $('#list-' + nextnum);
-    
-    nextcol  = nextlist.parent();
+    numlist  = parseInt(list.attr('id').substring(5));
 
-    /* TEMPORARY */
-    if ( $('#hello').is(':visible') ) {
-      $('#hello').hide();
-    }
-      
-    if ( $(this).hasClass('selected') ) {
-      list.removeClass('grey');
-      selected.removeClass('selected'); 
-    }
-    else {
-      nextlist.fadeIn(235);
-      list.addClass('grey');
-      selected.removeClass('selected'); 
-      $(this).addClass('selected');
+    nextnum  =  numlist + 1;
+    nextlist = $('#list-' + nextnum);
+    nextnextnum =  numlist + 2;
+    nextnextlist = $('#list-' + nextnextnum);
+    
+    if ( numlist > 1 ) {
+      prevnum  = numlist - 1;
+      prevlist = $('#list-' + prevnum);
+      if ( numlist > 2 ) {
+        prevprevnum  = numlist - 2;
+        prevprevlist = $('#list-' + prevprevnum);
+      }
     }
 
     if ( col.attr('id') == 'rightcol' ) {
-      colwidth = col.width();
-      $('#leftcol').attr('id', '');
-      $('#midcol').attr('id', 'leftcol');
-      $('#rightcol').attr('id', 'midcol');
-      nextcol.attr('id', 'rightcol');
-      $('#content').animate({left : '-=' + colwidth}, 340);
+      shiftleft(col, nextlist);
+      select(nextlist, list, selected, $(this));
     }
+    else if ( col.attr('id') == 'midcol' ) {
+      if ( $(this).hasClass('selected') ) {
+        deselect(nextlist, nextnextlist, list, selected);
+        if ( numlist > 2) {
+          shiftright(col, prevprevlist);
+        }
+      } else if ( list.children().hasClass('selected') ) {
+        reload(nextlist, nextnextlist, selected, $(this));
+      } else {
+        select(nextlist, list, selected, $(this));
+      }
+    }
+    else if ( col.attr('id') == 'leftcol' ) {
+      if ( $(this).hasClass('selected') ) {
+        deselect(nextlist, nextnextlist, list, selected);
+        if ( numlist > 1) {
+          shiftright(col, prevlist);
+        }
+      } else if ( list.children().hasClass('selected') ) {
+        reload(nextlist, nextnextlist, selected, $(this));
+        if ( numlist > 1) {
+          shiftright(col, prevlist);
+        }
+      } else {
+        select(nextlist, list, selected, $(this));
+      }
+    }
+
 
   });
 
+  // ------------------------------------------------
+  // Added by Torben
+  
+  $('.newwave').click( function() {
+	createNewWave();
+  } );
 
 });
+
+// ------------------------------------------------
+// Experimental functions to fill the UI with some live
+
+function createNewWave()
+{
+  if ( !LW.Session.sessionCreated ) {
+	alert("No session created yet");
+	return;
+  }
+  
+  // Instantiate the document
+  var doc = LW.Inbox.getOrCreateDoc("/localhost/foo");
+  doc.submitDocMutation( {"_rev":0, "_data":{"title":"A new document", "content":"Hallo Welt, das ist ein neues Dokument", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}} )
+  doc.content._data._cb_content = contentCallback;
+  
+  // Show the document in the inbox
+  createDocumentInboxView(doc);
+  
+  // Open the document in the session
+  LW.Session.open("/localhost/foo", false);
+}
+
+function contentCallback(doc, obj, attr, mutation, action ) {
+  console.log("Content has been modified: " + obj[attr]);
+  doc._dom.getElementsByTagName("span")[0].innerHTML = obj[attr];
+}
+
+function createDocumentInboxView(doc) {
+  var list = document.getElementById("list-1");
+  var html = '<h3><span class="text">' + esc(doc.content._data.title) + '</span> <span class="updates">(' + doc.content._data.replies.length.toString() + ')</span> <span class="date"> ' + doc.content._data.date + ' </span></h3>';
+  html += '<h4>' + esc(doc.content._data.content) + ' <span class="author">' + doc.content._data.author + '</span></h4>';
+  var div = document.createElement("div")
+  div.className = "wave new";
+  div.innerHTML = html;
+  list.insertBefore(div, list.firstChild);
+  doc.content._dom = div;
+}
+
+function esc(str) {
+  // TODO
+  return str;
+}
 
