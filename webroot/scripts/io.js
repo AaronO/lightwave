@@ -3,10 +3,19 @@ LW = {
 
 LW.Rpc = {
   // TODO
-  user : "weis"
+  user : "weis",
+  queue : [ ]
 };
 
 LW.Rpc.post = function(url, jsonData, callback, errCallback) {
+  LW.Rpc.postOrGet_(url, "POST", jsonData, callback, errCallback);
+}
+
+LW.Rpc.get = function(url, callback, errCallback) {
+  LW.Rpc.postOrGet_(url, "GET", null, callback, errCallback);
+}
+
+LW.Rpc.postOrGet_ = function(url, httpMethod, jsonData, callback, errCallback) {
   var xmlHttp = null;
   try {
 	// Mozilla, Opera, Safari sowie Internet Explorer (ab v7)
@@ -26,7 +35,7 @@ LW.Rpc.post = function(url, jsonData, callback, errCallback) {
 	}
   }
   if (xmlHttp) {
-	xmlHttp.open('POST', url, true);
+	xmlHttp.open(httpMethod, url, true);
 	xmlHttp.setRequestHeader("Content-type", "application/json")
 	xmlHttp.onreadystatechange = function () {
 	  if (xmlHttp.readyState == 4) {
@@ -37,48 +46,38 @@ LW.Rpc.post = function(url, jsonData, callback, errCallback) {
 		}
 	  }
 	};
-	xmlHttp.send(jsonData);
+	if ( jsonData ) {
+	  xmlHttp.send(jsonData);
+	} else {
+	  xmlHttp.send();
+	}
 	return true;
   }
   return false;
 };
 
-LW.Rpc.get = function(url, callback, errCallback) {
-  var xmlHttp = null;
-  try {
-	// Mozilla, Opera, Safari sowie Internet Explorer (ab v7)
-	xmlHttp = new XMLHttpRequest();
-  } 
-  catch(e) {
-	try {
-	  // MS Internet Explorer (ab v6)
-	  xmlHttp  = new ActiveXObject("Microsoft.XMLHTTP");
-	} catch(e) {
-	  try {
-		// MS Internet Explorer (ab v5)
-		xmlHttp  = new ActiveXObject("Msxml2.XMLHTTP");
-	  } catch(e) {
-		xmlHttp  = null;
-	  }
-	}
+LW.Rpc.enqueue = function(url, jsonData) {
+  LW.Rpc.queue.push( { url:url, data:jsonData } )
+  if ( LW.Rpc.queue.length == 1 ) {
+	LW.Rpc.post(url, jsonData, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
   }
-  if (xmlHttp) {
-	xmlHttp.open('GET', url, true);
-	xmlHttp.setRequestHeader("Content-type", "application/json")
-	xmlHttp.onreadystatechange = function () {
-	  if (xmlHttp.readyState == 4) {
-		if( callback && xmlHttp.status == 200 ) {
-		  callback(xmlHttp.responseText);
-		} else if ( errCallback && xmlHttp.status != 200 ) {
-		  errCallback();
-		}
-	  }
-	};
-	xmlHttp.send();
-	return true;
-  }
-  return false;
 };
+
+LW.Rpc.enqueueCallback_ = function() {
+  LW.Rpc.queue.splice(0,1);
+  // Send more?
+  if ( LW.Rpc.queue.length > 0 ) {
+	var msg = LW.Rpc.queue[0];
+	LW.Rpc.post(msg.url, msg.data, enqueueCallback_, enqueueErrCallback_);
+  }
+};
+
+LW.Rpc.enqueueErrCallback_ = function() {
+  alert("Offline", "You seem to be offline");
+};
+
+// -------------------------------------------------------------
+// Session
 
 LW.Session = {
   id : null,
@@ -125,8 +124,14 @@ LW.Session.sessionPoll_ = function() {
 
 LW.Session.sessionPollCallback_ = function(reply) {
   console.log("session: " + reply)
-  var json = JSON.stringify(reply);
-  // TODO ...
+  var json = JSON.parse(reply);
+  for( var url in json ) {
+	var doc = LW.Inbox.getOrCreateDoc(url);
+	var mutations = json[url];
+	for( var i in mutations ) {
+	  doc.recvDocMutation(mutations[i]);
+	}
+  }
   LW.Session.sessionPoll_();
 };
 
