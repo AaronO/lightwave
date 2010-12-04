@@ -1,25 +1,24 @@
 /*
- * Author: Kai Chang and Mary Becica
- * Copyright: 2010
+ * Authors: Kai Chang and Mary Becica
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ *
  */
-
-/* 
-  HTML5 ✰ Boilerplate 
-  
-  style.css contains a reset, font normalization and some base styles.
-  
-  credit is left where credit is due.
-  much inspiration was taken from these projects:
-    yui.yahooapis.com/2.8.1/build/base/base.css
-    camendesign.com/design/
-    praegnanz.de/weblog/htmlcssjs-kickstart
-*/
-
-/* 
-  html5doctor.com Reset Stylesheet (Eric Meyer's Reset Reloaded + HTML5 baseline)
-  v1.4 2009-07-27 | Authors: Eric Meyer & Richard Clark
-  html5doctor.com/html-5-reset-stylesheet/
-*/
 
 html, body, div, span, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
@@ -112,8 +111,8 @@ h1,h2,h3,h4,h5,h6 { font-weight: bold; }
 /* Accessible focus treatment: people.opera.com/patrickl/experiments/keyboard/test */
 a:hover, a:active { outline: none; }
 
-a, a:active, a:visited { color: #607890; }
-a:hover { color: #036; }
+a, a:active, a:visited { color: #047; text-decoration: none;}
+a:hover { color: #036; text-decoration:underline;}
 
 
 ul, ol { margin-left: 1.8em; }
@@ -223,16 +222,33 @@ button {  width: auto; overflow: visible; }
 
 
  /* Primary Styles
-    Author: Kai Chang
- */
+  *  Authors: Kai Chang and Mary Becica
+  */
 
 body {
   background: #efefef;
   color: #333;
 }
+#container {
+  overflow: auto;
+  top:0;
+  height:100%;
+  width:100%;
+}
 p {
   margin: 12px 0;
   color: #333;
+}
+.entry h1 {
+  font-weight:bold;
+  margin:18px 0 2px 0;
+  font-size:24px;
+  border-bottom:1px solid #d3d3d3;
+  }
+.entry h2 {
+  font-size:18px;
+  margin:18px 0 2px 0;
+  border-bottom:1px solid #d3d3d3;
 }
 .left {
   float:left;
@@ -251,26 +267,24 @@ a.button {
   border-radius: 14px !important;
   font-weight: bold;
 }
-.green {
+.green, .wave:hover .green {
   color: #070;
 }
-.yellow {
+.yellow, .wave:hover .yellow {
   color: #c70;
 }
-.red {
+.red, .wave:hover .red {
   color: #700;
 }
 header, footer {
   background: #333;
   position: fixed;
   width: 100%;
-  z-index: 3;
-  -moz-box-shadow: 0px 0px 8px #333;
-  -webkit-box-shadow: 0px 0px 8px #333;
-  box-shadow: 0px 0px 8px #333;
-  
-  /* TEMPORARY */
-  min-width: 1000px;
+  z-index: 7;
+  -moz-box-shadow: 0px 0px 8px #444;
+  -webkit-box-shadow: 0px 0px 8px #444;
+  box-shadow: 0px 0px 8px #444;
+  min-width: 768px;
 }
 header p, footer p {
   color: #ccc;
@@ -288,9 +302,7 @@ footer {
   width: 100%;
   overflow: hidden;
   position: relative;
-
-  /* TEMPORARY */
-  min-width: 1000px;
+  min-width: 768px;
 } 
 .outer {
   width: 100%;
@@ -319,69 +331,58 @@ footer li a, footer li a:visited,
   color: #ccc;
   display: block;
   height: 18px;
-  padding: 0px 8px;
+  padding: 0px 6px;
   margin: 5px 5px;
-  text-decoration: none;
   -moz-border-radius: 10px;
   border-radius: 10px;
+  text-decoration:none;
 }
 header li a:hover,
 header li a.active {
   color:#6bf;
+  text-decoration:none;
 }
 footer li a:hover,
 footer li a.active {
   color: #000;
   background: #ccc;
+  text-decoration:none;
 }
-header input {
+input:focus {
+}
+header input, footer input, .meta input {
   margin: 3px 2px;
   padding: 1px 12px;
-  width: 200px;
-  height: 18px;
   border: none;
-  background:#efefef;
   -moz-border-radius: 9px;
   -webkit-border-radius: 9px;
   border-radius: 9px;
 }
+header input {
+  width: 150px;
+  height: 18px;
+  background:#efefef;
+}
 header input[type="submit"] {
   display: none;
+}
+.meta input {
+  color:#bbb;
+  background:#4d4d4d;
+  width:70px;
+}
+.meta input:hover, .meta input:focus {
+  color:#333;
+  background:#aaa;
 }
 header .inner p {
   height: 20px;
   padding: 5px 4px 1px 14px;
   margin: 0;
 }
-a#logout:hover {
-  color: #700;
-}
 #main {
   margin: 28px 0px;
   height: 100%;
-}
-#hello {
-  position:absolute;
-  top:100px;
-  left:50%;
-  margin-left:-154px;
-  width:280px;
-  padding: 0 12px;
-  z-index:8;
-  background:#dfb;
-  border:2px solid #3d0;
-  color: #000;
-}
-#hello a {
-  color: #305890;
-  text-decoration: none;
-}
-#hello a:hover {
-  color: #fff;
-  background: #607890;
-}
-#hello p {
-  margin: 20px 0;
 }
 #content {
   margin: 0px;
@@ -403,7 +404,6 @@ a#logout:hover {
   width:16.61%;
   position:relative;
   /* TEMPORARY */
-  border-left: 1px solid #b8b8b8;
   min-height: 770px;
 }
 .list {
@@ -416,24 +416,29 @@ a#logout:hover {
   height:auto;
   width:3px;
   border-left:1px solid #c3c3c3;
-  background:#e6e6e6;
+  border-right: 1px solid #b8b8b8;
+  background:#fff;
   min-height:770px;
   cursor:col-resize;
   position:absolute;
   right:0;
-  z-index:2;
+  z-index:5;
 }
 .head {
-  padding:10px;
+  padding:10px 0 ;
+  height:16px;
   background:#efefef;
- background: -moz-linear-gradient(top, #EFEFEF 0%, #DDDDDD 100%); /* firefox */
- background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#EFEFEF), color-stop(100%,#DDDDDD)); /* webkit */
+  background: -moz-linear-gradient(top, #EFEFEF 0%, #DDDDDD 100%);
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#EFEFEF), color-stop(100%,#DDDDDD));
+  position:absolute;
+  width:100%;
+  z-index:4;
 }
 .head h2 {
   font-size:14px;
+  padding:0 9px 0 12px;
 }
 .head a {
-  text-decoration: none;
 }
 .head a:hover {
   text-decoration: underline;
@@ -452,6 +457,7 @@ a#logout:hover {
 .list {
   text-align: left;
   position:relative;
+  padding-top:36px;
 }
 .list .wave {
   padding: 6px 0;
@@ -468,18 +474,64 @@ a#logout:hover {
 .wave.new .bold {
   font-weight: bold;
 }
+.tools .active a {
+  color:#333;
+}
+.tools a, .tools a:visited {
+}
+.tools a:hover {
+  text-decoration:underline;
+}
+.wave .tools {
+  height:18px;
+  display:none;
+  padding:4px 12px 0;
+}
+.selected .tools {
+  display:block;
+  visibility:hidden;
+}
+#midcol .selected .tools {
+  display:block;
+  visibility:visible;
+}
+.view {
+  margin-right:8px;
+}
+.reply, .discuss {
+  margin-right:8px;
+}
+.edit {
+  float:right;
+  margin-right:8px;
+}
+.tools .history {
+  float:right;
+}
 .grey {
-  color: #999;
+  color: #bbb;
+}
+.grey .green {
+  color: #7CCC7C;
+}
+.grey .yellow {
+  color: #D4B07F;
+}
+.grey .red {
+  color: #B07D7D;
 }
 #content .selected {
   background: #fff;
   color: #000;
-  margin:0px -5px 0 0px !important;  
-  padding: 5px 12px 5px 12px !important;
+  margin:0px 0px 0 0px !important;
+  padding: 5px 0px 5px 0px !important;
   z-index:2;
-  border-left:1px solid #b8b8b8;
   border-top:1px solid #b8b8b8;
   border-bottom:1px solid #b8b8b8;
+}
+#content .selected h3, #content .selected h4{
+  padding: 0 12px;
+  color: #000;
 }
 #content .list .project:hover,
 #content .list .wave:hover {
@@ -491,7 +543,6 @@ a#logout:hover {
 }
 #content .list .project.selected:hover,
 #content .list .wave.selected:hover {
-  background: #efefef;
   cursor:auto;
 }
 .list .date, .list .author {
@@ -510,17 +561,55 @@ a#logout:hover {
   margin-right: 12px;
 }
 
+#main .entry {
+  font-size:14px;
+  padding:1px 28px 28px;
+}
+#main .entry p {
+  line-height:1.5em;
+}
+#main .entry h1 {
+  padding-right:220px;
+}
+.entry .tools {
+  margin-top:28px;
+  float:right;
+}
+.entry .tools .wrap {
+  width:auto;
+}
+.entry .tools .view, .entry .tools .edit, .entry .tools .discuss, .entry .tools .history {
+  padding:0px 8px 0px 1px;
+  font-size:11px;
+  float:none;
+}
+
+/* Wikipedia */
+.entry #siteSub {
+  font-size:11px;
+  padding-bottom:6px;
+}
+.entry .rellink {
+  font-size:11px;
+}
+.entry .editsection {
+  font-size:11px;
+  float:right;
+  font-weight:normal;
+  padding:5px 6px 0 0;
+}
+/* End Wikipedia*/
 
 #main .meta {
   height: 128px;
   position: fixed;
   bottom: -72px;
   width: 100%; 
-  background: #555;
+  background: #4d4d4d;
   -moz-box-shadow: 0px 0px 6px #333;
   -webkit-box-shadow: 0px 0px 6px #333;
   box-shadow: 0px 0px 6px #333;
-  z-index:3;
+  z-index:6;
 }
 #main .meta .bar {
   width:100%;

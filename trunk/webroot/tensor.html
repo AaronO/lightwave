@@ -1,48 +1,49 @@
-<!DOCTYPE html>
-<!-- saved from url=(0035)http://fleetinbeing.net/tensor-v1/# -->
-<html lang="en" class=" js flexbox canvas canvastext no-webgl no-touch geolocation postmessage websqldatabase no-indexeddb hashchange history draganddrop websockets rgba hsla multiplebgs backgroundsize borderimage borderradius boxshadow textshadow opacity cssanimations csscolumns cssgradients cssreflections csstransforms no-csstransforms3d csstransitions fontface video audio localstorage sessionstorage webworkers applicationcache svg inlinesvg smil svgclippaths"><!--<![endif]--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style type="text/css"></style>
+<!doctype html>  
+
+<!-- paulirish.com/2008/conditional-stylesheets-vs-css-hacks-answer-neither/ --> 
+<!--[if lt IE 7 ]> <html lang="en" class="no-js ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="no-js ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="no-js ie8"> <![endif]-->
+<!--[if IE 9 ]>    <html lang="en" class="no-js ie9"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!--> <html lang="en" class="no-js"> <!--<![endif]-->
+<head>
   <meta charset="utf-8">
 
   <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame 
        Remove this if you use the .htaccess -->
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 
-  <title>Tensor | Lightwave Interface Concept</title>
+  <title>Lightwave</title>
   <meta name="description" content="">
   <meta name="author" content="Kai Chang and Mary Becica">
 
   <!--  Mobile viewport optimized: j.mp/bplateviewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Place favicon.ico & apple-touch-icon.png in the root of your domain and delete these references
-  <link rel="shortcut icon" href="http://fleetinbeing.net/favicon.ico">
-  <link rel="apple-touch-icon" href="http://fleetinbeing.net/apple-touch-icon.png">  -->
+  <!-- Place favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
   <!-- CSS : implied media="all" -->
   <link rel="stylesheet" href="css/style.css">
 
-  <!-- Uncomment if you are specifically targeting less enabled mobile browsers
-  <link rel="stylesheet" media="handheld" href="css/handheld.css?v=2">  -->
- 
   <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
-  <script async="" src="./scripts/tensor/ga.js"></script>
-  <script src="./scripts/tensor/modernizr-1.6.min.js"></script>
+  <script src="scripts/tensor/modernizr-1.6.min.js"></script>
 
 </head>
 
-<body>
+<body onload="LW.Session.init()">
 
   <div id="container">
-    <header style="top: -150px; ">
+    <header>
       <div class="outer">
         <p>This is a cabinet.</p>
         <p>Cabinets are for changing application settings and updating one's user profile.</p>
-        <p>A single cabinet may be opened at once.</p>
+        <p>A single cabinet may be opened at once.  The current behavior is not correct.</p>
       </div>
       <div class="inner">
         <ul>
-          <li><a href="#" class="">Dashboard</a></li>
-          <li><a href="#">Activity</a></li>
+          <li><a href="#">Dashboard</a></li>
           <li><a href="#" class="active">Navigator</a></li>
         </ul>
         <ul class="right">
@@ -52,7 +53,7 @@
               <input type="submit" value="Search">
             </form>
           </li>
-          <li><p>kai@acmewave.com</p></li>
+          <li><p>kai@acmewave.com</p></a></li>
           <li><a href="#">Profile</a></li>
           <li><a href="#">Settings</a></li>
           <li><a href="#" id="logout">Logout</a></li>
@@ -63,23 +64,17 @@
     <div id="main">
 
       <div class="inner">
-        <div id="hello">
-          <p style="font-weight:bold;">Hi wavers, I'm Tensor!  A user interface concept for Wave in a Box that has been applied to Lightwave.</p>
-          <p style="font-weight:bold;">This is my navigational view.</p>
-          <p>(c) Kai Chang, 2010</p>
-        </div>
         <div id="content">
           <div id="leftcol" class="col">
             <div class="colDragger"></div>
             <div class="head">
-              <h2>Projects                  
+              <h2>Inbox
                 <span class="tuck">
-                  <a class="newproject" href="#">+ New project</a>
+                  <a class="newwave" href="#">+ New wave</a>
                 </span>
               </h2>
             </div>
             <div id="list-1" class="list">
-              <div class="selected hidden"></div>
               <div class="wave new">
                 <h3>Connect Shapes
                   <span class="updates">
@@ -89,7 +84,7 @@
                     Nov 22 
                   </span>
                 </h3>
-                <h4>Organizational graphing prototype bla bla and more text. Will the thing grow when I add more text here? Let's see!</h4>
+                <h4>Organizational graphing prototype</h4>
               </div>
               <div class="wave new">
                 <h3>Wave in a Box
@@ -138,14 +133,13 @@
           <div id="midcol" class="col">
             <div class="colDragger"></div>
             <div class="head">
-              <h2>Waves
+              <h2>Wave
                 <span class="tuck">
                   <a href="#">+ New wave</a> 
                 <span>
-              </span></span></h2>
+              </h2>
             </div>
             <div id="list-2" class="list">
-              <div class="selected hidden"></div>
               <div class="wave new">
                 <h3>Stacked Bar Charts
                   <span class="updates">
@@ -160,6 +154,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Network Diagrams (1)
@@ -174,6 +171,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll new">
                 <h3>Build a custom color picker?
@@ -193,6 +193,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Data Importer Brainstorm (1)
@@ -207,6 +210,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -226,6 +232,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -240,6 +249,9 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>Stacked Bar Charts
@@ -254,6 +266,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>Network Diagrams
@@ -268,6 +283,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Build a custom color picker?
@@ -287,6 +305,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>Data Importer Brainstor
@@ -301,6 +322,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -320,6 +344,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -334,6 +361,234 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave new">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                    (8)
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave new">
+                <h3>Network Diagrams (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave poll new">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                    (2)
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally"> <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave new">
+                <h3>Data Importer Brainstorm (1)
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave">
+                <h3>Stacked Bar Charts
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 22
+                  </span>
+                </h3>
+                <h4>Could we use to graph wave activity?
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave">
+                <h3>Network Diagrams
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 21 
+                  </span>
+                </h3>
+                <h4>Maybe. Tough to visualize many connect...
+                  <span class="author">
+                    River
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave poll">
+                <h3>Build a custom color picker?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="green bold">Yes 24</span>
+                    <span class="">No 9</span>
+                    <span class="">Maybe 6</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave">
+                <h3>Data Importer Brainstor
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Let's hold off on this for until we hear back...
+                  <span class="author">
+                    Peter
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave poll">
+                <h3>Add UML Diagramming?
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 19 
+                  </span>
+                </h3>
+                <h4>
+                  <span class="tally">
+                    <span class="red bold">No 16</span>
+                    <span class="">Yes 13</span>
+                    <span class="">Maybe 2</span>
+                  </span>
+                  <span class="author">
+                    Alexander
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
+              </div>
+              <div class="wave">
+                <h3>SVG Doodad
+                  <span class="updates">
+                  </span>
+                  <span class="date">
+                    Nov 13 
+                  </span>
+                </h3>
+                <h4>Add throttling to dragger.
+                  <span class="author">
+                    Kai
+                  </span>
+                </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
             </div>
           </div>
@@ -361,6 +616,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Network Diagrams (1)
@@ -375,6 +633,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll new">
                 <h3>Build a custom color picker?
@@ -395,6 +656,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Data Importer Brainstorm (1)
@@ -409,6 +673,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -428,6 +695,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -442,6 +712,9 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
             </div>
           </div>              
@@ -469,6 +742,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Network Diagrams (1)
@@ -483,6 +759,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll new">
                 <h3>Build a custom color picker?
@@ -503,6 +782,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Data Importer Brainstorm (1)
@@ -517,6 +799,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -536,6 +821,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -550,6 +838,9 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
             </div>
           </div>              
@@ -577,6 +868,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Network Diagrams (1)
@@ -591,6 +885,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll new">
                 <h3>Build a custom color picker?
@@ -611,6 +908,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Data Importer Brainstorm (1)
@@ -625,6 +925,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -644,6 +947,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -658,6 +964,9 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
             </div>
           </div>              
@@ -685,6 +994,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Network Diagrams (1)
@@ -699,6 +1011,9 @@
                     River
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll new">
                 <h3>Build a custom color picker?
@@ -719,6 +1034,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave new">
                 <h3>Data Importer Brainstorm (1)
@@ -733,6 +1051,9 @@
                     Peter
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave poll">
                 <h3>Add UML Diagramming?
@@ -752,6 +1073,9 @@
                     Alexander
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
               <div class="wave">
                 <h3>SVG Doodad
@@ -766,6 +1090,9 @@
                     Kai
                   </span>
                 </h4>
+                <div class="tools">
+                  <span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>
+                </div>
               </div>
             </div>
           </div>              
@@ -777,14 +1104,11 @@
         <ul class="bar">
           <li><a href="#" class="button">Metadata</a></li>
           <li><p><strong>Author:</strong></p></li>
-          <li><a href="#">Jubal Early</a></li>
+          <li><input name="author" type="text" value="Jubal" /></li>
           <li><p><strong>Tags:</strong></p></li>
-          <li><a href="#">Beauty</a></li>
-          <li><a href="#">Substance</a></li>
-          <li><a href="#">Existence</a></li>
-          <li><a href="#">Sartre</a></li>
-          <li><a href="#">Design</a></li>
-          <li><a href="#">Pyromaniac Midget</a></li>
+          <li><input name="tag1" type="text" value="Beauty" /></li>
+          <li><input name="tag2" type="text" value="Substance" /></li>
+          <li><input name="tag3" type="text" value="Consensus" /></li>
           <li><a href="#"></a></li>
           <li><p><strong>Folder:</strong></p></li>
           <li><a href="#">Bounties</a></li>
@@ -823,18 +1147,22 @@
   <!-- Javascript at the bottom for fast page loading -->
 
   <!-- Grab Google CDN's jQuery. fall back to local if necessary -->
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>   
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./scripts/tensor/jquery-1.4.2.js"%3E%3C/script%3E'))</script>
-    
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="js/libs/jquery-1.4.2.js"%3E%3C/script%3E'))</script>
+  
   <!-- scripts concatenated and minified via ant build script-->
-  <script src="./scripts/tensor/plugins.js"></script>
-  <script src="./scripts/tensor/script.js"></script>
+  <script src="scripts/tensor/plugins.js"></script>
+  <script src="scripts/tensor/script.js"></script>
   <!-- end concatenated and minified scripts-->
   
+  <script type="text/javascript" src="scripts/io.js"></script>
+  <script type="text/javascript" src="scripts/ot.js"></script>
+  <script type="text/javascript" src="scripts/doc.js"></script>
   
   <!--[if lt IE 7 ]>
     <script src="js/libs/dd_belatedpng.js"></script>
     <script> DD_belatedPNG.fix('img, .png_bg'); //fix any <img> or .png_bg background-images </script>
   <![endif]-->
 
-</body></html>
+</body>
+</html>
