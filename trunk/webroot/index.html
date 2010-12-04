@@ -2,17 +2,50 @@
   <head>
 	<title>Lightwave</title>
 	<script type="text/javascript" src="scripts/io.js"></script>
+	<script type="text/javascript" src="scripts/ot.js"></script>
+	<script type="text/javascript" src="scripts/doc.js"></script>
   </head>
   <body onload="LW.Session.init()">
 	<script type="text/javascript">
 function foo()
 {
-  LW.Rpc.post( "/client/localhost/foo", '{"_rev":0, "_data":{"foo":"bar"}}', cb )
+  if ( !LW.Session.sessionCreated ) {
+	alert("No session created yet");
+	return;
+  }
+  // LW.Rpc.post( "/client/localhost/foo", '{"_rev":0, "_data":{"foo":"bar"}}', cb )
+  
+  // Instantiate the document
+  var doc = LW.Inbox.getOrCreateDoc("/localhost/foo");
+  doc.submitDocMutation( {"_rev":0, "_data":{"title":"A new document", "content":"Hallo Welt, das ist ein neues Dokument", "author":"Torben", "date":"Dec 4", "replies":[]}} )
+  doc.content._data._cb_content = contentCallback;
+  
+  // Show the document in the inbox
+  createDocumentInboxView(doc);
+  
+  // Open the document in the session
+  LW.Session.open("/localhost/foo", false);
 }
 
 function foo2()
 {
-  LW.Rpc.post( "/client/localhost/foo", '{"_rev":1, "_data":{"$object":true, "foo":{"$text":[{"$skip":3}, "gain"]}}}', cb )
+  if ( !LW.Session.sessionCreated ) {
+	alert("No session created yet");
+	return;
+  }
+  var doc = LW.Inbox.getOrCreateDoc("/localhost/foo");
+  doc.submitDocMutation( {"_rev":1, "_data":{"$object":true, "content":"I changed the content", "replies":[]}} )
+}
+
+function foo3()
+{
+  if ( !LW.Session.sessionCreated ) {
+	alert("No session created yet");
+	return;
+  }
+  var doc = LW.Inbox.getOrCreateDoc("/localhost/foo");
+  doc.submitDocMutation( {"_rev":1, "_data":{"$object":true, "foo":{"$text":[{"$skip":3}, "pain"]}}} );
+  doc.submitDocMutation( {"_rev":2, "_data":{"$object":true, "foo":{"$text":[{"$skip":7}, "rain"]}}} );
 }
 
 function cb(txt)
@@ -20,10 +53,35 @@ function cb(txt)
   document.getElementById("result").innerHTML = txt;
 }
 
+function contentCallback(doc, obj, attr, mutation, action ) {
+  console.log("Content has been modified: " + obj[attr]);
+  doc._dom.getElementsByTagName("span")[0].innerHTML = obj[attr];
+}
+
+function createDocumentInboxView(doc) {
+  var inbox = document.getElementById("inbox");
+  var html = '<h3><span class="text">' + esc(doc.content._data.title) + '</span> <span class="updates">(' + doc.content._data.replies.length.toString() + ')</span> <span class="date"> ' + doc.content._data.date + ' </span></h3>';
+  html += '<h4>' + esc(doc.content._data.content) + ' <span class="author">' + doc.content._data.author + '</span></h4>';
+  var div = document.createElement("div")
+  div.className = "wave new";
+  div.innerHTML = html;
+  inbox.appendChild(div);
+  doc.content._dom = div;
+}
+
+function esc(str) {
+  // TODO
+  return str;
+}
+
 	</script>
 	<h1>Hello Lightwave</h1>
-	<input type="button" value="clickme" onclick="foo()" />
-	<input type="button" value="clickme 2" onclick="foo2()" />
+	<input type="button" value="Init Session" onclick="" />
+	<input type="button" value="Send initial delta" onclick="foo()" />
+	<input type="button" value="Send next delta" onclick="foo2()" />
+	<input type="button" value="Send own deltas" onclick="foo3()" />
 	<p id="result">...</p>
+	<h1>Inbox</h1>
+	<div id="inbox"> </div>
   </body>
 </html>

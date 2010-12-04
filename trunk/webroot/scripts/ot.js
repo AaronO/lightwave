@@ -6,6 +6,7 @@ if ( !LW.JsonOT ) {
   LW.JsonOT = { };
 }
 
+// Flags for mutation application
 LW.JsonOT.CreateIDs = 1;
 
 LW.JsonOT.uniqueIdCounter_ = 1;
@@ -13,13 +14,35 @@ LW.JsonOT.uniqueId_ = function() {
   return LW.JsonOT.uniqueIdCounter_++;
 };
 
-  
+// Flags for mutation events
+LW.JsonOT.AttributeModified = 1;
+LW.JsonOT.ObjectModified = 2;
+LW.JsonOT.DocumentModified = 3;
+LW.JsonOT.ArrayModified = 4;
+LW.JsonOT.ArrayElementModified = 5;
+LW.JsonOT.ArrayElementDeleted = 6;
+LW.JsonOT.ArrayElementInserted = 7;
+LW.JsonOT.ArrayElementLifted = 8;
+LW.JsonOT.ArrayElementSqueezed = 9;
+
 LW.JsonOT.applyDocMutation = function( doc, docmutation, flags ) {
   if ( docmutation._data ) {
 	doc._data = LW.JsonOT.applyMutation_(doc, doc._data, docmutation._data, flags );
+	// Event
+	if ( doc._data_cb ) {
+	  doc._data_cb(doc, doc, "_data", docmutation._data, LW.JsonOT.AttributeModified );
+	}
   }
   if ( docmutation._meta ) {
 	doc._meta = LW.JsonOT.applyMutation_(doc, doc._meta, docmutation._meta, flags );
+	// Event
+	if ( doc._meta_cb ) {
+	  doc._meta_cb(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeModified );
+	}
+  }
+  // Event
+  if ( doc._cb ) {
+	doc._cb(doc, doc, nil, docmutation, LW.JsonOT.ObjectModified );
   }
 };
 
@@ -35,7 +58,7 @@ LW.JsonOT.applyMutation_ = function( doc, val, mutation, flags ) {
   }
 };
 
-LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags ) {
+LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags, callback ) {
   for ( key in mutation ) {
 	var m = mutation[key];
 	if ( key[0] == '$' ) {
@@ -51,7 +74,15 @@ LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags ) {
 	  delete obj[key];
 	} else {
 	  obj[key] = LW.JsonOT.applyMutation_(doc, obj[key], m, flags);
-	}  
+	}
+	// Event
+	if ( obj["_cb_" + key] ) {
+	  obj["_cb_" + key](doc, obj, key, m, LW.JsonOT.AttributeModified);
+	}
+  }
+  // Event
+  if ( obj._cb ) {
+	callback( doc, obj, nil, mutation, LW.JsonOT.ObjectModified );
   }
   return obj;
 };
@@ -62,6 +93,8 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
   // Find the lifts
   var lifts = {};
   for ( var i in mutation["$array"] ) {
+	if ( i[0] == "_" ) continue;
+	// Skip event handlers
 	var mut = mutation["$array"][i];
 	if ( mut["$delete"] != null ) {
 	  index += mut["$delete"];
@@ -72,7 +105,7 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
 	} else if ( mut["$lift"] ) {
 	  var val = arr[index];
 	  if ( mut["$mutation"] ) {
-		val = LW.JsonOT.applyMutation_(doc, val, mut["$mutation"], flags)
+		val = LW.JsonOT.applyMutation_(doc, val, mut["$mutation"], flags);
 	  }
 	  lifts[mut["$lift"]] = val;
 	  index++;
@@ -83,26 +116,53 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
 
   index = 0;
   for ( var i in mutation["$array"] ) {
+	// Skip event handlers
+	if ( i[0] == "_" ) continue;
 	var mut = mutation["$array"][i];
 	if ( mut["$delete"] != null ) {
 	  arr.splice(index, mut["$delete"]);
+	  // Event
+	  if ( obj._cb_deleted ) {
+		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementDeleted );
+	  }
 	} else if ( mut["$skip"] != null ) {
 	  index += mut["$skip"];
 	} else if ( mut["$lift"] ) {
 	  arr.splice(index, 1);
+	  // Event
+	  if ( obj._cb_lifted ) {
+		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementLifted );
+	  }
 	} else if ( mut["$squeeze"] ) {
 	  arr.splice(index, 0, lifts[mut["$squeeze"]]);
-	  index++
+	  // Event
+	  if ( obj._cb_squeezed ) {
+		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementSqueezed );
+	  }	  
+	  index++;
 	} else if ( mut["$object"] == true || mut["$array"] || mut["$text"] ) {
 	  arr[index] = LW.JsonOT.applyMutation_(doc, arr[index], mut, flags);
+	  // Event
+	  if ( obj._cb_deleted ) {
+		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementModified );
+	  }
 	  index++;
 	} else {
 	  // Insert mutation
 	  arr.splice(index, 0, LW.JsonOT.applyInsertMutation_(doc, mut, flags));
+	  	  // Event
+	  if ( obj._cb_inserted ) {
+		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementInserted );
+	  }
 	  index++;
 	}
   }
   
+  // Event
+  if ( obj._cb ) {
+	callback( doc, obj, nil, mutation, LW.JsonOT.ArrayModified );
+  }
+
   return arr;
 };
 

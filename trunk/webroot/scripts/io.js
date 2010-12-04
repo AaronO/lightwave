@@ -56,23 +56,31 @@ LW.Rpc.postOrGet_ = function(url, httpMethod, jsonData, callback, errCallback) {
   return false;
 };
 
-LW.Rpc.enqueue = function(url, jsonData) {
-  LW.Rpc.queue.push( { url:url, data:jsonData } )
+LW.Rpc.enqueue = function(url, jsonData, callback, errCallback) {
+  LW.Rpc.queue.push( { url:url, data:jsonData, callback:callback, errCallback:errCallback } );
   if ( LW.Rpc.queue.length == 1 ) {
 	LW.Rpc.post(url, jsonData, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
   }
 };
 
-LW.Rpc.enqueueCallback_ = function() {
+LW.Rpc.enqueueCallback_ = function(reply) {
+  var msg = LW.Rpc.queue[0];
+  if ( msg.callback ) {
+	msg.callback(reply);
+  }
   LW.Rpc.queue.splice(0,1);
   // Send more?
   if ( LW.Rpc.queue.length > 0 ) {
 	var msg = LW.Rpc.queue[0];
-	LW.Rpc.post(msg.url, msg.data, enqueueCallback_, enqueueErrCallback_);
+	LW.Rpc.post(msg.url, msg.data, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
   }
 };
 
-LW.Rpc.enqueueErrCallback_ = function() {
+LW.Rpc.enqueueErrCallback_ = function(reply) {
+  var msg = LW.Rpc.queue[0];
+  if ( msg.errCallback ) {
+	msg.errCallback(reply);
+  }
   alert("Offline", "You seem to be offline");
 };
 
@@ -107,7 +115,7 @@ LW.Session.createSessionCallback_ = function(reply) {
 	LW.Session.version = json.version;
 	// Open the inbox
 	// TODO
-	LW.Session.open("/localhost/foo")
+	// LW.Session.open("/localhost/foo")
 	LW.Session.sessionPoll_();
   } else {
 	alert("Failed to create a session");
@@ -139,7 +147,7 @@ LW.Session.sessionPollErrCallback_ = function() {
   alert("Offline", "You seem to be offline");
 };
 	
-LW.Session.open = function(prefix, recursive, mimeTypes, schemas) {
+LW.Session.open = function(prefix, snapshot, recursive, mimeTypes, schemas) {
   if ( !mimeTypes ) {
 	mimeTypes = [];
   }
@@ -147,9 +155,10 @@ LW.Session.open = function(prefix, recursive, mimeTypes, schemas) {
 	schemas = [];
   }
   var json = { "_rev":LW.Session.version, "_data":{ "$object":true, "filters":{"$object":true} } };
-  json._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas};
+  json._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas, "snapshot":snapshot};
   console.log("-> " + JSON.stringify(json))
-  LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.openCallback_, LW.Session.openErrCallback_);
+  // LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.openCallback_, LW.Session.openErrCallback_);
+  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.openCallback_);
 };
 
 LW.Session.openCallback_ = function(reply) {
@@ -162,6 +171,8 @@ LW.Session.openCallback_ = function(reply) {
   }  
 };
 	
+/*
 LW.Session.openErrCallback_ = function() {
   alert("Offline", "You seem to be offline");
 };
+*/
