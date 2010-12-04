@@ -45,6 +45,8 @@ type NodeFilter struct {
   MimeTypes []string
   // Restrictions on the desired schema
   Schemas []string
+  // Determines whether the server might send a snapshot of the current state
+  Snapshot bool
 }
 
 func NewNodeFilter(prefix string, val interface{}) *NodeFilter {
@@ -135,10 +137,10 @@ func (self *SessionNode) update(msg *UpdateMsg) {
   }
   lst, ok := self.queue[msg.URI]
   if !ok {
-	lst = []string{msg.Mutation}
+	lst = msg.Mutation
 	self.queue[msg.URI] = lst
   } else {
-	self.queue[msg.URI] = append(lst, msg.Mutation)
+	self.queue[msg.URI] = append(lst, msg.Mutation...)
   }
   
   // Is somebody polling?

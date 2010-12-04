@@ -130,8 +130,8 @@ func (self DocumentMutation) Check(val interface{}, mutation interface{} ) bool 
 	  return self.checkArrayMutation( a, toArrayMutation(mutation) )
 	case IsTextMutation(mutation):
 	  s, test := val.(string)
-	  log.Println("Expected string")
 	  if !test {
+		log.Println("Expected string")
 		return false
 	  }	  
 	  return self.checkTextMutation( s, toTextMutation(mutation) )

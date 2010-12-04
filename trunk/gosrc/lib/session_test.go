@@ -227,15 +227,15 @@ func TestSession(t *testing.T) {
   if !testPost(server, "/localhost/foo", `{"_rev":1, "_data":{"$object":true, "hoo":"gar"}}`, `{"ok":true, "version":2}`, t) {
 	return
   }
-  if !testGet(server, "/localhost/foo", `{"_rev":2, "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{}}`, t) {
+  if !testGet(server, "/localhost/foo", `{"_rev":2, "_hash":"TODOHASH", "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{}}`, t) {
 	return
   }
-  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":{"/localhost/foo":{"recursive":true, "mimeTypes":[], "schemas":[]}}}}`, `{"ok":true, "version":1}`, t) {
+  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":{"/localhost/foo":{"recursive":true, "snapshot":true, "mimeTypes":[], "schemas":[]}}}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
 //  time.Sleep(10000)
 //  if !testGet(root, "/_session/weis/s1/_update", `{"/local/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
-  if !testGet(server, "/_session/weis/s1/_poll", `{"/localhost/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
+  if !testGet(server, "/_session/weis/s1/_poll", `{"/localhost/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":0, "_hash":"TODOHASH", "_endRev":2, "_endHash":"TODOHASH"}]}`, t) {
 	return
   }
 }
