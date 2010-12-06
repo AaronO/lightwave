@@ -163,7 +163,7 @@ func (self *WaveletNode) apply( delta *ProtocolWaveletDelta ) bool {
 	  var buffer bytes.Buffer
 	  Marshal( update, &buffer )
 	  for _, s := range self.subscriptions {
-		s.Subscriber.Update( &UpdateMsg{self.URI(), buffer.String()})
+		s.Subscriber.Update( &UpdateMsg{self.URI(), []string{buffer.String()}})
 	  }
 	}
   } else {
