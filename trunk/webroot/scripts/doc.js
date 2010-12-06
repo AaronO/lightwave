@@ -24,7 +24,7 @@ LW.Doc.prototype.recvDocMutation = function(mutation) {
 		var own = this.queue[i];
 		// ...
 	}
-	LW.JsonOT.applyDocMutation( this.content, mutation, 0 )
+	LW.JsonOT.applyDocMutation( this.content, mutation, LW.JsonOT.CreateIDs )
   }
   this.version = mutation._endRev;
   this.hash = mutation._endHash;
@@ -42,7 +42,7 @@ LW.Doc.prototype.recvDocMutation = function(mutation) {
 };
 
 LW.Doc.prototype.submitDocMutation = function(mutation) {
-  LW.JsonOT.applyDocMutation( this.content, mutation, 0 )
+  LW.JsonOT.applyDocMutation( this.content, mutation, LW.JsonOT.CreateIDs )
   // Enqueue such that incoming messages can be transformed against it
   this.queue.push(mutation);
   if ( this.pendingSubmit ) {
@@ -60,6 +60,10 @@ LW.Doc.prototype.sendDocMutation_ = function(mutation) {
   LW.Rpc.enqueue("/client" + this.url, JSON.stringify(mutation));
 };
 
+LW.Doc.prototype.getElementById = function(id) {
+  // TODO
+};
+
 // -------------------------------------------------------
 // Inbox
 
@@ -75,4 +79,22 @@ LW.Inbox.getOrCreateDoc = function(url) {
   var d = new LW.Doc(url);
   LW.Inbox.docs_[url] = d;
   return d;
+};
+
+// The id has the form "/localhost/conversation-id!object-id" where conversation-id has the form (/{identifier})*
+LW.Inbox.getElementById = function(id) {
+  var i = id.indexOf("!");
+  var convid;
+  var objectid;
+  if ( i == -1 ) {
+	convid = id;
+  } else {
+	url = id.substr(0, i);
+	convid = id.substring(i + 1, len(id));
+  }
+  var d = new LW.Doc(convid);
+  if ( !objectid ) {
+	return d;
+  }
+  return d.getElementById(objectid);
 };

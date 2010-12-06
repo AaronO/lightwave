@@ -1,5 +1,6 @@
-LW = {
-};
+if ( !window.LW ) {
+  LW = { };
+}
 
 LW.Rpc = {
   // TODO
