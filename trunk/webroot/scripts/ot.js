@@ -210,6 +210,10 @@ LW.JsonOT.applyInsertArrayMutation_ = function( doc, mutation, flags ) {
   for ( var i in mutation ) {
 	a[i] = LW.JsonOT.applyInsertMutation_(doc, mutation[i], flags);
   }
+  if (flags & LW.JsonOT.CreateIDs == LW.JsonOT.CreateIDs) {
+	a._id = LW.JsonOT.uniqueId_();	
+	a._rev = doc._rev;
+  }
   return a;
 };
 

@@ -37,8 +37,7 @@ LW.Tensor.createContent_ = function(item, nextlist) {
 	LW.Tensor.createConversationView();
   } else {
 	var reply = LW.Inbox.getElementById(id);
-	LW.Tensor.createCommentsView(nextlist, reply);
-	// TODO
+	LW.Tensor.createCommentsView(nextlist.toArray()[0], reply);
   }
 };
 
@@ -57,7 +56,7 @@ LW.Tensor.select_ = function(nextlist, list, selected, item) {
   selected.removeClass('selected'); 
   item.addClass('selected');
   $('#container').scrollTop(0);
-  LW.Tensor.createContent_(item);
+  LW.Tensor.createContent_(item, nextlist);
   nextlist.fadeIn(235);
 };
 
@@ -68,7 +67,7 @@ LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
   nextlist.fadeOut(300, function() {
 	nextlist.children('.selected').removeClass('selected');
 	nextlist.removeClass('grey');
-    LW.Tensor.createContent_(item);
+    LW.Tensor.createContent_(item, nextlist);
   } );
   $('html').scrollTop(0);
   nextlist.fadeIn();
@@ -179,13 +178,13 @@ LW.Tensor.createNewComment = function(objectid) {
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
   console.log("New Comment for " + objectid);
-  var obj = LW.Inbox.getElementById(objectid);
-  var arr = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}];
-  if ( obj.replies.length > 0 ) {
-	arr.splice(0,0, {"$skip":obj.replies.length});
+  var arr = LW.Inbox.getElementById(objectid);
+  var mutation = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}];
+  if ( arr.length > 0 ) {
+	mutation.splice(0,0, {"$skip":arr.length});
   }
-  var objectmut = {"$object":true, replies:{"$array":arr}};
-  var mut = LW.Tensor.currentDoc.createMutationForId(id, objectmut);
+  var arrmut = {"$array":mutation};
+  var mut = LW.Tensor.currentDoc.createMutationForId(id, arrmut);
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
@@ -197,7 +196,15 @@ LW.Tensor.contentCallback_ = function(doc, obj, attr, mutation, action ) {
 
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mutation, action ) {
   console.log("Comment has been inserted: " + JSON.stringify(arr[index]) + " at position " + index.toString());
-
+  // var lists = $('.list').attr('objectid', LW.Tensor.currentDoc.url + "!" + arr._id);
+  var lists = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]");
+  if ( lists.length == 0 ) {
+	console.log("LIST NOT FOUND");
+	return;
+  }
+  var list = lists.toArray()[0];
+  console.log(lists)
+  console.log(list);
   var reply = arr[index];
   var newreplies = reply.replies.length;
   html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
@@ -208,10 +215,8 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mutation, action 
   var div = document.createElement("div")
   div.className = "wave new";
   div.innerHTML = html;
-  div.id = doc.url + "!" + reply._id;
+  div.id = LW.Tensor.currentDoc.url + "!" + reply._id;
   div.onclick = LW.Tensor.onDivClick_;
-  // TODO
-  var list = document.getElementById("list-2");
   list.insertBefore( div, list.children[index + 1] );
 };
 
@@ -243,6 +248,7 @@ LW.Tensor.createConversationView = function() {
   div.innerHTML = html;
   div.id = doc.url + "!" + doc.content._data._id;
   list.appendChild(div);
+  list.objectid = doc.url + "!" + doc.content._data.replies._id;
   
   for( var i = 0; i < doc.content._data.replies.length; i++ ) {
 	var reply = doc.content._data.replies[i];
@@ -262,11 +268,13 @@ LW.Tensor.createConversationView = function() {
 };
 
 LW.Tensor.createCommentsView = function(list, obj) {
+  console.log("Create Comments View")
+  console.log(list)
   list.innerHTML = "";
   for( var i = 0; i < obj.replies.length; i++ ) {
 	var reply = obj.replies[i];
 	var newreplies = reply.replies.length;
-	html += '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
+	html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
 	html += '<h4>' + esc(reply.content) + '</h4>';
 	html += '<div class="tools">';
 	html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
@@ -274,10 +282,11 @@ LW.Tensor.createCommentsView = function(list, obj) {
 	var div = document.createElement("div")
 	div.className = "wave new";
 	div.innerHTML = html;
-	div.id = doc.url + "!" + reply._id;
+	div.id = LW.Tensor.currentDoc.url + "!" + reply._id;
 	div.onclick = LW.Tensor.onDivClick_;
 	list.appendChild(div);
   }
+  list.objectid = LW.Tensor.currentDoc.url + "!" + obj.replies._id;
 };
 
 // UGLY
@@ -366,7 +375,13 @@ $(function() {
   $('.newwave').click( LW.Tensor.createNewConversation );
 
   $('.newcomment').click( function() {
-	LW.Tensor.createNewComment(LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data._id);
+	var col = $(this);
+	while( !col.hasClass("col") ) {
+	  col = col.parent();
+	}
+    var list = col.children('.list').toArray()[0];
+	LW.Tensor.createNewComment(list.objectid);
+//						 LW.Tensor.createNewComment(LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data._id);
   });
 
   $('.wave').click( LW.Tensor.onDivClick_ );
