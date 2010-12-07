@@ -36,6 +36,8 @@ LW.Tensor.createContent_ = function(item, nextlist) {
 	// TODO: The doc should be opened in a session
 	LW.Tensor.createConversationView();
   } else {
+	var reply = LW.Inbox.getElementById(id);
+	LW.Tensor.createCommentsView(nextlist, reply);
 	// TODO
   }
 };
@@ -160,6 +162,7 @@ LW.Tensor.createNewConversation = function()
 	{content:"I like it never the less", author:"Jack", date:"Dec 6", replies:[]},
   ]}} )
   doc.content._data._cb_content = LW.Tensor.contentCallback_;
+  doc.content._data.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
   
   // Show the document in the inbox
   LW.Tensor.createDocumentInboxView(doc);
@@ -168,10 +171,48 @@ LW.Tensor.createNewConversation = function()
   LW.Session.open("/localhost/foo", false);
 };
 
+LW.Tensor.createNewComment = function(objectid) {
+  if ( !LW.Session.sessionCreated ) {
+	alert("No session created yet");
+	return;
+  }
+  var i = objectid.indexOf("!");
+  var id = objectid.substring(i + 1, objectid.length);
+  console.log("New Comment for " + objectid);
+  var obj = LW.Inbox.getElementById(objectid);
+  var arr = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}];
+  if ( obj.replies.length > 0 ) {
+	arr.splice(0,0, {"$skip":obj.replies.length});
+  }
+  var objectmut = {"$object":true, replies:{"$array":arr}};
+  var mut = LW.Tensor.currentDoc.createMutationForId(id, objectmut);
+  LW.Tensor.currentDoc.submitDocMutation( mut );
+};
+
 LW.Tensor.contentCallback_ = function(doc, obj, attr, mutation, action ) {
   console.log("Content has been modified: " + obj[attr]);
   // TODO
-  doc._dom.getElementsByTagName("span")[0].innerHTML = obj[attr];
+  // doc._dom.getElementsByTagName("span")[0].innerHTML = obj[attr];
+};
+
+LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mutation, action ) {
+  console.log("Comment has been inserted: " + JSON.stringify(arr[index]) + " at position " + index.toString());
+
+  var reply = arr[index];
+  var newreplies = reply.replies.length;
+  html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
+  html += '<h4>' + esc(reply.content) + '</h4>';
+  html += '<div class="tools">';
+  html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
+  html += '</div>';
+  var div = document.createElement("div")
+  div.className = "wave new";
+  div.innerHTML = html;
+  div.id = doc.url + "!" + reply._id;
+  div.onclick = LW.Tensor.onDivClick_;
+  // TODO
+  var list = document.getElementById("list-2");
+  list.insertBefore( div, list.children[index + 1] );
 };
 
 LW.Tensor.createDocumentInboxView = function(doc) {
@@ -184,27 +225,59 @@ LW.Tensor.createDocumentInboxView = function(doc) {
   div.id = doc.url;
   div.onclick = LW.Tensor.onDivClick_;
   list.insertBefore(div, list.firstChild);
-  doc.content._dom = div;
+  // Really?
+  // doc.content._dom = div;
 };
 
 LW.Tensor.createConversationView = function() {
   var doc = LW.Tensor.currentDoc;
   var list = document.getElementById("list-2");
-  var html = '<div id="' + doc.url + "!" + doc.content._data._id + '" class="wave new"><h3><span class="text">' + esc(doc.content._data.author) + ": " + esc(doc.content._data.title) + '</span> <span class="updates">(' + doc.content._data.replies.length.toString() + ')</span> <span class="date"> ' + doc.content._data.date + ' </span></h3>';
+  list.innerHTML = "";
+  var html = '<h3><span class="text">' + esc(doc.content._data.author) + ": " + esc(doc.content._data.title) + '</span> <span class="updates">(' + doc.content._data.replies.length.toString() + ')</span> <span class="date"> ' + doc.content._data.date + ' </span></h3>';
   html += '<h4>' + esc(doc.content._data.content) + '</h4>';
   html += '<div class="tools">';
   html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-  html += '</div></div>';
-  for( var i in doc.content._data.replies ) {
+  html += '</div>';
+  var div = document.createElement("div")
+  div.className = "wave new";
+  div.innerHTML = html;
+  div.id = doc.url + "!" + doc.content._data._id;
+  list.appendChild(div);
+  
+  for( var i = 0; i < doc.content._data.replies.length; i++ ) {
 	var reply = doc.content._data.replies[i];
 	var newreplies = reply.replies.length;
-	html += '<div id="' + doc.url + "/" + doc.content._data._id + '"class="wave new"><h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
+	html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
 	html += '<h4>' + esc(reply.content) + '</h4>';
 	html += '<div class="tools">';
 	html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-	html += '</div></div>';
+	html += '</div>';
+	var div = document.createElement("div")
+	div.className = "wave new";
+	div.innerHTML = html;
+	div.id = doc.url + "!" + reply._id;
+	div.onclick = LW.Tensor.onDivClick_;
+	list.appendChild(div);
   }
-  list.innerHTML = html;
+};
+
+LW.Tensor.createCommentsView = function(list, obj) {
+  list.innerHTML = "";
+  for( var i = 0; i < obj.replies.length; i++ ) {
+	var reply = obj.replies[i];
+	var newreplies = reply.replies.length;
+	html += '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
+	html += '<h4>' + esc(reply.content) + '</h4>';
+	html += '<div class="tools">';
+	html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
+	html += '</div>';
+	var div = document.createElement("div")
+	div.className = "wave new";
+	div.innerHTML = html;
+	div.id = doc.url + "!" + reply._id;
+	div.onclick = LW.Tensor.onDivClick_;
+	list.appendChild(div);
+  }
 };
 
 // UGLY
@@ -291,6 +364,10 @@ $(function() {
   // Added by Torben
   
   $('.newwave').click( LW.Tensor.createNewConversation );
+
+  $('.newcomment').click( function() {
+	LW.Tensor.createNewComment(LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data._id);
+  });
 
   $('.wave').click( LW.Tensor.onDivClick_ );
 });
