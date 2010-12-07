@@ -218,6 +218,8 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mutation, action 
   div.id = LW.Tensor.currentDoc.url + "!" + reply._id;
   div.onclick = LW.Tensor.onDivClick_;
   list.insertBefore( div, list.children[index + 1] );
+
+  arr[index].replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
 };
 
 LW.Tensor.createDocumentInboxView = function(doc) {
