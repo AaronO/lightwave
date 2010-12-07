@@ -61,7 +61,78 @@ LW.Doc.prototype.sendDocMutation_ = function(mutation) {
 };
 
 LW.Doc.prototype.getElementById = function(id) {
-  // TODO
+  return this.getElementById_(this.content, id);
+};
+
+LW.Doc.prototype.getElementById_ = function(obj, id) {
+  if ( obj == null ) {
+	return null;
+  }
+  if ( Array.isArray(obj) ) {
+	if ( obj._id == id ) {
+	  return obj;
+	}
+	for( var i = 0; i < obj.length; ++i ) {
+	  var element = this.getElementById_(obj[i], id);
+	  if ( element ) {
+		return element;
+	  }	  
+	}
+  } else if ( typeof(obj) == "object" ) {
+	if ( obj._id == id ) {
+	  return obj;
+	}
+	for( var i in obj ) {
+	  var element = this.getElementById_(obj[i], id);
+	  if ( element ) {
+		return element;
+	  }	  
+	}
+  }
+  return null;
+};
+
+LW.Doc.prototype.createMutationForId = function(id, mutation) {
+  return this.createMutationForId_(this.content, id, mutation);
+};
+
+LW.Doc.prototype.createMutationForId_ = function(obj, id, mutation) {
+  if ( obj == null ) {
+	return null;
+  }
+  if ( Array.isArray(obj) ) {
+	if ( obj._id == id ) {
+	  return mutation;
+	}
+	for( var i = 0; i < obj.length; ++i ) {
+	  var mut = this.createMutationForId_(obj[i], id, mutation);
+	  if ( mut ) {
+		arr = [ mut ];
+		if ( i > 0 ) {
+		  arr.splice(0, 0, {"$skip":i});
+		}
+		if ( i + 1 < obj.length ) {
+		  arr.push({"$skip":(obj.length - i - 1)});
+		}
+		var r = {"$array":arr};
+		return r;
+	  }	  
+	}
+  } else if ( typeof(obj) == "object" ) {
+	if ( obj._id == id ) {
+	  return mutation;
+	}
+	for( var i in obj ) {
+	  console.log(id + ": " + i);
+	  var mut = this.createMutationForId_(obj[i], id, mutation);
+	  if ( mut ) {
+		var r = {"$object":true};
+		r[i] = mut;
+		return r;
+	  }
+	}
+  }
+  return null;
 };
 
 // -------------------------------------------------------
@@ -89,10 +160,10 @@ LW.Inbox.getElementById = function(id) {
   if ( i == -1 ) {
 	convid = id;
   } else {
-	url = id.substr(0, i);
-	convid = id.substring(i + 1, len(id));
+	convid = id.substr(0, i);
+	objectid = id.substring(i + 1, id.length);
   }
-  var d = new LW.Doc(convid);
+  var d = LW.Inbox.docs_[convid];
   if ( !objectid ) {
 	return d;
   }

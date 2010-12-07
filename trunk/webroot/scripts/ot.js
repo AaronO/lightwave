@@ -58,7 +58,7 @@ LW.JsonOT.applyMutation_ = function( doc, val, mutation, flags ) {
   }
 };
 
-LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags, callback ) {
+LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags ) {
   for ( key in mutation ) {
 	var m = mutation[key];
 	if ( key[0] == '$' ) {
@@ -82,7 +82,7 @@ LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags, callback ) {
   }
   // Event
   if ( obj._cb ) {
-	callback( doc, obj, nil, mutation, LW.JsonOT.ObjectModified );
+	obj._cb( doc, obj, nil, mutation, LW.JsonOT.ObjectModified );
   }
   return obj;
 };
@@ -122,45 +122,45 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
 	if ( mut["$delete"] != null ) {
 	  arr.splice(index, mut["$delete"]);
 	  // Event
-	  if ( obj._cb_deleted ) {
-		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementDeleted );
+	  if ( arr._cb_deleted ) {
+		arr._cb_deleted( doc, arr, index, mut, LW.JsonOT.ArrayElementDeleted );
 	  }
 	} else if ( mut["$skip"] != null ) {
 	  index += mut["$skip"];
 	} else if ( mut["$lift"] ) {
 	  arr.splice(index, 1);
 	  // Event
-	  if ( obj._cb_lifted ) {
-		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementLifted );
+	  if ( arr._cb_lifted ) {
+		arr._cb_lifted( doc, arr, index, mut, LW.JsonOT.ArrayElementLifted );
 	  }
 	} else if ( mut["$squeeze"] ) {
 	  arr.splice(index, 0, lifts[mut["$squeeze"]]);
 	  // Event
-	  if ( obj._cb_squeezed ) {
-		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementSqueezed );
+	  if ( arr._cb_squeezed ) {
+		arr._cb_squeezed( doc, arr, index, mut, LW.JsonOT.ArrayElementSqueezed );
 	  }	  
 	  index++;
 	} else if ( mut["$object"] == true || mut["$array"] || mut["$text"] ) {
 	  arr[index] = LW.JsonOT.applyMutation_(doc, arr[index], mut, flags);
 	  // Event
-	  if ( obj._cb_deleted ) {
-		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementModified );
+	  if ( arr._cb_deleted ) {
+		arr._cb_deleted( doc, arr, index, mut, LW.JsonOT.ArrayElementModified );
 	  }
 	  index++;
 	} else {
 	  // Insert mutation
 	  arr.splice(index, 0, LW.JsonOT.applyInsertMutation_(doc, mut, flags));
 	  	  // Event
-	  if ( obj._cb_inserted ) {
-		callback( doc, arr, index, mut, LW.JsonOT.ArrayElementInserted );
+	  if ( arr._cb_inserted ) {
+		arr._cb_inserted( doc, arr, index, mut, LW.JsonOT.ArrayElementInserted );
 	  }
 	  index++;
 	}
   }
   
   // Event
-  if ( obj._cb ) {
-	callback( doc, obj, nil, mutation, LW.JsonOT.ArrayModified );
+  if ( arr._cb ) {
+	arr._cb( doc, obj, nil, mutation, LW.JsonOT.ArrayModified );
   }
 
   return arr;
