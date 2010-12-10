@@ -221,6 +221,12 @@ func TestSession(t *testing.T) {
   // Stop the root node
   defer server.Stop()
 
+  if !testPost(server, "/_user/weis", `{"_rev":0, "_data":{"uid":"weis@localhost"}}`, `{"ok":true, "version":1}`, t) {
+	return
+  }
+  if !testGet(server, "/_user/weis", `{"_rev":1, "_hash":"TODOHASH", "_meta":{}, "_data":{"uid":"weis@localhost"}}`, t) {
+	return
+  }
   if !testPost(server, "/localhost/foo", `{"_rev":0, "_data":{"foo":"bar"}}`, `{"ok":true, "version":1}`, t) {
 	return
   }

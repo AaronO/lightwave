@@ -43,6 +43,7 @@ func (self SessionURI) String() string {
 // UserURI
 
 type UserURI struct {
+  // A string of the form "joe", i.e. with no domain suffix
   User string
 }
 

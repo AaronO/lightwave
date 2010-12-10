@@ -75,6 +75,8 @@ type GetRequest struct {
 const (
   Subscribe = iota
   Unsubscribe
+  SubscribeDigest
+  UnsubscribeDigest
 )
 
 type PubSubRequest struct {
@@ -84,7 +86,15 @@ type PubSubRequest struct {
   Subscriber Subscriber
 }
 
+type DigestMsg struct {
+  User string
+  URI string
+  Digest string
+}
+
+// Update messages are sent to subscribers
 type UpdateMsg struct {
+  // The document URI to which this update belongs
   URI string
   // JSON encoded mutation
   Mutation []string
@@ -203,6 +213,8 @@ type DocumentNode struct {
   level int
   doc map[string]interface{}
   subscriptions map[string]Subscription
+  // Maps user names to a bool. If true, send digest updates to the user's inbox.
+  digestMode map[string]bool
   // List of domains which participate in federating this document
   federatedDomains map[string]bool
   history *DocumentHistory
@@ -235,6 +247,32 @@ func (self *DocumentNode) Run() {
 		return
 	}
   }
+}
+
+func (self *DocumentNode) Participants() []*UserId {  
+  meta, ok := self.doc["_meta"]
+  if !ok {
+	return nil;
+  }
+  metamap := meta.(map[string]interface{})
+  particiants, ok := metamap["participants"]
+  if !ok {
+	return nil;
+  }
+  arr, ok := particiants.([]interface{})
+  if !ok {
+	return nil;
+  }
+  var result = make([]*UserId, 0, len(arr))
+  for _, p := range arr {
+	if s, ok := p.(string); ok {
+	  u, err := NewUserId(s)
+	  if err == nil {
+		result = append( result, u )
+	  }
+	}
+  }
+  return result
 }
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
@@ -280,8 +318,23 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 	jsonmsg, _ := json.Marshal(m)
 	s.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
   }
-// At this point we know that the mutation is applied.
+  // At this point we know that the mutation is applied.
 
+  users := self.Participants()
+
+  // Inform all local users of this document that the document has changed
+  digest := "TODODigest"
+  for _, u := range users {
+	b, ok := self.digestMode[u.String()]
+	if !ok {
+	  self.digestMode[u.String()] = false;
+	}
+	if !ok || b {
+	  // Send a digest updates
+	  self.Server().Users().Digest(&DigestMsg{u.String(), self.URI(), digest})
+	}
+  }
+  
   // If this is just a remote server for this document, we are done
   if !self.Host().IsLocal() {
 	return true
@@ -291,23 +344,11 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   // Find out whether there are new domains involved. In this case we
   // have to send the mutation as a wavelet update to all the others
   // This code assumes that the meta data can be arbitrarily malformed. This is perhaps overly defensive
-  self.federatedDomains = make(map[string]bool)
-  if meta, ok := self.doc["_meta"]; ok {
-	metamap := meta.(map[string]interface{})
-	if particiants, ok := metamap["participants"]; ok {
-	  if arr, ok := particiants.([]interface{}); ok {
-		for _, p := range arr {
-		  if s, ok := p.(string); ok {
-			u := NewUserId(s)
-			if u != nil {
-			  // If this is a remote user, we must federate
-			  if u.Domain != server.manifest.Domain {
-				self.federatedDomains[u.Domain] = true
-			  }
-			}
-		  }
-		}
-	  }
+  self.federatedDomains = make(map[string]bool)  
+  for _, u := range users {
+	// If this is a remote user, we must federate
+	if u.Domain != server.manifest.Domain {
+	  self.federatedDomains[u.Domain] = true
 	}
   }
   
@@ -735,6 +776,7 @@ type Server struct {
   manifest *ServerManifest
   children map[string]Node
   sessions *SessionRootNode
+  users *UserRootNode
   gateways map[string]*FederationGateway
   gatewaysMutex sync.Mutex
 }
@@ -742,9 +784,11 @@ type Server struct {
 func NewServer(manifest *ServerManifest) *Server {
   r := &Server{manifest:manifest, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:manifest.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   r.sessions = NewSessionRootNode(r)
+  r.users = NewUserRootNode(r)
   r.gateways = make(map[string]*FederationGateway)
   // Launch the server, i.e. start processing messages
   go r.sessions.Run()
+  go r.users.Run()
   return r
 }
 
@@ -762,6 +806,10 @@ func (self *Server) Gateway(domain string) *FederationGateway {
   go g.Run()
   self.gateways[domain] = g;
   return g;
+}
+
+func (self *Server) Users() *UserRootNode {
+  return self.users
 }
 
 func (self *Server) Run() {
@@ -811,9 +859,9 @@ func (self *Server) post(req *PostRequest) {
 	  oldfinish <- ok
 	case SessionURI:
 	  self.sessions.Post(req)
-	case ViewURI:
-	  panic("TODO")
 	case UserURI:
+	  self.users.Post(req)
+	case ViewURI:
 	  panic("TODO")
 	case ManifestURI:
 	  makeErrorResponse(req.Response, "Posting to a manifest is not allowed")
@@ -848,9 +896,9 @@ func (self *Server) get(req *GetRequest) {
 	  return
 	case SessionURI:
 	  self.sessions.Get(req)
-	case ViewURI:
-	  panic("TODO")
 	case UserURI:
+	  self.users.Get(req)
+	case ViewURI:
 	  panic("TODO")
 	case ManifestURI:
 	  log.Println("Asking for manifest")
