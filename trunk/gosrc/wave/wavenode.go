@@ -185,8 +185,8 @@ func (self *WaveletNode) apply( delta *ProtocolWaveletDelta ) bool {
   // This code assumes that the meta data can be arbitrarily malformed. This is perhaps overly defensive
   self.federatedDomains = make(map[string]bool)
   for _, s := range self.wavelet.Participants {
-	u := NewUserId(s)
-	if u != nil {
+	u, err := NewUserId(s)
+	if err == nil {
 	  // If this is a remote user, we must federate
 	  if u.Domain != server.Capabilities().Domain {
 		self.federatedDomains[u.Domain] = true
