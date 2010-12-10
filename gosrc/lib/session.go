@@ -167,6 +167,7 @@ func (self *SessionNode) update(msg *UpdateMsg) {
   }
 }
 
+// Create a SessionData object from the JSON representation
 func (self *SessionNode) parseSessionData() *SessionData {
   s := new(SessionData)
   s.Filters = make(map[string]*NodeFilter)
