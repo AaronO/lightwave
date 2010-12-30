@@ -31,7 +31,6 @@ func findServer(host string) (server *lightwave.Server, err os.Error) {
   return server, nil
 }
 
-
 func fileHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
   server, err := findServer(r.Host)
@@ -214,6 +213,8 @@ func main() {
   f := lightwave.NewStaticNode(server, "../webroot")
   go f.Run()
   server.AddChild(f)
+  // TODO: This is a hack
+  server.LocalHost().Users().CreateUser("weis")
   go server.Run()
 
   server2 := lightwave.NewServer(&lightwave.ServerManifest{Domain:"sony", HostName:"sony", Port:8080})
@@ -225,7 +226,7 @@ func main() {
 
   lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
   lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
-  lightwave.RegisterNodeFactory("application/json", lightwave.NewDocumentNode)
+  lightwave.RegisterNodeFactory("application/json", lightwave.DocumentNodeFactory)
   
   // Behave like a wave server with HTTP transport
   http.HandleFunc("/wave/fed/", waveFederationHandler)

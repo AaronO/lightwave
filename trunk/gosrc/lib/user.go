@@ -3,9 +3,8 @@ package lightwave
 import (
   "regexp"
   "log"
-  "json"
-  "fmt"
   "os"
+  "strings"
 )
 
 // -------------------------------------
@@ -29,28 +28,111 @@ func (self *UserId) String() string {
 }
 
 // -------------------------------------
+// Inbox
+
+type Inbox struct {
+  DocumentNode
+  digestChannel chan *DigestMsg
+}
+
+func NewInbox(parent Node) *Inbox {
+  i := &Inbox{DocumentNode:*NewDocumentNode(parent, "inbox", 3), digestChannel:make(chan *DigestMsg)}
+  data := i.doc["_data"].(map[string]interface{})
+  data["docs"] = [0]interface{}{}[:]
+  return i
+}
+
+func (self *Inbox) Run() {
+  for {
+	select {
+	  case req := <-self.postChannel:
+		self.post(req)
+	  case req := <-self.getChannel:
+		self.get(req)
+	  case req := <-self.pubSubChannel:
+		self.pubSub(req)		
+	  case msg := <-self.digestChannel:
+		self.digest(msg)
+	  case <-self.stopChannel:
+		return
+	}
+  }
+}
+
+func (self *Inbox) post(req *PostRequest) {  
+  makeErrorResponse(req.Response, "Posting to the inbox is not allowed")
+  req.FinishSignal <- false
+}
+
+func (self *Inbox) docs() []interface{} {
+  return self.doc["_data"].(map[string]interface{})["docs"].([]interface{})
+}
+
+func (self *Inbox) digest(msg *DigestMsg) {
+  log.Println("DIGEST: Got digest message for " + msg.URI)
+  lst := self.docs()  
+  mut := make(map[string]interface{})
+  mut["_rev"] = float64(self.Revision())
+  arraymut := make([]interface{}, 0, 3)
+  // Is the document already in the list?
+  found := false
+  for i, doc := range lst {
+	docmap, ok := doc.(map[string]interface{})
+	if !ok {
+	  continue
+	}
+	if msg.URI == docmap["uri"].(string) {
+	  if i > 0 {
+		arraymut = append(arraymut, NewSkipMutation(i))
+	  }
+	  digmut := NewObjectMutation()
+	  digmut["uri"] = msg.URI;
+	  digmut["digest"] = msg.Digest;
+	  arraymut = append(arraymut, digmut)
+	  if len(lst) > i + 1 {
+		arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
+	  } 
+	  found = true
+	  break
+	}
+  }
+  if !found {
+	digmut := make(map[string]interface{})
+	digmut["uri"] = msg.URI;
+	digmut["digest"] = msg.Digest;
+	arraymut = append(arraymut, digmut)
+	if len(lst) > 0 {
+	  arraymut = append(arraymut, NewSkipMutation(len(lst)))
+	} 
+  }
+  datamut := NewObjectMutation()
+  datamut["docs"] = NewArrayMutation(arraymut)
+  mut["_data"] = datamut
+  ok := self.apply(mut)
+  if !ok {
+	panic("Failed to apply mutation for meta data of " + self.Name())
+  }
+}
+
+// -------------------------------------
 // UserNode
 
 type UserNode struct {
-  NodeBase
-  doc map[string]interface{}
-  // The user to which this session belongs
-  user string
-  digestChannel chan *DigestMsg
-  history *DocumentHistory
+  DocumentNode
+  inbox *Inbox
 }
 
 func NewUserNode(parent *UserRootNode, user string) *UserNode {
-  u := &UserNode{NodeBase:NodeBase{parent:parent, name:user, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool)}, user:user, doc:make(map[string]interface{})}
-  u.digestChannel = make(chan *DigestMsg)
-  // Initialize the JSON document
-  u.doc["_meta"] = make(map[string]interface{})
-  u.doc["_data"] = make(map[string]interface{})
-  u.doc["_rev"] = float64(0)
-  // TODO
-  u.doc["_hash"] = "TODOHASH"  
-  u.history = NewDocumentHistory()
+  u := &UserNode{DocumentNode:*NewDocumentNode(parent, user, 2)}
+  u.inbox = NewInbox(u)
+  go u.inbox.Run()
+  u.children[u.inbox.Name()] = u.inbox
   return u
+}
+
+func (self *UserNode) Digest(msg *DigestMsg) {
+  log.Println("DIGEST")
+  self.inbox.digestChannel <- msg
 }
 
 func (self *UserNode) Run() {
@@ -60,116 +142,12 @@ func (self *UserNode) Run() {
 		self.post(req)
 	  case req := <-self.getChannel:
 		self.get(req)
-	  case msg := <-self.digestChannel:
-		self.digest(msg)
+	  case req := <-self.pubSubChannel:
+		self.pubSub(req)				
 	  case <-self.stopChannel:
 		return
 	}
   }
-}
-
-func (self *UserNode) Digest(msg *DigestMsg) {
-  self.digestChannel <- msg
-}
-
-func (self *UserNode) digest(msg *DigestMsg) {
-  log.Println("Update for user ", self.user, " inbox from URI ", msg.URI)
-  // TODO
-}
-
-func (self *UserNode) apply( mutation map[string]interface{} ) bool {
-  if !(IsDocumentMutation(mutation)) {
-	log.Println("Not a document mutation")
-	return false
-  }
-  m := DocumentMutation(mutation)  
-
-  // TODO: Check that the delta has the right hash
-  
-  // Apply the mutation at the most recent version of the document?
-  if m.AppliedAtRevision() == self.Revision() {
-	if !m.Apply(self.doc, NoFlags) {
-	  log.Println("Failed applying delta")
-	  return false
-	}	
-  } else if m.AppliedAtRevision() > self.Revision() {
-	// Delta from the future -> error
-	log.Println("Seen delta from the future")
-	return false
-  } else {
-	// OT is required
-	var ot Transformer
-	deltas := self.history.Tail( m.AppliedAtRevision() )
-	for _, d := range deltas {
-	  log.Println("Transforming ", d, m )
-	  err := ot.Transform( d.Clone(), m )
-	  if err != nil {
-		log.Println("OT Error: ", err)
-		return false
-	  }
-	}
-  }
-  self.doc["_rev"] = float64(self.Revision() + 1)
-  log.Println("Resulting version is ", self.Revision())
-  // TODO
-  m["_endHash"] = "TODOHASH"
-  m["_endRev"] =  float64(self.Revision())
-  self.history.Append(m)
-  return true
-}
-
-func (self *UserNode) Revision() int64 {
-  return int64(self.doc["_rev"].(float64))
-}
-
-func (self *UserNode) post(req *PostRequest) {  
-  switch req.MimeType {
-	// Posting a json document or a document mutation?
-	case "application/json", "application/x-www-form-urlencoded":
-	  m := make(map[string]interface{})
-	  if err := json.Unmarshal(req.Data, &m); err != nil {
-		makeErrorResponse(req.Response, "Cannot parse HTTP body. No valid JSON")
-		req.FinishSignal <- false
-		return
-	  }
-	  // It is not allowed to modify the meta data
-	  if _, ok := m["_meta"]; ok {
-		makeErrorResponse(req.Response, "Attempt to modify meta data using POST")
-		req.FinishSignal <- false
-		return
-	  }
-	  // Try to apply the data
-	  if !self.apply(m) {
-		makeErrorResponse(req.Response, "Could not apply document mutation")
-		req.FinishSignal <- false
-		return
-	  }
-	  req.Response.SetHeader("Content-Type", "application/json")
-	  if _, err := req.Response.Write( []byte(fmt.Sprintf("{\"ok\":true, \"version\":%d}", self.Revision())) ); err != nil {
-		log.Println("Failed writing HTTP response")
-		req.FinishSignal <- false
-		return
-	  }
-	  req.FinishSignal <- true
-	default:
-	  makeErrorResponse(req.Response, "Data type not allowed for post")
-	  req.FinishSignal <- false
-  }
-}
-
-func (self *UserNode) get(req *GetRequest) {  
-  json, err := json.Marshal(self.doc)
-  if err != nil {
-	panic("Failed marshaling to json")
-  }
-  req.Response.SetHeader("Content-Type", "application/json")
-  _, err = req.Response.Write( json )
-  if err != nil {
-	log.Println("Failed writing HTTP response")
-	req.FinishSignal <- false
-	return
-  }
-  req.FinishSignal <- true
 }
 
 // -------------------------------------
@@ -181,8 +159,8 @@ type UserRootNode struct {
   digestChannel chan *DigestMsg
 }
 
-func NewUserRootNode(server *Server) *UserRootNode {
-  return &UserRootNode{NodeBase:NodeBase{parent:server, name:"_user", postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool)}, users:make(map[string]*UserNode), digestChannel:make(chan *DigestMsg)}
+func NewUserRootNode(parent Node) *UserRootNode {
+  return &UserRootNode{NodeBase:NodeBase{parent:parent, name:"_user", postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}, users:make(map[string]*UserNode), digestChannel:make(chan *DigestMsg)}
 }
 
 func (self *UserRootNode) Run() {
@@ -192,6 +170,8 @@ func (self *UserRootNode) Run() {
 		self.post(req)
 	  case req := <-self.getChannel:
 		self.get(req)
+	  case req := <-self.pubSubChannel:
+		self.pubSub(req)				
 	  case req := <-self.digestChannel:
 		self.digest(req)
 	  case <-self.stopChannel:
@@ -200,19 +180,35 @@ func (self *UserRootNode) Run() {
   }
 }
 
+func (self *UserRootNode) CreateUser(name string) *UserNode {
+  if _, ok := self.users[name]; ok {
+	log.Println("User already exists")
+	return nil
+  }
+  u := NewUserNode(self, name)
+  go u.Run()
+  self.addChild(u)
+  return u
+}
+
 func (self *UserRootNode) Digest(msg *DigestMsg) {
   self.digestChannel <- msg
 }
 
 func (self *UserRootNode) post(req *PostRequest) {
-  uri := req.URI.(UserURI)
-  // Check for the session node
-  u, ok := self.users[uri.User]
+  uri := req.URI.(DocumentURI)
+  if len(uri.NameSeq) < 2 {
+	makeErrorResponse(req.Response, "Cannot get _user")
+	req.FinishSignal <- false
+	return
+  }
+  // Check for the user node
+  u, ok := self.users[uri.NameSeq[1]]
   if ok {
 	u.Post(req)
 	return
   }
-  u = NewUserNode(self, uri.User)
+  u = NewUserNode(self, uri.NameSeq[1])
   oldfinish := req.FinishSignal
   finish := make(chan bool)
   req.FinishSignal = finish
@@ -228,9 +224,14 @@ func (self *UserRootNode) post(req *PostRequest) {
 }
 
 func (self *UserRootNode) get(req *GetRequest) {  
-  uri := req.URI.(UserURI)
-  // Check for the session node
-  u, ok := self.users[uri.User]
+  uri := req.URI.(DocumentURI)
+  if len(uri.NameSeq) < 2 {
+	makeErrorResponse(req.Response, "Cannot post _user")
+	req.FinishSignal <- false
+	return
+  }
+  // Check for the user node
+  u, ok := self.users[uri.NameSeq[1]]
   if !ok {
 	makeErrorResponse(req.Response, "The user does not exist")
 	req.FinishSignal <- false
@@ -239,11 +240,24 @@ func (self *UserRootNode) get(req *GetRequest) {
   u.Get(req)
 }
 
+func (self *UserRootNode) pubSub(req* PubSubRequest) {
+  seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
+  if len(seq) < 3 {
+	log.Println("Malformed NodeFilter prefix")
+	return
+  }
+  // Send to all host nodes
+  node, ok := self.users[seq[2]]
+  if ok {
+	node.PubSub(req)
+  }  
+}
+
 func (self *UserRootNode) digest(msg *DigestMsg) {  
-  // Check for the session node
+  // Check for the user node
   u, ok := self.users[msg.User]
   if !ok {
-	log.Println("The user does not exist")
+	log.Println("The user ", msg.User, " does not exist")
 	return
   }
   u.Digest(msg)

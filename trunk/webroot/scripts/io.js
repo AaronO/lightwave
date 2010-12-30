@@ -2,9 +2,13 @@ if ( !window.LW ) {
   LW = { };
 }
 
+// ----------------------------------------------------------
+// Implementation of HTTP Post and Get using XMLHTTPRequest
+
 LW.Rpc = {
   // TODO
   user : "weis",
+  domain : "localhost",
   queue : [ ]
 };
 
@@ -91,6 +95,7 @@ LW.Rpc.enqueueErrCallback_ = function(reply) {
 LW.Session = {
   id : null,
   sessionCreated : false,
+  content : { },
   version : 0
 };
 
@@ -102,12 +107,15 @@ LW.Session.init = function() {
   }
 };
 
+// Create a new session at the server
 LW.Session.createSession_ = function() {
   LW.Session.id = "s" + Math.random().toString();
-  var json = {"_rev":0, "_data":{"filters":{}}};
-  LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.createSessionCallback_, LW.Session.createSessionErrCallback_);
+  var mutation = {"_rev":0, "_data":{"filters":{}}};
+  LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
+  LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.createSessionCallback_, LW.Session.createSessionErrCallback_);
 };
 
+// Callback for the successful attempt of creating a session on the server
 LW.Session.createSessionCallback_ = function(reply) {
   console.log("create session: " + reply)
   var json = JSON.parse(reply)
@@ -115,22 +123,25 @@ LW.Session.createSessionCallback_ = function(reply) {
 	LW.Session.sessionCreated = true;
 	LW.Session.version = json.version;
 	// Open the inbox
-	// TODO
-	// LW.Session.open("/localhost/foo")
+	LW.Session.open("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox", true, false )
+	// Start polling the session to get updates on the documents
 	LW.Session.sessionPoll_();
   } else {
 	alert("Failed to create a session");
   }
 };
 
+// Callback for the failed attempt of creating a session on the server
 LW.Session.createSessionErrCallback_ = function() {
   alert("Offline", "You seem to be offline");
 };
 	
+// HTTP long call to get updates on the documents
 LW.Session.sessionPoll_ = function() {
   LW.Rpc.get("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id + "/_poll", LW.Session.sessionPollCallback_, LW.Session.sessionPollErrCallback_);  
 };
 
+// Successful response from the HTTP long call
 LW.Session.sessionPollCallback_ = function(reply) {
   console.log("session: " + reply)
   var json = JSON.parse(reply);
@@ -144,10 +155,12 @@ LW.Session.sessionPollCallback_ = function(reply) {
   LW.Session.sessionPoll_();
 };
 
+// Failed response from the HTTP long call
 LW.Session.sessionPollErrCallback_ = function() {
   alert("Offline", "You seem to be offline");
 };
 	
+// Adds a new document to the session
 LW.Session.open = function(prefix, snapshot, recursive, mimeTypes, schemas) {
   if ( !mimeTypes ) {
 	mimeTypes = [];
@@ -155,13 +168,18 @@ LW.Session.open = function(prefix, snapshot, recursive, mimeTypes, schemas) {
   if ( !schemas ) {
 	schemas = [];
   }
-  var json = { "_rev":LW.Session.version, "_data":{ "$object":true, "filters":{"$object":true} } };
-  json._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas, "snapshot":snapshot};
-  console.log("-> " + JSON.stringify(json))
-  // LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.openCallback_, LW.Session.openErrCallback_);
-  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(json), LW.Session.openCallback_);
+  // This document is already open?
+  if ( LW.Session.content._data.filters[prefix] ) {
+	return
+  }
+  var mutation = { "_rev":LW.Session.version, "_data":{ "$object":true, "filters":{"$object":true} } };
+  mutation._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas, "snapshot":snapshot};
+  LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
+  console.log("-> " + JSON.stringify(mutation))
+  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.openCallback_);
 };
 
+// Response to the request of adding a document to the session
 LW.Session.openCallback_ = function(reply) {
   console.log("open: " + reply)
   var json = JSON.parse(reply)
@@ -171,9 +189,3 @@ LW.Session.openCallback_ = function(reply) {
 	alert("Failed to open a document");
   }  
 };
-	
-/*
-LW.Session.openErrCallback_ = function() {
-  alert("Offline", "You seem to be offline");
-};
-*/

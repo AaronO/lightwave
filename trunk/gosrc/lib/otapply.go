@@ -117,22 +117,19 @@ func (self DocumentMutation) Check(val interface{}, mutation interface{} ) bool 
 	case IsObjectMutation(mutation):
 	  obj, test := val.(map[string]interface{})
 	  if !test {
-		log.Println("Expected object")
-		return false
+		obj = make(map[string]interface{})
 	  }	  
 	  return self.checkObjectMutation(obj, toObjectMutation(mutation))
 	case IsArrayMutation(mutation):
 	  a, test := val.([]interface{})
 	  if !test {
-		log.Println("Expected array")
-		return false
+		a = make([]interface{},0)[:]
 	  }
 	  return self.checkArrayMutation( a, toArrayMutation(mutation) )
 	case IsTextMutation(mutation):
 	  s, test := val.(string)
 	  if !test {
-		log.Println("Expected string")
-		return false
+		s = ""
 	  }	  
 	  return self.checkTextMutation( s, toTextMutation(mutation) )
 	case IsInsertMutation(mutation):
@@ -341,20 +338,20 @@ func (self DocumentMutation) apply(val interface{}, mutation interface{}, flags 
 	case IsObjectMutation(mutation):
 	  o, test := val.(map[string]interface{})
 	  if !test {
-		panic("That should have been caught before")
+		o = make(map[string]interface{})
 	  }  
 	  self.applyObjectMutation(o, toObjectMutation(mutation), flags)
 	  return o
 	case IsArrayMutation(mutation):
 	  a, test := val.([]interface{})
 	  if !test {
-		panic("That should have been caught before")
+		a = make([]interface{},0)[:]
 	  }
 	  return self.applyArrayMutation( a, toArrayMutation(mutation), flags )
 	case IsTextMutation(mutation):
 	  s, test := val.(string)
 	  if !test {
-		panic("That should have been caught before")
+		s = ""
 	  }	  
 	  return self.applyTextMutation( s, toTextMutation(mutation), flags )
 	case IsInsertMutation(mutation):

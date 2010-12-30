@@ -11,9 +11,13 @@ LW.Doc = function(url) {
   this.queue = [];
 };
 
+// Called when a new mutation arrived for this document
 LW.Doc.prototype.recvDocMutation = function(mutation) {
   // Check that version and hash are as expected
   // ...
+  // Get the new revision and hash
+  this.version = mutation._endRev;
+  this.hash = mutation._endHash;
   // Is this our own mutation?
   if ( this.pendingSubmit && mutation._token == this.pendingSubmit ) {
 	console.log("Filtered out my own delta");
@@ -26,8 +30,6 @@ LW.Doc.prototype.recvDocMutation = function(mutation) {
 	}
 	LW.JsonOT.applyDocMutation( this.content, mutation, LW.JsonOT.CreateIDs )
   }
-  this.version = mutation._endRev;
-  this.hash = mutation._endHash;
   console.log("New version of " + this.url + " is " + this.version);
   
   // Is this our own mutation?
@@ -92,6 +94,10 @@ LW.Doc.prototype.getElementById_ = function(obj, id) {
   return null;
 };
 
+// Creats a mutation for this document that mutates the object specified by the id,
+// but that mutates nothing else. This is just a convenience function.
+// 
+// @param id is a string denoting an object-id, i.e. a JSON object or array inside this document
 LW.Doc.prototype.createMutationForId = function(id, mutation) {
   return this.createMutationForId_(this.content, id, mutation);
 };
@@ -139,9 +145,21 @@ LW.Doc.prototype.createMutationForId_ = function(obj, id, mutation) {
 // Inbox
 
 LW.Inbox = {
-  docs_ : {}
+  docs_ : {},
+  self : null
 };
 
+LW.Inbox.uniqueId = function() {
+  var str = Math.random().toString();
+  return str.substr(2, str.length - 2);
+};
+
+LW.Inbox.init = function() {
+  LW.Inbox.self = LW.Inbox.getOrCreateDoc("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox");
+  LW.Inbox.self.content._data = { "docs":[] }
+};
+
+// @param url has the format "/host-name/conversation-id"
 LW.Inbox.getOrCreateDoc = function(url) {
   if ( LW.Inbox.docs_[url] ) {
 	return LW.Inbox.docs_[url];
@@ -152,7 +170,7 @@ LW.Inbox.getOrCreateDoc = function(url) {
   return d;
 };
 
-// The id has the form "/localhost/conversation-id!object-id" where conversation-id has the form (/{identifier})*
+// The id has the form "/host-name/conversation-id!object-id" where conversation-id has the form (/{identifier})*
 LW.Inbox.getElementById = function(id) {
   var i = id.indexOf("!");
   var convid;
@@ -169,3 +187,4 @@ LW.Inbox.getElementById = function(id) {
   }
   return d.getElementById(objectid);
 };
+

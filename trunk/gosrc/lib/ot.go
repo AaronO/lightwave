@@ -233,6 +233,13 @@ func NewDeleteMutation(count int) map[string]interface{} {
 
 type ObjectMutation map[string]interface{}
 
+
+func NewObjectMutation() map[string]interface{} {
+  s := make(map[string]interface{})
+  s["$object"] = true
+  return s
+}
+
 func (self ObjectMutation) RemoveAttribute(attr string) {
   self[attr] = nil, false
 }
@@ -256,6 +263,12 @@ func toTextMutation( m interface{} ) TextMutation {
 }
 
 type ArrayMutation map[string]interface{}
+
+func NewArrayMutation(arr []interface{}) map[string]interface{} {
+  s := make(map[string]interface{})
+  s["$array"] = arr
+  return s
+}
 
 func (self ArrayMutation) Array() []interface{} {
   return self["$array"].([]interface{})
