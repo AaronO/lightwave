@@ -16,8 +16,9 @@ LW.JsonOT.uniqueId_ = function() {
 
 // Flags for mutation events
 LW.JsonOT.AttributeModified = 1;
+LW.JsonOT.AttributeInserted = 10;
+LW.JsonOT.AttributeDeleted = 11;
 LW.JsonOT.ObjectModified = 2;
-LW.JsonOT.DocumentModified = 3;
 LW.JsonOT.ArrayModified = 4;
 LW.JsonOT.ArrayElementModified = 5;
 LW.JsonOT.ArrayElementDeleted = 6;
@@ -27,34 +28,65 @@ LW.JsonOT.ArrayElementSqueezed = 9;
 
 LW.JsonOT.applyDocMutation = function( doc, docmutation, flags ) {
   if ( docmutation._data ) {
-	doc._data = LW.JsonOT.applyMutation_(doc, doc._data, docmutation._data, flags );
+	var inserted = doc._data == null;
+	var callback = function(val) {
+	  if ( doc._cb_data ) { doc._data = val; doc._cb_data(doc, doc, "_data", docmutation._data, LW.JsonOT.AttributeInserted); }
+	  if ( doc._cb ) { doc._data = val; doc._cb(doc, doc, "_data", docmutation._data, LW.JsonOT.AttributeInserted); }
+	}
+	doc._data = LW.JsonOT.applyMutation_(doc, doc._data, docmutation._data, flags, callback );
 	// Event
-	if ( doc._data_cb ) {
+	if ( doc._data_cb && !inserted ) {
 	  doc._data_cb(doc, doc, "_data", docmutation._data, LW.JsonOT.AttributeModified );
+	}
+	if ( doc._cb && !inserted ) {
+	  doc._cb(doc, doc, "_data", docmutation._data, LW.JsonOT.AttributeModified );
 	}
   }
   if ( docmutation._meta ) {
-	doc._meta = LW.JsonOT.applyMutation_(doc, doc._meta, docmutation._meta, flags );
+	var inserted = doc._meta == null;
+	var callback = function(val) {
+	  if ( doc._cb_meta ) { doc._meta = val; doc._cb_meta(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeInserted); }
+	  if ( doc._cb ) { doc._meta = val; doc._cb(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeInserted); }
+	}
+	doc._meta = LW.JsonOT.applyMutation_(doc, doc._meta, docmutation._meta, flags, callback );
 	// Event
-	if ( doc._meta_cb ) {
+	if ( doc._meta_cb && !inserted ) {
 	  doc._meta_cb(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeModified );
+	  if ( doc._meta_cb && !inserted ) {
+		doc._meta_cb(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeModified );
+	  }
+	  if ( doc._cb && !inserted ) {
+		doc._cb(doc, doc, "_meta", docmutation._meta, LW.JsonOT.AttributeModified );
+	  }
 	}
   }
   // Event
   if ( doc._cb ) {
-	doc._cb(doc, doc, nil, docmutation, LW.JsonOT.ObjectModified );
+	doc._cb(doc, doc, null, docmutation, LW.JsonOT.ObjectModified );
   }
 };
 
-LW.JsonOT.applyMutation_ = function( doc, val, mutation, flags ) {
+LW.JsonOT.applyMutation_ = function( doc, val, mutation, flags, insertCallback ) {
   if ( mutation["$object"] == true ) {
+	if ( !val ) {
+	  val = { };
+	  if ( insertCallback ) { insertCallback(val); }
+	}
 	return LW.JsonOT.applyObjMutation_( doc, val, mutation, flags )
   } else if ( mutation["$array"] ) {
+	if ( !val ) {
+	  val = [ ];
+	  if ( insertCallback ) { insertCallback(val); }
+	}
 	return LW.JsonOT.applyArrayMutation_( doc, val, mutation, flags )
   } else if ( mutation["$text"] ) {
+	if ( !val ) {
+	  if ( insertCallback ) { insertCallback(val); }
+	  val = "";
+	}
 	return LW.JsonOT.applyTextMutation_( doc, val, mutation, flags )
   } else {
-	return LW.JsonOT.applyInsertMutation_( doc, mutation, flags )
+	return LW.JsonOT.applyInsertMutation_( doc, mutation, flags, insertCallback )
   }
 };
 
@@ -70,19 +102,35 @@ LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags ) {
 	  }
 	  obj["_rev"] = doc._rev;
 	}
+	var event = obj["_cb_" + key];
+	var v = obj[key];
 	if ( m === null ) {
-	  delete obj[key];
+	  // Event
+	  if ( event ) {
+		event(doc, obj, key, m, LW.JsonOT.AttributeDeleted);
+	  }
+	  if ( obj._cb ) {
+		obj._cb(doc, obj, key, m, LW.JsonOT.AttributeDeleted);
+	  }
+	  delete obj[key];	  
 	} else {
-	  obj[key] = LW.JsonOT.applyMutation_(doc, obj[key], m, flags);
-	}
-	// Event
-	if ( obj["_cb_" + key] ) {
-	  obj["_cb_" + key](doc, obj, key, m, LW.JsonOT.AttributeModified);
+	  var callback = function(val) {
+		if ( event ) { obj[key] = val; event(doc, obj, key, m, LW.JsonOT.AttributeInserted); }
+		if ( obj._cb ) { obj[key] = val; obj._cb(doc, obj, key, m, LW.JsonOT.AttributeInserted); }
+	  }
+	  obj[key] = LW.JsonOT.applyMutation_(doc, obj[key], m, flags, callback);
+	  // Event
+	  if ( event && v != null ) {
+		event(doc, obj, key, m, LW.JsonOT.AttributeModified);
+	  }
+	  if ( obj._cb && v != null ) {
+		obj._cb(doc, obj, key, m, LW.JsonOT.AttributeModified);
+	  }
 	}
   }
   // Event
   if ( obj._cb ) {
-	obj._cb( doc, obj, nil, mutation, LW.JsonOT.ObjectModified );
+	obj._cb( doc, obj, null, mutation, LW.JsonOT.ObjectModified );
   }
   return obj;
 };
@@ -143,24 +191,27 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
 	} else if ( mut["$object"] == true || mut["$array"] || mut["$text"] ) {
 	  arr[index] = LW.JsonOT.applyMutation_(doc, arr[index], mut, flags);
 	  // Event
-	  if ( arr._cb_deleted ) {
-		arr._cb_deleted( doc, arr, index, mut, LW.JsonOT.ArrayElementModified );
+	  if ( arr._cb_modified ) {
+		arr._cb_modified( doc, arr, index, mut, LW.JsonOT.ArrayElementModified );
 	  }
 	  index++;
 	} else {
 	  // Insert mutation
-	  arr.splice(index, 0, LW.JsonOT.applyInsertMutation_(doc, mut, flags));
-	  	  // Event
-	  if ( arr._cb_inserted ) {
-		arr._cb_inserted( doc, arr, index, mut, LW.JsonOT.ArrayElementInserted );
+	  var callback = function(val) {
+		arr.splice(index, 0, val);
+		// Event
+		if ( arr._cb_inserted ) {
+		  arr._cb_inserted( doc, arr, index, mut, LW.JsonOT.ArrayElementInserted );
+		}
 	  }
+	  LW.JsonOT.applyInsertMutation_(doc, mut, flags, callback)
 	  index++;
 	}
   }
   
   // Event
   if ( arr._cb ) {
-	arr._cb( doc, obj, nil, mutation, LW.JsonOT.ArrayModified );
+	arr._cb( doc, obj, null, mutation, LW.JsonOT.ArrayModified );
   }
 
   return arr;
@@ -183,36 +234,51 @@ LW.JsonOT.applyTextMutation_ = function( doc, txt, mutation, flags ) {
   return txt;
 };
 
-LW.JsonOT.applyInsertMutation_ = function( doc, mutation, flags ) {
+LW.JsonOT.applyInsertMutation_ = function( doc, mutation, flags, insertCallback ) {
   if ( Array.isArray(mutation) ) {
-	return LW.JsonOT.applyInsertArrayMutation_( doc, mutation, flags );
+	return LW.JsonOT.applyInsertArrayMutation_( doc, mutation, flags, insertCallback );
   } else if ( mutation != null && typeof(mutation) == "object" ) {
-	return LW.JsonOT.applyInsertObjectMutation_( doc, mutation, flags );
+	return LW.JsonOT.applyInsertObjectMutation_( doc, mutation, flags, insertCallback );
   } else {
+	if ( insertCallback ) insertCallback(mutation);
 	return mutation;
   }
 };
 
-LW.JsonOT.applyInsertObjectMutation_ = function( doc, mutation, flags ) {
+LW.JsonOT.applyInsertObjectMutation_ = function( doc, mutation, flags, insertCallback ) {
   var m = {};
-  for ( var key in mutation ) {
-	m[key] = LW.JsonOT.applyInsertMutation_(doc, mutation[key], flags);
-  }
   if (flags & LW.JsonOT.CreateIDs == LW.JsonOT.CreateIDs) {
 	m._id = LW.JsonOT.uniqueId_();	
 	m._rev = doc._rev;
   }
+  if ( insertCallback ) insertCallback(m);
+  for ( var key in mutation ) {
+	var callback = function(val) {
+	  m[key] = val;
+	  if ( m["_cb_" + key] ) { m["_cb_" + key](doc, m, key, mutation[key], LW.JsonOT.AttributeInserted); }
+	  if ( m._cb ) { m._cb(doc, m, key, mutation[key], LW.JsonOT.AttributeInserted); }	
+	};
+	LW.JsonOT.applyInsertMutation_(doc, mutation[key], flags, callback);
+  }
+  if ( m._cb ) {
+	m._cb(doc, m, null, mutation, LW.JsonOT.ObjectModified);
+  }
   return m;
 };
 
-LW.JsonOT.applyInsertArrayMutation_ = function( doc, mutation, flags ) {
+LW.JsonOT.applyInsertArrayMutation_ = function( doc, mutation, flags, insertCallback ) {
   var a = [];
-  for ( var i in mutation ) {
-	a[i] = LW.JsonOT.applyInsertMutation_(doc, mutation[i], flags);
-  }
   if (flags & LW.JsonOT.CreateIDs == LW.JsonOT.CreateIDs) {
 	a._id = LW.JsonOT.uniqueId_();	
 	a._rev = doc._rev;
+  }
+  if ( insertCallback ) insertCallback(a);
+  for ( var i in mutation ) {
+	var callback = function(val) {
+	  a[i] = val;
+	  if ( a._cb_inserted ) { a._cb_inserted(doc, a, i, mutation[i], LW.JsonOT.AttributeInserted); }
+	};
+	LW.JsonOT.applyInsertMutation_(doc, mutation[i], flags, callback);
   }
   return a;
 };

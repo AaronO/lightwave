@@ -220,7 +220,11 @@ type DocumentNode struct {
   history *DocumentHistory
 }
 
-func NewDocumentNode(parent Node, name string, level int) Node {
+func DocumentNodeFactory(parent Node, name string, level int) Node {
+  return NewDocumentNode(parent, name, level)
+}
+
+func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   d := &DocumentNode{children:make(map[string]Node), level:level, NodeBase:NodeBase{parent:parent, name:name,postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   d.subscriptions = make(map[string]Subscription)
   d.doc = make(map[string]interface{})
@@ -231,6 +235,7 @@ func NewDocumentNode(parent Node, name string, level int) Node {
   d.doc["_hash"] = "TODOHASH"
   d.federatedDomains = make(map[string]bool)
   d.history = NewDocumentHistory()
+  d.digestMode = make(map[string]bool)
   return d
 }
 
@@ -321,17 +326,21 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   // At this point we know that the mutation is applied.
 
   users := self.Participants()
-
+  server := self.Server()
+  
   // Inform all local users of this document that the document has changed
   digest := "TODODigest"
   for _, u := range users {
-	b, ok := self.digestMode[u.String()]
+	if u.Domain != server.manifest.Domain {
+	  continue
+	}
+	b, ok := self.digestMode[u.Username]
 	if !ok {
-	  self.digestMode[u.String()] = false;
+	  self.digestMode[u.Username] = false;
 	}
 	if !ok || b {
 	  // Send a digest updates
-	  self.Server().Users().Digest(&DigestMsg{u.String(), self.URI(), digest})
+	  self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), digest})
 	}
   }
   
@@ -340,7 +349,6 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
 	return true
   }
   
-  server := self.Server()
   // Find out whether there are new domains involved. In this case we
   // have to send the mutation as a wavelet update to all the others
   // This code assumes that the meta data can be arbitrarily malformed. This is perhaps overly defensive
@@ -650,10 +658,14 @@ type HostNode struct {
   NodeBase
   children map[string]Node
   proxy *FederationProxy
+  users *UserRootNode
 }
 
 func NewHostNode(parent Node, host string) *HostNode {
   h := &HostNode{children:make(map[string]Node), NodeBase:NodeBase{parent:parent, name:host, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
+  h.users = NewUserRootNode(h)
+  go h.users.Run()
+  h.children[h.users.Name()] = h.users
   return h
 }
 
@@ -674,6 +686,10 @@ func (self *HostNode) Run() {
 		return
 	}
   }
+}
+
+func (self *HostNode) Users() *UserRootNode {
+  return self.users
 }
 
 func (self *HostNode) IsLocal() bool {
@@ -776,7 +792,6 @@ type Server struct {
   manifest *ServerManifest
   children map[string]Node
   sessions *SessionRootNode
-  users *UserRootNode
   gateways map[string]*FederationGateway
   gatewaysMutex sync.Mutex
 }
@@ -784,11 +799,9 @@ type Server struct {
 func NewServer(manifest *ServerManifest) *Server {
   r := &Server{manifest:manifest, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:manifest.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   r.sessions = NewSessionRootNode(r)
-  r.users = NewUserRootNode(r)
   r.gateways = make(map[string]*FederationGateway)
   // Launch the server, i.e. start processing messages
   go r.sessions.Run()
-  go r.users.Run()
   return r
 }
 
@@ -808,8 +821,15 @@ func (self *Server) Gateway(domain string) *FederationGateway {
   return g;
 }
 
-func (self *Server) Users() *UserRootNode {
-  return self.users
+func (self *Server) LocalHost() *HostNode {
+  h, ok := self.children[self.manifest.Domain].(*HostNode)
+  if ok {
+	return h
+  }
+  h = NewHostNode(self, self.manifest.Domain)
+  go h.Run()
+  self.AddChild(h)
+  return h
 }
 
 func (self *Server) Run() {
@@ -859,8 +879,6 @@ func (self *Server) post(req *PostRequest) {
 	  oldfinish <- ok
 	case SessionURI:
 	  self.sessions.Post(req)
-	case UserURI:
-	  self.users.Post(req)
 	case ViewURI:
 	  panic("TODO")
 	case ManifestURI:
@@ -896,8 +914,6 @@ func (self *Server) get(req *GetRequest) {
 	  return
 	case SessionURI:
 	  self.sessions.Get(req)
-	case UserURI:
-	  self.users.Get(req)
 	case ViewURI:
 	  panic("TODO")
 	case ManifestURI:

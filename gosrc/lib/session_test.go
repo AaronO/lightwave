@@ -8,6 +8,7 @@ import (
   "bufio"
   "json"
   "log"
+  "time"
 )
 
 func testPost(server *Server, uri string, jsonRequest string, jsonResponse string, t *testing.T) bool {
@@ -216,32 +217,38 @@ func TestSession(t *testing.T) {
   // Create a root node
   server := NewServer(&ServerManifest{Domain:"localhost", HostName:"localhost", Port:8080})
   go server.Run()
-  RegisterNodeFactory("application/json", NewDocumentNode)
+  RegisterNodeFactory("application/json", DocumentNodeFactory)
 
   // Stop the root node
   defer server.Stop()
 
-  if !testPost(server, "/_user/weis", `{"_rev":0, "_data":{"uid":"weis@localhost"}}`, `{"ok":true, "version":1}`, t) {
+  if !testPost(server, "/localhost/_user/weis", `{"_rev":0, "_data":{"uid":"weis@localhost"}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
-  if !testGet(server, "/_user/weis", `{"_rev":1, "_hash":"TODOHASH", "_meta":{}, "_data":{"uid":"weis@localhost"}}`, t) {
+  if !testGet(server, "/localhost/_user/weis", `{"_rev":1, "_hash":"TODOHASH", "_meta":{}, "_data":{"uid":"weis@localhost"}}`, t) {
 	return
   }
-  if !testPost(server, "/localhost/foo", `{"_rev":0, "_data":{"foo":"bar"}}`, `{"ok":true, "version":1}`, t) {
+  if !testGet(server, "/localhost/_user/weis/inbox", `{"_rev":0, "_hash":"TODOHASH", "_meta":{}, "_data":{"docs":[]}}`, t) {
+	return
+  }
+  if !testPost(server, "/localhost/foo", `{"_rev":0, "_data":{"foo":"bar"}, "_meta":{"participants":["weis@localhost"]}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
   if !testPost(server, "/localhost/foo", `{"_rev":1, "_data":{"$object":true, "hoo":"gar"}}`, `{"ok":true, "version":2}`, t) {
 	return
   }
-  if !testGet(server, "/localhost/foo", `{"_rev":2, "_hash":"TODOHASH", "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{}}`, t) {
+  if !testGet(server, "/localhost/foo", `{"_rev":2, "_hash":"TODOHASH", "_data":{"foo":"bar", "hoo":"gar"}, "_meta":{"participants":["weis@localhost"]}}`, t) {
 	return
   }
-  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":{"/localhost/foo":{"recursive":true, "snapshot":true, "mimeTypes":[], "schemas":[]}}}}`, `{"ok":true, "version":1}`, t) {
+  if !testPost(server, "/_session/weis/s1", `{"_rev":0, "_data":{"filters":{"/localhost/foo":{"recursive":true, "snapshot":true, "mimeTypes":[], "schemas":[]}, "/localhost/_user/weis/inbox":{"recursive":false, "snapshot":true, "mimeTypes":[], "schemas":[]}}}}`, `{"ok":true, "version":1}`, t) {
 	return
   }
-//  time.Sleep(10000)
+  time.Sleep(10000000)
 //  if !testGet(root, "/_session/weis/s1/_update", `{"/local/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":2}]}`, t) {
-  if !testGet(server, "/_session/weis/s1/_poll", `{"/localhost/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{},"_rev":0, "_hash":"TODOHASH", "_endRev":2, "_endHash":"TODOHASH"}]}`, t) {
+  if !testGet(server, "/_session/weis/s1/_poll", `{"/localhost/foo":[{"_data":{"foo":"bar","hoo":"gar"},"_meta":{"participants":["weis@localhost"]},"_rev":0, "_hash":"TODOHASH", "_endRev":2, "_endHash":"TODOHASH"}], "/localhost/_user/weis/inbox":[{"_rev":0, "_endRev":1, "_hash":"TODOHASH", "_endHash":"TODOHASH", "_meta":{}, "_data":{"docs":[{"uri":"/localhost/foo", "digest":"TODODigest"}]}}]}`, t) {
+	return
+  }
+  if !testGet(server, "/localhost/_user/weis/inbox", `{"_rev":1, "_hash":"TODOHASH", "_meta":{}, "_data":{"docs":[{"uri":"/localhost/foo", "digest":"TODODigest"}]}}`, t) {
 	return
   }
 }

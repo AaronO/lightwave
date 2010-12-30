@@ -40,18 +40,6 @@ func (self SessionURI) String() string {
 }
 
 // -----------------------------------------------
-// UserURI
-
-type UserURI struct {
-  // A string of the form "joe", i.e. with no domain suffix
-  User string
-}
-
-func (self UserURI) String() string {
-  return "_user/" + self.User
-}
-
-// -----------------------------------------------
 // ManifestURI
 
 type ManifestURI struct {
@@ -117,11 +105,6 @@ func NewURI(uri string) (result URI, ok bool) {
 	  return nil, false
 	}
 	return ViewURI{slices[1]}, true
-  } else if slices[0] == "_user" {
-	if len(slices) != 2 {
-	  return nil, false
-	}
-	return UserURI{slices[1]}, true
   } else if slices[0] == "_session" {
 	if len(slices) != 3 && len(slices) != 4 {
 	  return nil, false
