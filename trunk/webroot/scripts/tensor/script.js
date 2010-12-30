@@ -181,6 +181,7 @@ LW.Tensor.onDivClick_ = function() {
   }
 };
 
+// Creates and sends an initial document mutation to create a new conversation document
 LW.Tensor.createNewConversation = function()
 {
   if ( !LW.Session.sessionCreated ) {
@@ -192,7 +193,6 @@ LW.Tensor.createNewConversation = function()
   var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
   var doc = LW.Inbox.getOrCreateDoc(url);
   LW.Tensor.currentDoc = doc;
-  doc.content._data = {};
   doc.content._data._cb_comments = function(d, obj, key, mutation, event ) {
 	if ( event == LW.JsonOT.AttributeInserted ) {
 	  var list = $('#list-2');
@@ -202,7 +202,7 @@ LW.Tensor.createNewConversation = function()
 	  d._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
 	}
   }
-  doc.submitDocMutation( {"_rev":0, "_meta":{"participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
 						"_data":{"$object":true, "title":"A new document", "comments":[
 								  {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
 								   "comments":[],
@@ -213,6 +213,9 @@ LW.Tensor.createNewConversation = function()
   LW.Session.open(url, false);
 };
 
+// Creates and sends a document mutation to insert a new comment.
+//
+// @param objectid is the ID denoting a JSON array that contains a list of comments.
 LW.Tensor.createNewComment = function(objectid) {
   if ( !LW.Session.sessionCreated ) {
 	alert("No session created yet");
@@ -232,6 +235,7 @@ LW.Tensor.createNewComment = function(objectid) {
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
+// Install the event handlers for a comment that has been inserted in an array at the specified index.
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
   arr[index]._cb = function(d, obj, key, mut, event) {
 	if ( event == LW.JsonOT.ObjectModified ) {
@@ -242,6 +246,7 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
   }
 };
 
+// Called when a comment has changed or been inserted
 LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   var comment = arr[index];
   var newreplies = comment.comments.length;
@@ -270,6 +275,7 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   }
 };
 
+// Invoked when an item of the inbox has changed or been inserted
 LW.Tensor.inboxModifiedCallback_ = function(entry) {
   var html = '<h3><span class="text">' + esc(entry.digest) + '</span> <span class="updates">(' + "0" + ')</span> <span class="date"> ' + "today" + ' </span></h3>';
   html += '<h4>' + "Some text Bla bla bla" + ' <span class="author">' + "torben" + '</span></h4>';
@@ -291,6 +297,7 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
   }
 };
 
+// Install the event handlers for the Inbox
 LW.Tensor.init = function() {
   LW.Inbox.init();
   // Wait for the data object
