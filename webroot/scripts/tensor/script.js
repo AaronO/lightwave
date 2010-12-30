@@ -34,7 +34,6 @@ LW.Tensor.createContent_ = function(item, nextlist) {
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	// TODO: The doc should be opened in a session
 	LW.Tensor.createConversationView();
   } else {
 	var reply = LW.Inbox.getElementById(id);
@@ -54,7 +53,9 @@ LW.Tensor.deselectAll_ = function(list) {
 	}
 	list.removeClass('grey');
 	list.children('.selected').removeClass('selected');
-	list.fadeOut();
+	if ( i > 1 ) {
+	  list.fadeOut();
+	}
 	i++;
   }
 };
@@ -181,12 +182,8 @@ LW.Tensor.createNewConversation = function()
   var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
   var doc = LW.Inbox.getOrCreateDoc(url);
   doc.submitDocMutation( {"_rev":0, "_meta":{"participants":[LW.Rpc.user + "@" + LW.Rpc.domain]}, "_data":{"title":"A new document", "content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}} )
-  // doc.content._data._cb_content = LW.Tensor.contentCallback_;
-  // doc.content._data.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
   doc.content._data.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
-  
-  // Show the document in the inbox
-  // LW.Tensor.createDocumentInboxView(doc);
+  LW.Tensor.currentDoc = doc;
   
   // Open the document in the session
   LW.Session.open(url, false);
@@ -214,14 +211,14 @@ LW.Tensor.createNewComment = function(objectid) {
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
   arr[index]._cb = function(d, obj, key, mut, event) {
 	if ( event == LW.JsonOT.ObjectModified ) {
-	  LW.Tensor.commentModifiedCallback_(doc, arr, index);
+	  LW.Tensor.commentModifiedCallback_(arr, index);
 	} else if ( event == LW.JsonOT.AttributeInserted && key == "replies" ) {
 	  obj.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
 	}
   }
 };
 
-LW.Tensor.commentModifiedCallback_ = function(doc, arr, index) {
+LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   var reply = arr[index];
   var html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
   html += '<h4>' + esc(reply.content) + '</h4>';
@@ -232,13 +229,7 @@ LW.Tensor.commentModifiedCallback_ = function(doc, arr, index) {
   if ( !div ) {
 	console.log("Comment has been inserted: " + JSON.stringify(arr[index]) + " at position " + index.toString());
 	var lists = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]");
-	if ( lists.length == 0 ) {
-	  console.log("LIST NOT FOUND");
-	  return;
-	}
 	var list = lists.toArray()[0];
-	console.log(lists)
-	console.log(list);
 	var newreplies = reply.replies.length;
 	div = document.createElement("div")
 	div.className = "wave new";
@@ -263,6 +254,10 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 	div.onclick = LW.Tensor.onDivClick_;
 	div.innerHTML = html;
 	list.insertBefore(div, list.firstChild);
+	// Is this the current document?
+	if ( LW.Tensor.currentDoc && LW.Tensor.currentDoc.url == entry.uri ) {
+	  div.onclick();
+	}
   } else {
 	div.innerHTML = html;
   }
@@ -306,22 +301,10 @@ LW.Tensor.createCommentsView = function(list, obj) {
   console.log("Create Comments View for " + obj.replies._id)
   console.log(list)
   list.innerHTML = "";
-  for( var i = 0; i < obj.replies.length; i++ ) {
-	var reply = obj.replies[i];
-	var newreplies = reply.replies.length;
-	html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
-	html += '<h4>' + esc(reply.content) + '</h4>';
-	html += '<div class="tools">';
-	html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-	html += '</div>';
-	var div = document.createElement("div")
-	div.className = "wave new";
-	div.innerHTML = html;
-	div.id = LW.Tensor.currentDoc.url + "!" + reply._id;
-	div.onclick = LW.Tensor.onDivClick_;
-	list.appendChild(div);
-  }
   list.objectid = LW.Tensor.currentDoc.url + "!" + obj.replies._id;
+  for( var i = 0; i < obj.replies.length; i++ ) {
+	LW.Tensor.commentModifiedCallback_(obj.replies, i)
+  }
 };
 
 LW.Tensor.init = function() {
