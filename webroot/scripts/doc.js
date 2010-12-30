@@ -6,7 +6,7 @@ LW.Doc = function(url) {
   this.url = url;
   this.version = 0;
   this.hash = "TODOHASH";
-  this.content = { };
+  this.content = { "_rev":0, "_data":{"_rev":0, "_id":LW.JsonOT.uniqueId_()}, "_meta":{"_rev":0, "_id":LW.JsonOT.uniqueId_()} };
   this.pendingSubmit = null;
   this.queue = [];
 };
