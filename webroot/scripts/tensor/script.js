@@ -34,10 +34,11 @@ LW.Tensor.createContent_ = function(item, nextlist) {
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	LW.Tensor.createConversationView();
+	var comments = LW.Tensor.currentDoc.content._data.comments;
+	LW.Tensor.createCommentsView(nextlist.toArray()[0], comments, true);
   } else {
-	var reply = LW.Inbox.getElementById(id);
-	LW.Tensor.createCommentsView(nextlist.toArray()[0], reply);
+	var comment = LW.Inbox.getElementById(id);
+	LW.Tensor.createCommentsView(nextlist.toArray()[0], comment.comments, false);
   }
 };
 
@@ -181,9 +182,23 @@ LW.Tensor.createNewConversation = function()
   // Instantiate the document
   var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
   var doc = LW.Inbox.getOrCreateDoc(url);
-  doc.submitDocMutation( {"_rev":0, "_meta":{"participants":[LW.Rpc.user + "@" + LW.Rpc.domain]}, "_data":{"title":"A new document", "content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}} )
-  doc.content._data.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
   LW.Tensor.currentDoc = doc;
+  doc.content._data = {};
+  doc.content._data._cb_comments = function(d, obj, key, mutation, event ) {
+	if ( event == LW.JsonOT.AttributeInserted ) {
+	  var list = $('#list-2');
+	  list.toArray()[0].innerHTML = "";
+	  list.toArray()[0].objectid = LW.Tensor.currentDoc.url + "!" + d._data.comments._id;
+	  list.fadeIn();
+	  d._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+	}
+  }
+  doc.submitDocMutation( {"_rev":0, "_meta":{"participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+						"_data":{"$object":true, "title":"A new document", "comments":[
+								  {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
+								   "comments":[],
+								   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
+								  }]}});
   
   // Open the document in the session
   LW.Session.open(url, false);
@@ -198,13 +213,13 @@ LW.Tensor.createNewComment = function(objectid) {
   var id = objectid.substring(i + 1, objectid.length);
   console.log("New Comment for " + objectid);
   console.log(LW.Tensor.currentDoc.content);
-  var arr = LW.Inbox.getElementById(objectid);
-  var mutation = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "author":LW.Rpc.user, "date":"Dec 4", "replies":[]}];
-  if ( arr.length > 0 ) {
-	mutation.splice(0,0, {"$skip":arr.length});
+  var comments = LW.Inbox.getElementById(objectid);
+  var mutation = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
+  if ( comments.length > 0 ) {
+	mutation.splice(0,0, {"$skip":comments.length});
   }
-  var arrmut = {"$array":mutation};
-  var mut = LW.Tensor.currentDoc.createMutationForId(id, arrmut);
+  var arrmut = {"$array":mutation};	
+  var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
@@ -212,29 +227,33 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
   arr[index]._cb = function(d, obj, key, mut, event) {
 	if ( event == LW.JsonOT.ObjectModified ) {
 	  LW.Tensor.commentModifiedCallback_(arr, index);
-	} else if ( event == LW.JsonOT.AttributeInserted && key == "replies" ) {
-	  obj.replies._cb_inserted = LW.Tensor.commentInsertedCallback_;
+	} else if ( event == LW.JsonOT.AttributeInserted && key == "comments" ) {
+	  obj.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
 	}
   }
 };
 
 LW.Tensor.commentModifiedCallback_ = function(arr, index) {
-  var reply = arr[index];
-  var html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
-  html += '<h4>' + esc(reply.content) + '</h4>';
+  var comment = arr[index];
+  var newreplies = comment.comments.length;
+  // TODO: newreplies
+  var title = "";
+  if ( arr == LW.Tensor.currentDoc.content._data.comments && index == 0 ) {
+	title = LW.Tensor.currentDoc.content._data.title + " ";
+  }
+  var html = '<h3><span class="text">' + esc(comment._meta.author) + ": " + title + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + comment._meta.date + ' </span></h3>';
+  html += '<h4>' + esc(comment.content) + '</h4>';
   html += '<div class="tools">';
   html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
   html += '</div>';
-  var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + reply._id);
+  var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + comment._id);
   if ( !div ) {
-	console.log("Comment has been inserted: " + JSON.stringify(arr[index]) + " at position " + index.toString());
-	var lists = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]");
-	var list = lists.toArray()[0];
-	var newreplies = reply.replies.length;
+	console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
+	var list = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]").toArray()[0];
 	div = document.createElement("div")
 	div.className = "wave new";
 	div.innerHTML = html;
-	div.id = LW.Tensor.currentDoc.url + "!" + reply._id;
+	div.id = LW.Tensor.currentDoc.url + "!" + comment._id;
 	div.onclick = LW.Tensor.onDivClick_;
 	list.insertBefore( div, list.children[index + 1] );
   } else {
@@ -256,69 +275,37 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 	list.insertBefore(div, list.firstChild);
 	// Is this the current document?
 	if ( LW.Tensor.currentDoc && LW.Tensor.currentDoc.url == entry.uri ) {
-	  div.onclick();
+	  $(div).addClass("selected");
 	}
   } else {
 	div.innerHTML = html;
   }
 };
 
-LW.Tensor.createConversationView = function() {
-  var doc = LW.Tensor.currentDoc;
-  console.log("Create Conversation View for " + doc.content._data.replies._id)
-  var list = document.getElementById("list-2");
+LW.Tensor.createCommentsView = function(list, comments, title) {
+  console.log("Create Comments View for " + comments._id)
   list.innerHTML = "";
-  var html = '<h3><span class="text">' + esc(doc.content._data.author) + ": " + esc(doc.content._data.title) + '</span> <span class="updates">(' + doc.content._data.replies.length.toString() + ')</span> <span class="date"> ' + doc.content._data.date + ' </span></h3>';
-  html += '<h4>' + esc(doc.content._data.content) + '</h4>';
-  html += '<div class="tools">';
-  html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-  html += '</div>';
-  var div = document.createElement("div")
-  div.className = "wave new";
-  div.innerHTML = html;
-  div.id = doc.url + "!" + doc.content._data._id;
-  list.appendChild(div);
-  list.objectid = doc.url + "!" + doc.content._data.replies._id;
-  
-  for( var i = 0; i < doc.content._data.replies.length; i++ ) {
-	var reply = doc.content._data.replies[i];
-	var newreplies = reply.replies.length;
-	html = '<h3><span class="text">' + esc(reply.author) + ":" + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + reply.date + ' </span></h3>';
-	html += '<h4>' + esc(reply.content) + '</h4>';
-	html += '<div class="tools">';
-	html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-	html += '</div>';
-	var div = document.createElement("div")
-	div.className = "wave new";
-	div.innerHTML = html;
-	div.id = doc.url + "!" + reply._id;
-	div.onclick = LW.Tensor.onDivClick_;
-	list.appendChild(div);
-  }
-};
-
-LW.Tensor.createCommentsView = function(list, obj) {
-  console.log("Create Comments View for " + obj.replies._id)
-  console.log(list)
-  list.innerHTML = "";
-  list.objectid = LW.Tensor.currentDoc.url + "!" + obj.replies._id;
-  for( var i = 0; i < obj.replies.length; i++ ) {
-	LW.Tensor.commentModifiedCallback_(obj.replies, i)
+  list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
+  for( var i = 0; i < comments.length; i++ ) {
+	LW.Tensor.commentModifiedCallback_(comments, i)
   }
 };
 
 LW.Tensor.init = function() {
   LW.Inbox.init();
+  // Wait for the data object
   LW.Inbox.self.content._cb_data = function(doc, obj, key, mut, event) {
-	doc._data._cb_docs = function(doc, obj, key, mut, event) {
-	  if ( event == LW.JsonOT.AttributeInserted ) {
-		doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
-		  console.log("A1");
-		  arr[index]._cb = function(doc, obj, key, mut, event) {
-			if ( event == LW.JsonOT.ObjectModified ) {
-			  console.log("A3");
-			  console.log(obj);
-			  LW.Tensor.inboxModifiedCallback_(obj);
+	if ( event == LW.JsonOT.AttributeInserted ) {
+	  // Wait for the "docs" object
+	  doc._data._cb_docs = function(doc, obj, key, mut, event) {
+		if ( event == LW.JsonOT.AttributeInserted ) {
+		  // Wait for documents being inserted in the "docs" object
+		  doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
+			// Wait for changes in the inserted docs object
+			arr[index]._cb = function(doc, obj, key, mut, event) {
+			  if ( event == LW.JsonOT.ObjectModified ) {
+				LW.Tensor.inboxModifiedCallback_(obj);
+			  }
 			}
 		  }
 		}
@@ -423,7 +410,6 @@ $(function() {
 	}
     var list = col.children('.list').toArray()[0];
 	LW.Tensor.createNewComment(list.objectid);
-//						 LW.Tensor.createNewComment(LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data._id);
   });
 
   $('.wave').click( LW.Tensor.onDivClick_ );
