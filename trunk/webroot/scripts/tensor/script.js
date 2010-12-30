@@ -29,16 +29,25 @@ LW.Tensor = {
 };
 
 // Called when a new column is shown
-LW.Tensor.createContent_ = function(item, nextlist) {
+LW.Tensor.createColumnContent_ = function(item, nextlist) {
   var id = item.context.id;
+  var list = nextlist.toArray()[0];
+  var title = false;
+  var comments = null;
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	var comments = LW.Tensor.currentDoc.content._data.comments;
-	LW.Tensor.createCommentsView(nextlist.toArray()[0], comments, true);
+	title = true;
+	comments = LW.Tensor.currentDoc.content._data.comments;
   } else {
-	var comment = LW.Inbox.getElementById(id);
-	LW.Tensor.createCommentsView(nextlist.toArray()[0], comment.comments, false);
+	comments = LW.Inbox.getElementById(id).comments;
+  }
+  // Generate the HTML for the column
+  console.log("Create Comments View for " + comments._id)
+  list.innerHTML = "";
+  list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
+  for( var i = 0; i < comments.length; i++ ) {
+	LW.Tensor.commentModifiedCallback_(comments, i)
   }
 };
 
@@ -76,7 +85,7 @@ LW.Tensor.select_ = function(nextlist, list, selected, item) {
   selected.removeClass('selected'); 
   item.addClass('selected');
   $('#container').scrollTop(0);
-  LW.Tensor.createContent_(item, nextlist);
+  LW.Tensor.createColumnContent_(item, nextlist);
   nextlist.fadeIn(235);
 };
 
@@ -87,7 +96,7 @@ LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
   nextlist.fadeOut(300, function() {
 	nextlist.children('.selected').removeClass('selected');
 	nextlist.removeClass('grey');
-    LW.Tensor.createContent_(item, nextlist);
+    LW.Tensor.createColumnContent_(item, nextlist);
   } );
   $('html').scrollTop(0);
   nextlist.fadeIn();
@@ -279,15 +288,6 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 	}
   } else {
 	div.innerHTML = html;
-  }
-};
-
-LW.Tensor.createCommentsView = function(list, comments, title) {
-  console.log("Create Comments View for " + comments._id)
-  list.innerHTML = "";
-  list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
-  for( var i = 0; i < comments.length; i++ ) {
-	LW.Tensor.commentModifiedCallback_(comments, i)
   }
 };
 
