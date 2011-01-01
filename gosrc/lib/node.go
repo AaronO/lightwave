@@ -615,6 +615,8 @@ func (self *DocumentNode) pubSub(req* PubSubRequest) {
 		  clone["_endHash"] = clone["_hash"]
 		  clone["_rev"] = 0
 		  clone["_hash"] = "TODOHASH"
+		  clone["_data"].(map[string]interface{})["$object"] = true;
+		  clone["_meta"].(map[string]interface{})["$object"] = true;
 		  m, _ := json.Marshal(clone)
 		  req.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(m)}} )
 		} else {
