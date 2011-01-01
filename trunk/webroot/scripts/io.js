@@ -52,6 +52,8 @@ LW.Rpc.postOrGet_ = function(url, httpMethod, jsonData, callback, errCallback) {
 	  }
 	};
 	if ( jsonData ) {
+	  console.log("Sending ...");
+	  console.log(jsonData);
 	  xmlHttp.send(jsonData);
 	} else {
 	  xmlHttp.send();
@@ -69,6 +71,8 @@ LW.Rpc.enqueue = function(url, jsonData, callback, errCallback) {
 };
 
 LW.Rpc.enqueueCallback_ = function(reply) {
+  console.log("Answer ...");
+  console.log(reply);
   var msg = LW.Rpc.queue[0];
   if ( msg.callback ) {
 	msg.callback(reply);
@@ -112,12 +116,12 @@ LW.Session.createSession_ = function() {
   LW.Session.id = "s" + Math.random().toString();
   var mutation = {"_rev":0, "_data":{"filters":{}}};
   LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
-  LW.Rpc.post("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.createSessionCallback_, LW.Session.createSessionErrCallback_);
+  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.createSessionCallback_, LW.Session.createSessionErrCallback_);
 };
 
 // Callback for the successful attempt of creating a session on the server
 LW.Session.createSessionCallback_ = function(reply) {
-  console.log("create session: " + reply)
+  // console.log("create session: " + reply)
   var json = JSON.parse(reply)
   if ( json.ok == true ) {
 	LW.Session.sessionCreated = true;
@@ -143,8 +147,9 @@ LW.Session.sessionPoll_ = function() {
 
 // Successful response from the HTTP long call
 LW.Session.sessionPollCallback_ = function(reply) {
-  console.log("session: " + reply)
+  console.log("Recv session ...")
   var json = JSON.parse(reply);
+  console.log(json);
   for( var url in json ) {
 	var doc = LW.Inbox.getOrCreateDoc(url);
 	var mutations = json[url];
@@ -175,13 +180,13 @@ LW.Session.open = function(prefix, snapshot, recursive, mimeTypes, schemas) {
   var mutation = { "_rev":LW.Session.version, "_data":{ "$object":true, "filters":{"$object":true} } };
   mutation._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas, "snapshot":snapshot};
   LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
-  console.log("-> " + JSON.stringify(mutation))
+  // console.log("-> " + JSON.stringify(mutation))
   LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.openCallback_);
 };
 
 // Response to the request of adding a document to the session
 LW.Session.openCallback_ = function(reply) {
-  console.log("open: " + reply)
+  // console.log("open: " + reply)
   var json = JSON.parse(reply)
   if ( json.ok == true ) {
 	LW.Session.version = json.version;

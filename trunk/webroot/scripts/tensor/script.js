@@ -37,22 +37,13 @@ LW.Tensor.createColumnContent_ = function(id, list) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
 	LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
 	  if ( event == LW.JsonOT.AttributeInserted ) {
-		console.log("Comments attribute arrived");
 		document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
 		LW.Tensor.currentDoc.content._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
 	  }
 	}
 	// Open the document if it is not yet open
-	LW.Session.open(LW.Tensor.currentDoc.url, true, false);
+	// LW.Session.open(LW.Tensor.currentDoc.url, true, false);
 	comments = LW.Tensor.currentDoc.content._data.comments;
-	// If the document is currently empty (because the client has not loaded it from the server yet)
-	// then create some place holder here. We need the uniqueId!
-	//if ( !comments ) {
-	//  LW.Tensor.currentDoc.content._data.comments = [ ];
-	//  LW.Tensor.currentDoc.content._data.comments._id = LW.JsonOT.uniqueId_();
-	//  LW.Tensor.currentDoc.content._data.comments._rev = 0;
-	//  comments = LW.Tensor.currentDoc.content._data.comments;
-	//}
   } else {
 	comments = LW.Inbox.getElementById(id).comments;
   }
@@ -147,11 +138,6 @@ LW.Tensor.onDivClick_ = function() {
   selected = list.children('.selected');
 
   numlist  = parseInt(list.attr('id').substring(5));
-
-  // Click in the inbox?
-  //if ( numlist == 1 ) {
-	//LW.Session.open(this.id, true, false);
-  //}
   
   nextnum  =  numlist + 1;
   nextlist = $('#list-' + nextnum);
@@ -198,35 +184,11 @@ LW.Tensor.onDivClick_ = function() {
 	  LW.Tensor.select_(nextlist, list, selected, $(this));
 	}
   }
-};
-
-// Creates and sends an initial document mutation to create a new conversation document
-//LW.Tensor.createNewConversation = function()
-//{
-  // Instantiate the document
-//  var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
-//  var doc = LW.Inbox.getOrCreateDoc(url);
-  //LW.Tensor.currentDoc = doc;
-  //doc.content._data._cb_comments = function(d, obj, key, mutation, event ) {
-//	if ( event == LW.JsonOT.AttributeInserted ) {
-//	  var list = $('#list-2');
-//	  list.toArray()[0].innerHTML = "";
-//	  list.toArray()[0].objectid = LW.Tensor.currentDoc.url + "!" + d._data.comments._id;
-//	  list.fadeIn();
-//	  d._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-//	}
-//  }
-//  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-//						"_data":{"$object":true, "title":"A new document", "comments":[
-//								  {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
-//								   "comments":[],
-//								   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
-//								  }]}});
   
-  // Open the document in the session
-  //LW.Session.open(url, false, false);
-//  return doc;
-//};
+  if ( numlist == 1 ) {
+	LW.Session.open(LW.Tensor.currentDoc.url, true, false);
+  }
+};
 
 // Creates and sends a document mutation to insert a new comment.
 //
@@ -234,8 +196,8 @@ LW.Tensor.onDivClick_ = function() {
 LW.Tensor.createNewComment = function(objectid) {
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
-  console.log("New Comment for " + objectid);
-  console.log(LW.Tensor.currentDoc.content);
+  // console.log("New Comment for " + objectid);
+  // console.log(LW.Tensor.currentDoc.content);
   var comments = LW.Inbox.getElementById(objectid);
   var mutation = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
   if ( comments.length > 0 ) {
@@ -259,7 +221,7 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
 
 // Called when a comment has changed or been inserted
 LW.Tensor.commentModifiedCallback_ = function(arr, index) {
-  console.log("Comment modified callback");
+  // console.log("Comment modified callback");
   var comment = arr[index];
   var newreplies = comment.comments.length;
   // TODO: newreplies
@@ -274,8 +236,12 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   html += '</div>';
   var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + comment._id);
   if ( !div ) {
-	console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
+	// console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
 	var list = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]").toArray()[0];
+	// Do not display the comment?
+	if ( !list ) {
+	  return;
+	}
 	div = document.createElement("div")
 	div.className = "wave new";
 	div.innerHTML = html;
@@ -325,27 +291,6 @@ LW.Tensor.init = function() {
 	  }
 	}
   }	
-  /*
-  // Wait for the data object
-  LW.Inbox.self.content._cb_data = function(doc, obj, key, mut, event) {
-	if ( event == LW.JsonOT.AttributeInserted ) {
-	  // Wait for the "docs" object
-	  doc._data._cb_docs = function(doc, obj, key, mut, event) {
-		if ( event == LW.JsonOT.AttributeInserted ) {
-		  // Wait for documents being inserted in the "docs" object
-		  doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
-			// Wait for changes in the inserted docs object
-			arr[index]._cb = function(doc, obj, key, mut, event) {
-			  if ( event == LW.JsonOT.ObjectModified ) {
-				LW.Tensor.inboxModifiedCallback_(obj);
-			  }
-			}
-		  }
-		}
-	  }
-	}
-  };
-   */
   LW.Session.init();
 };
 
@@ -447,7 +392,8 @@ $(function() {
 							{"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
 							 "comments":[],
 							"_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
-						  }]}});					  
+						  }]}});
+	LW.Session.open(LW.Tensor.currentDoc.url, false, false);
   } );
 
   $('.newcomment').click( function() {

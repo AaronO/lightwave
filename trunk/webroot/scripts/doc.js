@@ -129,7 +129,6 @@ LW.Doc.prototype.createMutationForId_ = function(obj, id, mutation) {
 	  return mutation;
 	}
 	for( var i in obj ) {
-	  console.log(id + ": " + i);
 	  var mut = this.createMutationForId_(obj[i], id, mutation);
 	  if ( mut ) {
 		var r = {"$object":true};
@@ -155,8 +154,8 @@ LW.Inbox.uniqueId = function() {
 };
 
 LW.Inbox.init = function() {
+  // Create the json document that contains the inbox
   LW.Inbox.self = LW.Inbox.getOrCreateDoc("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox");
-  // LW.Inbox.self.content._data = { "docs":[] }
 };
 
 // @param url has the format "/host-name/conversation-id"

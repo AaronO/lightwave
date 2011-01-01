@@ -279,13 +279,16 @@ func (self DocumentMutation) checkArrayMutation(arr []interface{}, mutation Arra
 		lifts[l.Id()] = true
 		index++
 	  default:
-		 log.Println("Unknown or unexpected mutation: ", mut)
+		log.Println("Unknown or unexpected mutation: ", mut)
 		return false
 	}
   }
 
   if index < len(arr) {
 	log.Println("Array mutation is too small")
+	log.Println(index)
+	log.Println(len(arr))
+	log.Println(arr)
 	return false
   }
   if len(lifts) != len(squeezes) {
@@ -426,7 +429,7 @@ func (self DocumentMutation) applyArrayMutation(arr []interface{}, mutation Arra
 		v.Insert(index, lifts[toSqueezeMutation(m).Id()])
 		index++
 	  case IsObjectMutation(m), IsArrayMutation(m), IsTextMutation(m):
-		v.Insert(index, self.apply( v[index], m, flags ))
+		v[index] = self.apply( v[index], m, flags )
 		index++		
 	  default:
 		// Must be an insert mutation
