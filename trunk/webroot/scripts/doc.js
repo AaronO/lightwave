@@ -156,7 +156,7 @@ LW.Inbox.uniqueId = function() {
 
 LW.Inbox.init = function() {
   LW.Inbox.self = LW.Inbox.getOrCreateDoc("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox");
-  LW.Inbox.self.content._data = { "docs":[] }
+  // LW.Inbox.self.content._data = { "docs":[] }
 };
 
 // @param url has the format "/host-name/conversation-id"

@@ -25,29 +25,46 @@ if ( !window.LW ) {
 }
 
 LW.Tensor = {
+  // Points to an instance of LW.Doc
   currentDoc : null
 };
 
 // Called when a new column is shown
-LW.Tensor.createColumnContent_ = function(item, nextlist) {
-  var id = item.context.id;
-  var list = nextlist.toArray()[0];
-  var title = false;
+LW.Tensor.createColumnContent_ = function(id, list) {
   var comments = null;
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	title = true;
+	LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
+	  if ( event == LW.JsonOT.AttributeInserted ) {
+		console.log("Comments attribute arrived");
+		document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
+		LW.Tensor.currentDoc.content._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+	  }
+	}
+	// Open the document if it is not yet open
+	LW.Session.open(LW.Tensor.currentDoc.url, true, false);
 	comments = LW.Tensor.currentDoc.content._data.comments;
+	// If the document is currently empty (because the client has not loaded it from the server yet)
+	// then create some place holder here. We need the uniqueId!
+	//if ( !comments ) {
+	//  LW.Tensor.currentDoc.content._data.comments = [ ];
+	//  LW.Tensor.currentDoc.content._data.comments._id = LW.JsonOT.uniqueId_();
+	//  LW.Tensor.currentDoc.content._data.comments._rev = 0;
+	//  comments = LW.Tensor.currentDoc.content._data.comments;
+	//}
   } else {
 	comments = LW.Inbox.getElementById(id).comments;
   }
-  // Generate the HTML for the column
-  console.log("Create Comments View for " + comments._id)
+  // Clear the HTML for this columns
   list.innerHTML = "";
-  list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
-  for( var i = 0; i < comments.length; i++ ) {
-	LW.Tensor.commentModifiedCallback_(comments, i)
+  // Is the document already loaded? -> Show it
+  if ( comments ) {
+	// Generate the HTML for the column
+	list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
+	for( var i = 0; i < comments.length; i++ ) {
+	  LW.Tensor.commentModifiedCallback_(comments, i)
+	}
   }
 };
 
@@ -85,7 +102,7 @@ LW.Tensor.select_ = function(nextlist, list, selected, item) {
   selected.removeClass('selected'); 
   item.addClass('selected');
   $('#container').scrollTop(0);
-  LW.Tensor.createColumnContent_(item, nextlist);
+  LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
   nextlist.fadeIn(235);
 };
 
@@ -96,7 +113,7 @@ LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
   nextlist.fadeOut(300, function() {
 	nextlist.children('.selected').removeClass('selected');
 	nextlist.removeClass('grey');
-    LW.Tensor.createColumnContent_(item, nextlist);
+    LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
   } );
   $('html').scrollTop(0);
   nextlist.fadeIn();
@@ -122,6 +139,8 @@ LW.Tensor.shiftright_ = function(col, prevlist) {
   $('#content').animate({left : '+=' + colwidth}, 340);
 };
 
+// Called when a user clicks on an entry in the inbox or a comment.
+// "this" is the DIV element the user clicked on.
 LW.Tensor.onDivClick_ = function() {
   list     = $(this).parent();
   col      = list.parent();
@@ -130,9 +149,9 @@ LW.Tensor.onDivClick_ = function() {
   numlist  = parseInt(list.attr('id').substring(5));
 
   // Click in the inbox?
-  if ( numlist == 1 ) {
-	LW.Session.open(this.id, true, false);
-  }
+  //if ( numlist == 1 ) {
+	//LW.Session.open(this.id, true, false);
+  //}
   
   nextnum  =  numlist + 1;
   nextlist = $('#list-' + nextnum);
@@ -182,45 +201,37 @@ LW.Tensor.onDivClick_ = function() {
 };
 
 // Creates and sends an initial document mutation to create a new conversation document
-LW.Tensor.createNewConversation = function()
-{
-  if ( !LW.Session.sessionCreated ) {
-	alert("No session created yet");
-	return;
-  }
-    
+//LW.Tensor.createNewConversation = function()
+//{
   // Instantiate the document
-  var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
-  var doc = LW.Inbox.getOrCreateDoc(url);
-  LW.Tensor.currentDoc = doc;
-  doc.content._data._cb_comments = function(d, obj, key, mutation, event ) {
-	if ( event == LW.JsonOT.AttributeInserted ) {
-	  var list = $('#list-2');
-	  list.toArray()[0].innerHTML = "";
-	  list.toArray()[0].objectid = LW.Tensor.currentDoc.url + "!" + d._data.comments._id;
-	  list.fadeIn();
-	  d._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-	}
-  }
-  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-						"_data":{"$object":true, "title":"A new document", "comments":[
-								  {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
-								   "comments":[],
-								   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
-								  }]}});
+//  var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
+//  var doc = LW.Inbox.getOrCreateDoc(url);
+  //LW.Tensor.currentDoc = doc;
+  //doc.content._data._cb_comments = function(d, obj, key, mutation, event ) {
+//	if ( event == LW.JsonOT.AttributeInserted ) {
+//	  var list = $('#list-2');
+//	  list.toArray()[0].innerHTML = "";
+//	  list.toArray()[0].objectid = LW.Tensor.currentDoc.url + "!" + d._data.comments._id;
+//	  list.fadeIn();
+//	  d._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+//	}
+//  }
+//  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+//						"_data":{"$object":true, "title":"A new document", "comments":[
+//								  {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
+//								   "comments":[],
+//								   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
+//								  }]}});
   
   // Open the document in the session
-  LW.Session.open(url, false);
-};
+  //LW.Session.open(url, false, false);
+//  return doc;
+//};
 
 // Creates and sends a document mutation to insert a new comment.
 //
 // @param objectid is the ID denoting a JSON array that contains a list of comments.
 LW.Tensor.createNewComment = function(objectid) {
-  if ( !LW.Session.sessionCreated ) {
-	alert("No session created yet");
-	return;
-  }
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
   console.log("New Comment for " + objectid);
@@ -248,6 +259,7 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
 
 // Called when a comment has changed or been inserted
 LW.Tensor.commentModifiedCallback_ = function(arr, index) {
+  console.log("Comment modified callback");
   var comment = arr[index];
   var newreplies = comment.comments.length;
   // TODO: newreplies
@@ -300,6 +312,20 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 // Install the event handlers for the Inbox
 LW.Tensor.init = function() {
   LW.Inbox.init();
+  LW.Inbox.self.content._data._cb_docs = function(doc, obj, key, mut, event) {
+	if ( event == LW.JsonOT.AttributeInserted ) {
+	  // Wait for documents being inserted in the "docs" object
+	  doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
+		// Wait for changes in the inserted docs object
+		arr[index]._cb = function(doc, obj, key, mut, event) {
+		  if ( event == LW.JsonOT.ObjectModified ) {
+			LW.Tensor.inboxModifiedCallback_(obj);
+		  }
+		}
+	  }
+	}
+  }	
+  /*
   // Wait for the data object
   LW.Inbox.self.content._cb_data = function(doc, obj, key, mut, event) {
 	if ( event == LW.JsonOT.AttributeInserted ) {
@@ -319,6 +345,7 @@ LW.Tensor.init = function() {
 	  }
 	}
   };
+   */
   LW.Session.init();
 };
 
@@ -330,7 +357,6 @@ function esc(str) {
 
 $(function() {
   // Header pulldown
-  // TODO: Abstract this code to keep things DRY
   var headspace = 0;
   $('header a').toggle(
     function() {
@@ -406,11 +432,28 @@ $(function() {
   // Added by Torben
   
   $('.newwave').click( function() {
-	LW.Tensor.deselectAll_();
-	LW.Tensor.createNewConversation();
+	if ( !LW.Session.sessionCreated ) {
+	  alert("No session created yet");
+	  return;
+	}
+	LW.Tensor.deselectAll_();  
+	// Instantiate the document
+	var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
+	var doc = LW.Inbox.getOrCreateDoc(url);
+	LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"));
+	$("#list-2").fadeIn();
+	doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+							"_data":{"$object":true, "title":"A new document", "comments":[
+							{"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
+							 "comments":[],
+							"_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
+						  }]}});					  
   } );
 
   $('.newcomment').click( function() {
+	if ( !LW.Tensor.currentDoc ) {
+	  alert("You must select a document first");
+	}
 	var col = $(this);
 	while( !col.hasClass("col") ) {
 	  col = col.parent();
@@ -418,6 +461,4 @@ $(function() {
     var list = col.children('.list').toArray()[0];
 	LW.Tensor.createNewComment(list.objectid);
   });
-
-  $('.wave').click( LW.Tensor.onDivClick_ );
 });
