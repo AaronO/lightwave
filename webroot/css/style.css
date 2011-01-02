@@ -680,14 +680,63 @@ footer ul {
   float: right;
 }
 
+.inputBox, .infoBox {
+  border-radius:6px;
+  position:relative;
+  margin-top:4px;
+  margin-right:14px;
+  margin-left:12px; 
+  padding-right:12px;
+  padding-left:5px; 
+  padding-top:5px;
+  background-color:#CCCCCC;
+}
 
+.grey .inputBox, .grey .infoBox {
+  display:none;
+}
 
+.inputBox textarea {
+  width:100%; height:100px;
+}
 
+.inputBox input {
+  width:80%; margin-bottom:4px;
+}
 
+.inputBox .label {
+  vertical-align:middle
+}
 
+.inputBox .toolsRight {
+  float:right
+}
 
+.inputBox .editor {
+  display:block
+}
 
+.inputBox .info {
+  display:none
+}
 
+.inputBox .title {
+  display:none;
+}
+
+.infoBox .info {
+  padding-top:2px;
+  padding-bottom:6px;
+  text-align:center;
+}
+
+.infoBox .editor {
+  display:none
+}
+
+.infoBox .info {
+  display:block
+}
 
 /*
  * Media queries for responsive design
@@ -731,4 +780,3 @@ footer ul {
   p, h2, h3 { orphans: 3; widows: 3; }
   h2, h3{ page-break-after: avoid; }
 }
-

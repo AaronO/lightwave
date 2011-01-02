@@ -35,6 +35,7 @@ LW.Tensor.createColumnContent_ = function(id, list) {
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
+	console.log("SET DOC " + id);
 	LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
 	  if ( event == LW.JsonOT.AttributeInserted ) {
 		document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
@@ -57,6 +58,35 @@ LW.Tensor.createColumnContent_ = function(id, list) {
 	  LW.Tensor.commentModifiedCallback_(comments, i)
 	}
   }
+  // Create the HTML for the edit box that allows users to type new comments
+  var html = '<div class="editor">';
+  html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
+  html += '<div><textarea></textarea></div>';
+  html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
+  html += '</div>';
+  html += '<div class="info"><a href="#">Click here to reply</a></div>';
+  var box = document.createElement("div");
+  box.className = "infoBox";
+  box.innerHTML = html;
+  // Event handlers for the edit box.
+  box.lastChild.firstChild.onclick = function() {
+	box.className = "inputBox";
+	var textarea = box.firstChild.children[1].firstChild;
+	textarea.focus();
+	return false;
+  };
+  box.firstChild.lastChild.firstChild.lastChild.onclick = function() {
+	box.className = "infoBox";
+	return false;
+  };
+  box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
+	var textarea = box.firstChild.children[1].firstChild;
+	LW.Tensor.createNewComment(list.objectid, textarea.value);
+	textarea.value = "";
+	textarea.focus();
+	return false;
+  };
+  list.appendChild(box);
 };
 
 LW.Tensor.deselectAll_ = function(list) {
@@ -94,14 +124,14 @@ LW.Tensor.select_ = function(nextlist, list, selected, item) {
   item.addClass('selected');
   $('#container').scrollTop(0);
   LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
-  nextlist.fadeIn(235);
+  nextlist.fadeIn(240);
 };
 
 LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
-  nextnextlist.fadeOut(300);
+  nextnextlist.fadeOut(240);
   selected.removeClass('selected'); 
   item.addClass('selected');
-  nextlist.fadeOut(300, function() {
+  nextlist.fadeOut(240, function() {
 	nextlist.children('.selected').removeClass('selected');
 	nextlist.removeClass('grey');
     LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
@@ -185,21 +215,25 @@ LW.Tensor.onDivClick_ = function() {
 	}
   }
   
-  if ( numlist == 1 ) {
-	LW.Session.open(LW.Tensor.currentDoc.url, true, false);
+  if ( numlist == 1 && $(this).hasClass('selected') ) {
+	console.log("SESSION " + this.id);
+	LW.Session.open(this.id, true, false);
   }
 };
 
 // Creates and sends a document mutation to insert a new comment.
 //
 // @param objectid is the ID denoting a JSON array that contains a list of comments.
-LW.Tensor.createNewComment = function(objectid) {
+LW.Tensor.createNewComment = function(objectid, text) {
+  if ( !text ) {
+	text = "Hallo Welt, das ist ein neuer Kommentar";
+  }
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
   // console.log("New Comment for " + objectid);
   // console.log(LW.Tensor.currentDoc.content);
   var comments = LW.Inbox.getElementById(objectid);
-  var mutation = [{"content":"Hallo Welt, das ist ein neuer Kommentar", "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
+  var mutation = [{"content":text, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
   if ( comments.length > 0 ) {
 	mutation.splice(0,0, {"$skip":comments.length});
   }
@@ -247,7 +281,7 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
 	div.innerHTML = html;
 	div.id = LW.Tensor.currentDoc.url + "!" + comment._id;
 	div.onclick = LW.Tensor.onDivClick_;
-	list.insertBefore( div, list.children[index + 1] );
+	list.insertBefore( div, list.children[index] );
   } else {
 	div.innerHTML = html;
   }
