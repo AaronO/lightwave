@@ -116,7 +116,7 @@ LW.Tensor.deselectAll_ = function(list) {
 	list.removeClass('grey');
 	list.children('.selected').removeClass('selected');
 	if ( i > 1 ) {
-	  list.fadeOut();
+	  list.fadeOut(0);
 	}
 	i++;
   }
