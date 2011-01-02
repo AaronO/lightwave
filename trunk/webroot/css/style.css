@@ -720,7 +720,11 @@ footer ul {
   display:none
 }
 
-.inputBox .title {
+.list:first-child .title {
+  display:block;
+}
+
+.wave + .inputBox .title {
   display:none;
 }
 

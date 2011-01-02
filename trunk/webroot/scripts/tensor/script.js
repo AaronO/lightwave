@@ -30,7 +30,7 @@ LW.Tensor = {
 };
 
 // Called when a new column is shown
-LW.Tensor.createColumnContent_ = function(id, list) {
+LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
   var comments = null;
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
@@ -58,27 +58,38 @@ LW.Tensor.createColumnContent_ = function(id, list) {
 	}
   }
   // Create the HTML for the edit box that allows users to type new comments
+  var box = document.createElement("div");
   var html = '<div class="editor">';
   html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
   html += '<div><textarea></textarea></div>';
   html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
   html += '</div>';
   html += '<div class="info"><a href="#">Click here to reply</a></div>';
-  var box = document.createElement("div");
-  box.className = "infoBox";
   box.innerHTML = html;
+  box.className = "infoBox";
   // Event handlers for the edit box.
   box.lastChild.firstChild.onclick = function() {
 	box.className = "inputBox";
-	var textarea = box.firstChild.children[1].firstChild;
-	textarea.focus();
+	if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+	  box.firstChild.firstChild.lastChild.focus();
+	} else {
+	  var textarea = box.firstChild.children[1].firstChild;
+	  textarea.focus();
+	}
 	return false;
   };
+  // Cancel clicked
   box.firstChild.lastChild.firstChild.lastChild.onclick = function() {
 	box.className = "infoBox";
 	return false;
   };
+  // Submit clicked
   box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
+	if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+	  var title = box.firstChild.firstChild.lastChild;
+	  LW.Tensor.setTitle(title.value);
+	  title.value = "";
+	}
 	var textarea = box.firstChild.children[1].firstChild;
 	LW.Tensor.createNewComment(list.objectid, textarea.value);
 	textarea.value = "";
@@ -86,6 +97,10 @@ LW.Tensor.createColumnContent_ = function(id, list) {
 	return false;
   };
   list.appendChild(box);
+  if ( isNewWave ) {
+	box.className = "inputBox";
+	box.firstChild.firstChild.lastChild.focus();
+  }
 };
 
 LW.Tensor.deselectAll_ = function(list) {
@@ -251,6 +266,12 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
   }
 };
 
+LW.Tensor.setTitle = function(title) {
+  var datamut = {"$object":true, "title":title};
+  var mut = LW.Tensor.currentDoc.createMutationForId(LW.Tensor.currentDoc.content._data._id, datamut);
+  LW.Tensor.currentDoc.submitDocMutation( mut );
+};
+
 // Called when a comment has changed or been inserted
 LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   // console.log("Comment modified callback");
@@ -287,8 +308,8 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
 
 // Invoked when an item of the inbox has changed or been inserted
 LW.Tensor.inboxModifiedCallback_ = function(entry) {
-  var html = '<h3><span class="text">' + esc(entry.digest) + '</span> <span class="updates">(' + "0" + ')</span> <span class="date"> ' + "today" + ' </span></h3>';
-  html += '<h4>' + "Some text Bla bla bla" + ' <span class="author">' + "torben" + '</span></h4>';
+  var html = '<h3><span class="text">' + "Georg...Heinz,Fritz" + '</span> <span class="updates">(' + "0" + ')</span> <div style="margin-left:4px; float:right"><img src="http://www.uni-due.de/favicon.ico"></div><span class="date"> ' + "uni-due.de" + ' </span></h3>';
+  html += '<h4>' + esc(entry.digest) + ' <span class="author">' + "Today" + '</span></h4>';
   var div = document.getElementById(entry.uri);
   if ( !div ) {
 	var list = document.getElementById("list-1");
@@ -309,6 +330,7 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 
 // Install the event handlers for the Inbox
 LW.Tensor.init = function() {
+  document.getElementById("username").innerText = LW.Rpc.user + "@" + LW.Rpc.domain;
   LW.Inbox.init();
   LW.Inbox.self.content._data._cb_docs = function(doc, obj, key, mut, event) {
 	if ( event == LW.JsonOT.AttributeInserted ) {
@@ -417,15 +439,17 @@ $(function() {
 	// Instantiate the document
 	var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
 	var doc = LW.Inbox.getOrCreateDoc(url);
-	LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"));
+	LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
 	$("#list-2").fadeIn();
 	doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-							"_data":{"$object":true, "title":"A new document", "comments":[
-							{"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
-							 "comments":[],
-							"_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
-						  }]}});
-	LW.Session.open(LW.Tensor.currentDoc.url, false, false);
+							"_data":{"$object":true, "title":"", "comments":[]}});
+//					  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+//											"_data":{"$object":true, "title":"A new document", "comments":[
+//																										   {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
+//																										   "comments":[],
+//																										   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
+//																										   }]}});
+					  LW.Session.open(LW.Tensor.currentDoc.url, false, false);
   } );
   /*
   $('.newcomment').click( function() {
