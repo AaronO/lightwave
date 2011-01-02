@@ -35,7 +35,6 @@ LW.Tensor.createColumnContent_ = function(id, list) {
   // Clicked on a conversation in the inbox?
   if ( id.indexOf('!') == -1 ) {
 	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	console.log("SET DOC " + id);
 	LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
 	  if ( event == LW.JsonOT.AttributeInserted ) {
 		document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
@@ -216,7 +215,6 @@ LW.Tensor.onDivClick_ = function() {
   }
   
   if ( numlist == 1 && $(this).hasClass('selected') ) {
-	console.log("SESSION " + this.id);
 	LW.Session.open(this.id, true, false);
   }
 };
@@ -429,7 +427,7 @@ $(function() {
 						  }]}});
 	LW.Session.open(LW.Tensor.currentDoc.url, false, false);
   } );
-
+  /*
   $('.newcomment').click( function() {
 	if ( !LW.Tensor.currentDoc ) {
 	  alert("You must select a document first");
@@ -441,4 +439,5 @@ $(function() {
     var list = col.children('.list').toArray()[0];
 	LW.Tensor.createNewComment(list.objectid);
   });
+   */
 });
