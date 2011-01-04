@@ -307,7 +307,8 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
 };
 
 // Invoked when an item of the inbox has changed or been inserted
-LW.Tensor.inboxModifiedCallback_ = function(entry) {
+LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
+  var entry = arr[index];
   var html = '<h3><span class="text">' + "Georg...Heinz,Fritz" + '</span> <span class="updates">(' + "0" + ')</span> <div style="margin-left:4px; float:right"><img src="http://www.uni-due.de/favicon.ico"></div><span class="date"> ' + "uni-due.de" + ' </span></h3>';
   html += '<h4>' + esc(entry.digest) + ' <span class="author">' + "Today" + '</span></h4>';
   var div = document.getElementById(entry.uri);
@@ -318,7 +319,7 @@ LW.Tensor.inboxModifiedCallback_ = function(entry) {
 	div.id = entry.uri;
 	div.onclick = LW.Tensor.onDivClick_;
 	div.innerHTML = html;
-	list.insertBefore(div, list.firstChild);
+	list.insertBefore(div, list.children[index]);
 	// Is this the current document?
 	if ( LW.Tensor.currentDoc && LW.Tensor.currentDoc.url == entry.uri ) {
 	  $(div).addClass("selected");
@@ -339,7 +340,7 @@ LW.Tensor.init = function() {
 		// Wait for changes in the inserted docs object
 		arr[index]._cb = function(doc, obj, key, mut, event) {
 		  if ( event == LW.JsonOT.ObjectModified ) {
-			LW.Tensor.inboxModifiedCallback_(obj);
+			LW.Tensor.inboxModifiedCallback_(arr, index);
 		  }
 		}
 	  }
