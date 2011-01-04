@@ -442,7 +442,7 @@ $(function() {
 	LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
 	$("#list-2").fadeIn();
 	doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-							"_data":{"$object":true, "title":"", "comments":[]}});
+							"_data":{"$object":true, "title":"...", "comments":[]}});
 //					  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
 //											"_data":{"$object":true, "title":"A new document", "comments":[
 //																										   {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",

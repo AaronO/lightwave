@@ -59,6 +59,10 @@ func (self *Inbox) Run() {
   }
 }
 
+func (self *Inbox) Digest(msg *DigestMsg) {
+  self.digestChannel <- msg;
+}
+
 func (self *Inbox) post(req *PostRequest) {  
   makeErrorResponse(req.Response, "Posting to the inbox is not allowed")
   req.FinishSignal <- false
@@ -70,31 +74,29 @@ func (self *Inbox) docs() []interface{} {
 
 func (self *Inbox) digest(msg *DigestMsg) {
   log.Println("DIGEST: Got digest message for " + msg.URI)
-  lst := self.docs()  
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.Revision())
   arraymut := make([]interface{}, 0, 3)
   // Is the document already in the list?
   found := false
+  lst := self.docs()  
   for i, doc := range lst {
-	docmap, ok := doc.(map[string]interface{})
-	if !ok {
+	docmap := doc.(map[string]interface{})
+	if msg.URI != docmap["uri"].(string) {
 	  continue
 	}
-	if msg.URI == docmap["uri"].(string) {
-	  if i > 0 {
-		arraymut = append(arraymut, NewSkipMutation(i))
-	  }
-	  digmut := NewObjectMutation()
-	  digmut["uri"] = msg.URI;
-	  digmut["digest"] = msg.Digest;
-	  arraymut = append(arraymut, digmut)
-	  if len(lst) > i + 1 {
-		arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
-	  } 
-	  found = true
-	  break
+	if i > 0 {
+	  arraymut = append(arraymut, NewSkipMutation(i))
 	}
+	digmut := NewObjectMutation()
+	digmut["uri"] = msg.URI;
+	digmut["digest"] = msg.Digest;
+	arraymut = append(arraymut, digmut)
+	if len(lst) > i + 1 {
+	  arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
+	} 
+	found = true
+	break
   }
   if !found {
 	digmut := make(map[string]interface{})
@@ -103,7 +105,9 @@ func (self *Inbox) digest(msg *DigestMsg) {
 	arraymut = append(arraymut, digmut)
 	if len(lst) > 0 {
 	  arraymut = append(arraymut, NewSkipMutation(len(lst)))
-	} 
+	}
+	// Subscribe to this document to receive further digest data
+	self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, Filter:&NodeFilter{User:self.parent.Name(), Prefix:msg.URI, Recursive:false}} )
   }
   datamut := NewObjectMutation()
   datamut["docs"] = NewArrayMutation(arraymut)

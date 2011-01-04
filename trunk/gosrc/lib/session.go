@@ -47,6 +47,8 @@ type NodeFilter struct {
   Schemas []string
   // Determines whether the server might send a snapshot of the current state
   Snapshot bool
+  // The user that creaeted this filter
+  User string
 }
 
 func NewNodeFilter(prefix string, val interface{}) *NodeFilter {
@@ -114,6 +116,7 @@ func (self *SessionNode) Run() {
   }
 }
 
+// Subscriber interface
 func (self *SessionNode) Update(msg *UpdateMsg) {
   self.updateChannel <- msg
 }
@@ -188,6 +191,7 @@ func (self *SessionNode) parseSessionData() *SessionData {
 	if filter == nil {
 	  continue
 	}
+	filter.User = self.user;
 	s.Filters[prefix] = filter
   }
   return s

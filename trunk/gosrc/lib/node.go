@@ -218,6 +218,7 @@ type DocumentNode struct {
   // List of domains which participate in federating this document
   federatedDomains map[string]bool
   history *DocumentHistory
+  digest string
 }
 
 func DocumentNodeFactory(parent Node, name string, level int) Node {
@@ -236,6 +237,7 @@ func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   d.federatedDomains = make(map[string]bool)
   d.history = NewDocumentHistory()
   d.digestMode = make(map[string]bool)
+  d.digest = ""
   return d
 }
 
@@ -278,6 +280,19 @@ func (self *DocumentNode) Participants() []*UserId {
 	}
   }
   return result
+}
+
+func (self *DocumentNode) Digest() string {
+  data := self.doc["_data"].(map[string]interface{})
+  tmp, ok := data["title"];
+  if !ok {
+	return "";
+  }
+  title, ok := tmp.(string)
+  if !ok {
+	return "";
+  }
+  return title
 }
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
@@ -329,18 +344,21 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   server := self.Server()
   
   // Inform all local users of this document that the document has changed
-  digest := "TODODigest"
-  for _, u := range users {
-	if u.Domain != server.manifest.Domain {
-	  continue
-	}
-	b, ok := self.digestMode[u.Username]
-	if !ok {
-	  self.digestMode[u.Username] = false;
-	}
-	if !ok || b {
-	  // Send a digest updates
-	  self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), digest})
+  newdigest := self.Digest()
+  if newdigest != self.digest {
+	self.digest = newdigest
+	for _, u := range users {
+	  if u.Domain != server.manifest.Domain {
+		continue
+	  }
+	  b, ok := self.digestMode[u.Username]
+	  if !ok {
+		self.digestMode[u.Username] = false;
+	  }
+	  if !ok || b {
+		// Send a digest updates
+		self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest})
+	  }
 	}
   }
   
@@ -632,6 +650,13 @@ func (self *DocumentNode) pubSub(req* PubSubRequest) {
 	  case Unsubscribe:
 		log.Println("Unsubscribing node ", self.URI())
 		self.subscriptions[req.Filter.Id] = Subscription{}, false
+	  case SubscribeDigest:
+		log.Println("Subscribing digest for ", self.URI())
+		self.digestMode[req.Filter.User] = true;
+		self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest})
+	  case UnsubscribeDigest:
+		log.Println("Unsubscribing digest for ", self.URI())
+		self.digestMode[req.Filter.User] = false;		
 	  default:
 		panic("Unsupported PubSub action")
 	}
