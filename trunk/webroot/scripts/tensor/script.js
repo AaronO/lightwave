@@ -177,6 +177,11 @@ LW.Tensor.shiftright_ = function(col, prevlist) {
 // Called when a user clicks on an entry in the inbox or a comment.
 // "this" is the DIV element the user clicked on.
 LW.Tensor.onDivClick_ = function() {
+  // Do nothing while the element is being edited
+  if ( $(this).find(".editBox").length > 0 ) {
+	return;
+  }
+  
   list     = $(this).parent();
   col      = list.parent();
   selected = list.children('.selected');
@@ -232,6 +237,7 @@ LW.Tensor.onDivClick_ = function() {
   if ( numlist == 1 && $(this).hasClass('selected') ) {
 	LW.Session.open(this.id, true, false);
   }
+  return false;
 };
 
 // Creates and sends a document mutation to insert a new comment.
@@ -272,21 +278,92 @@ LW.Tensor.setTitle = function(title) {
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
-// Called when a comment has changed or been inserted
-LW.Tensor.commentModifiedCallback_ = function(arr, index) {
-  // console.log("Comment modified callback");
-  var comment = arr[index];
+LW.Tensor.changeComment = function(comments, index, content) {
+  var mutation = [{"$object":true, "content":content}];
+  if ( index > 0 ) {
+	mutation.splice(0,0, {"$skip":index});
+  }
+  if ( comments.length > index + 1 ) {
+	mutation.push({"$skip":comments.length - index - 1});
+  }
+  var arrmut = {"$array":mutation};	
+  var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
+  LW.Tensor.currentDoc.submitDocMutation( mut );
+};
+
+LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
+  if ( div._block ) {
+	return;
+  }
+  var comment = comments[index];
   var newreplies = comment.comments.length;
   // TODO: newreplies
   var title = "";
-  if ( arr == LW.Tensor.currentDoc.content._data.comments && index == 0 ) {
+  if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
 	title = LW.Tensor.currentDoc.content._data.title + " ";
+  }  
+  var html1 = '<span class="text">' + esc(comment._meta.author) + ": " + title + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + comment._meta.date + ' </span>';
+  var html2 = esc(comment.content);
+  if ( contentOnly ) {
+	div.children[0].innerHTML = html1;
+	div.children[1].innerHTML = html2;
+	return;
   }
-  var html = '<h3><span class="text">' + esc(comment._meta.author) + ": " + title + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + comment._meta.date + ' </span></h3>';
-  html += '<h4>' + esc(comment.content) + '</h4>';
-  html += '<div class="tools">';
-  html += '<span class="view"><a href="#">View</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Edit</a></span>';
-  html += '</div>';
+  var html3 = '<div class="tools">';
+  html3 += '<span class="view"><a href="#">Edit</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Delete</a></span>';
+  html3 += '</div>';
+  div.innerHTML = '<h3>' + html1 + '</h3><h4>' + html2 + '</h4>' + html3;
+  div.id = LW.Tensor.currentDoc.url + "!" + comment._id;
+  div.onclick = LW.Tensor.onDivClick_;
+  var d = $(div);
+  // Edit clicked
+  d.find(".view").get(0).firstChild.onclick = function(e) {
+	if ( !e ) e = window.event;
+	e.cancelBubble = true;
+	if ( e.stopPropagation ) e.stopPropagation();
+	var html = '<div class="editBox">';
+	if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+	  html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
+	}
+	html += '<div><textarea class="textInput"></textarea></div>';
+	html += '<div><span class="submit"><a href="#">Submit</a> <a href="#" class="cancel">Cancel</a></span></div>';
+	html += '</div>';
+	div.innerHTML = html;
+	if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+	  d.find(".titleInput").get(0).value = LW.Tensor.currentDoc.content._data.title;
+	}
+	d.find(".textInput").get(0).value = comment.content;
+	// Submit clicked
+	d.find(".submit").get(0).onclick = function(e) {
+	  if ( !e ) e = window.event;
+	  e.cancelBubble = true;
+	  if ( e.stopPropagation ) e.stopPropagation();
+	  div._block = true;
+	  var text = d.find(".textInput").get(0).value;
+	  LW.Tensor.changeComment(comments, index, text);
+	  if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+		var title = d.find(".titleInput").get(0).value;
+		LW.Tensor.setTitle(title);
+	  }
+	  delete div._block;
+	  LW.Tensor.fillCommentDiv_(comments, index, div, false);
+	  return false;
+	};
+	// Cancel clicked
+	d.find(".cancel").get(0).onclick = function(e) {
+	  if ( !e ) e = window.event;
+	  e.cancelBubble = true;
+	  if ( e.stopPropagation ) e.stopPropagation();
+	  LW.Tensor.fillCommentDiv_(comments, index, div, false);
+	  return false;
+	};	  
+	return false;
+  };
+};
+
+// Called when a comment has changed or been inserted
+LW.Tensor.commentModifiedCallback_ = function(arr, index) {
+  var comment = arr[index];
   var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + comment._id);
   if ( !div ) {
 	// console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
@@ -295,14 +372,12 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
 	if ( !list ) {
 	  return;
 	}
-	div = document.createElement("div")
+	div = document.createElement("div");
 	div.className = "wave new";
-	div.innerHTML = html;
-	div.id = LW.Tensor.currentDoc.url + "!" + comment._id;
-	div.onclick = LW.Tensor.onDivClick_;
+	LW.Tensor.fillCommentDiv_(arr, index, div, false);
 	list.insertBefore( div, list.children[index] );
   } else {
-	div.innerHTML = html;
+	LW.Tensor.fillCommentDiv_(arr, index, div, true);
   }
 };
 
