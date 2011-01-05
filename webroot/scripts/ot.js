@@ -140,8 +140,8 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
 
   // Find the lifts
   var lifts = {};
-  for ( var i in mutation["$array"] ) {
-	if ( i[0] == "_" ) continue;
+  for ( var i = 0; i < mutation["$array"].length; i++ ) {
+	// if ( i[0] == "_" ) continue;
 	// Skip event handlers
 	var mut = mutation["$array"][i];
 	if ( mut["$delete"] != null ) {
@@ -163,9 +163,9 @@ LW.JsonOT.applyArrayMutation_ = function( doc, arr, mutation, flags ) {
   }
 
   index = 0;
-  for ( var i in mutation["$array"] ) {
+  for ( var i = 0; i < mutation["$array"].length; i++ ) {
 	// Skip event handlers
-	if ( i[0] == "_" ) continue;
+	//if ( i[0] == "_" ) continue;
 	var mut = mutation["$array"][i];
 	if ( mut["$delete"] != null ) {
 	  arr.splice(index, mut["$delete"]);
@@ -273,7 +273,7 @@ LW.JsonOT.applyInsertArrayMutation_ = function( doc, mutation, flags, insertCall
 	a._rev = doc._rev;
   }
   if ( insertCallback ) insertCallback(a);
-  for ( var i in mutation ) {
+  for ( var i = 0; i < mutation.length; i++ ) {
 	var callback = function(val) {
 	  a[i] = val;
 	  if ( a._cb_inserted ) { a._cb_inserted(doc, a, i, mutation[i], LW.JsonOT.AttributeInserted); }
