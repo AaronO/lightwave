@@ -1,5 +1,4 @@
 source ~/.bash_profile
 cd lib; make $1 ; cd ..
-cd wave; make $1 ; cd ..
 rm server/lightwave
 cd server; make $1 ; cd ..

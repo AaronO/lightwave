@@ -7,7 +7,7 @@ import (
   "fmt"
   "strings"
   "os"
-  "wave"
+//  "wave"
 )
 
 var servers map[string]*lightwave.Server = make(map[string]*lightwave.Server)
@@ -56,6 +56,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
   log.Println("GET finished")
 }
 
+/*
 // Maps wave federation requests to requests of the generalized federation protocol.
 // Therefore, this handler is performing some URL rewriting
 func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,6 +111,7 @@ func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
 	errorHandler(w, r, "Unsupported HTTP method")
   }  
 }
+*/
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
@@ -224,12 +226,12 @@ func main() {
   server2.AddChild(f2)
   go server2.Run()
 
-  lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
-  lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
+//  lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
+//  lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
   lightwave.RegisterNodeFactory("application/json", lightwave.DocumentNodeFactory)
   
   // Behave like a wave server with HTTP transport
-  http.HandleFunc("/wave/fed/", waveFederationHandler)
+//  http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
   http.HandleFunc("/fed/", federationHandler)
   http.HandleFunc("/client/", clientHandler)
