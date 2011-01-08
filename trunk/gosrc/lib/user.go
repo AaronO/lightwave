@@ -38,7 +38,16 @@ type Inbox struct {
 func NewInbox(parent Node) *Inbox {
   i := &Inbox{DocumentNode:*NewDocumentNode(parent, "inbox", 3), digestChannel:make(chan *DigestMsg)}
   data := i.doc["_data"].(map[string]interface{})
-  data["docs"] = [0]interface{}{}[:]
+  if _, ok := data["docs"]; !ok {
+    mut := make(map[string]interface{})
+    mut["_rev"] = float64(0)
+    mut["_hash"] = "TODOHash"
+    datamut := NewObjectMutation()
+    datamut["docs"] = [0]interface{}{}[:]
+    mut["_data"] = datamut
+    i.apply(mut)
+    // data["docs"] = [0]interface{}{}[:]
+  }
   return i
 }
 
