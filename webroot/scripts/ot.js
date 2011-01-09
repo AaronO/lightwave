@@ -120,10 +120,10 @@ LW.JsonOT.applyObjMutation_ = function( doc, obj, mutation, flags ) {
 	  }
 	  obj[key] = LW.JsonOT.applyMutation_(doc, obj[key], m, flags, callback);
 	  // Event
-	  if ( event && v != null ) {
+	  if ( event ) {
 		event(doc, obj, key, m, LW.JsonOT.AttributeModified);
 	  }
-	  if ( obj._cb && v != null ) {
+	  if ( obj._cb ) {
 		obj._cb(doc, obj, key, m, LW.JsonOT.AttributeModified);
 	  }
 	}
@@ -276,7 +276,7 @@ LW.JsonOT.applyInsertArrayMutation_ = function( doc, mutation, flags, insertCall
   for ( var i = 0; i < mutation.length; i++ ) {
 	var callback = function(val) {
 	  a[i] = val;
-	  if ( a._cb_inserted ) { a._cb_inserted(doc, a, i, mutation[i], LW.JsonOT.AttributeInserted); }
+	  if ( a._cb_inserted ) { a._cb_inserted(doc, a, i, mutation[i], LW.JsonOT.ArrayElementInserted); }
 	};
 	LW.JsonOT.applyInsertMutation_(doc, mutation[i], flags, callback);
   }
