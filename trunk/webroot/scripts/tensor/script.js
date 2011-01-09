@@ -32,30 +32,48 @@ LW.Tensor = {
 // Called when a new column is shown
 LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
   var comments = null;
-  // Clicked on a conversation in the inbox?
+  // Clicked on a conversation in the inbox? -> Install event handlers
   if ( id.indexOf('!') == -1 ) {
-	LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-	LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
-	  if ( event == LW.JsonOT.AttributeInserted ) {
-		document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
-		LW.Tensor.currentDoc.content._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-	  }
-	}
-	// Open the document if it is not yet open
-	// LW.Session.open(LW.Tensor.currentDoc.url, true, false);
-	comments = LW.Tensor.currentDoc.content._data.comments;
+    // This is now the current document
+    LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
+    // When the title changes update the first comment because it contains the title
+    LW.Tensor.currentDoc.content._data._cb_title = function(doc, obj, key, mutations, event) {
+        if ( LW.Tensor.currentDoc.content == doc ) {
+            var list = $("#list-2").get(0);
+            if ( list.children.length > 0 && list.firstChild.firstChild.className != "editor" ) {
+                LW.Tensor.commentModifiedCallback_(LW.Tensor.currentDoc.content._data.comments, 0);
+            }
+        }
+    };
+    // Participants changed?
+    LW.Tensor.currentDoc.content._meta._cb_participants = function(doc, obj, key, mutation, event) {
+        if ( LW.Tensor.currentDoc.content == doc ) {
+            LW.Tensor.participantsModifiedCallback_();
+        }
+    };
+    // When a top-level comment is inserted -> show it
+    LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
+      if ( event == LW.JsonOT.AttributeInserted ) {
+        document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
+        LW.Tensor.currentDoc.content._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+      }
+    };
+    comments = LW.Tensor.currentDoc.content._data.comments;
   } else {
-	comments = LW.Inbox.getElementById(id).comments;
+    comments = LW.Inbox.getElementById(id).comments;
   }
   // Clear the HTML for this columns
   list.innerHTML = "";
   // Is the document already loaded? -> Show it
   if ( comments ) {
-	// Generate the HTML for the column
-	list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
-	for( var i = 0; i < comments.length; i++ ) {
-	  LW.Tensor.commentModifiedCallback_(comments, i)
-	}
+    // Generate the HTML for the column
+    list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
+    for( var i = 0; i < comments.length; i++ ) {
+      LW.Tensor.commentModifiedCallback_(comments, i)
+    }
+  }
+  if ( LW.Tensor.currentDoc.content._meta.participants ) {
+      LW.Tensor.participantsModifiedCallback_();
   }
   // Create the HTML for the edit box that allows users to type new comments
   var box = document.createElement("div");
@@ -69,37 +87,37 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
   box.className = "infoBox";
   // Event handlers for the edit box.
   box.lastChild.firstChild.onclick = function() {
-	box.className = "inputBox";
-	if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
-	  box.firstChild.firstChild.lastChild.focus();
-	} else {
-	  var textarea = box.firstChild.children[1].firstChild;
-	  textarea.focus();
-	}
-	return false;
+    box.className = "inputBox";
+    if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+      box.firstChild.firstChild.lastChild.focus();
+    } else {
+      var textarea = box.firstChild.children[1].firstChild;
+      textarea.focus();
+    }
+    return false;
   };
   // Cancel clicked
   box.firstChild.lastChild.firstChild.lastChild.onclick = function() {
-	box.className = "infoBox";
-	return false;
+    box.className = "infoBox";
+    return false;
   };
   // Submit clicked
   box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
-	if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
-	  var title = box.firstChild.firstChild.lastChild;
-	  LW.Tensor.setTitle(title.value);
-	  title.value = "";
-	}
-	var textarea = box.firstChild.children[1].firstChild;
-	LW.Tensor.createNewComment(list.objectid, textarea.value);
-	textarea.value = "";
-	textarea.focus();
-	return false;
+    if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+      var title = box.firstChild.firstChild.lastChild;
+      LW.Tensor.setTitle(title.value);
+      title.value = "";
+    }
+    var textarea = box.firstChild.children[1].firstChild;
+    LW.Tensor.createNewComment(list.objectid, textarea.value);
+    textarea.value = "";
+    textarea.focus();
+    return false;
   };
   list.appendChild(box);
   if ( isNewWave ) {
-	box.className = "inputBox";
-	box.firstChild.firstChild.lastChild.focus();
+    box.className = "inputBox";
+    box.firstChild.firstChild.lastChild.focus();
   }
 };
 
@@ -109,16 +127,16 @@ LW.Tensor.deselectAll_ = function(list) {
   content.animate({left : '+=' + content.position().left}, 240);
   var i = 1;
   while( true ) {
-	var list = $('#list-' + i.toString());
-	if ( list.length == 0 ) {
-	  break;
-	}
-	list.removeClass('grey');
-	list.children('.selected').removeClass('selected');
-	if ( i > 1 ) {
-	  list.fadeOut(0);
-	}
-	i++;
+    var list = $('#list-' + i.toString());
+    if ( list.length == 0 ) {
+      break;
+    }
+    list.removeClass('grey');
+    list.children('.selected').removeClass('selected');
+    if ( i > 1 ) {
+      list.fadeOut(0);
+    }
+    i++;
   }
 };
 
@@ -127,8 +145,8 @@ LW.Tensor.deselect_ = function(nextlist, nextnextlist, list, selected) {
   list.removeClass('grey');
   selected.removeClass('selected');
   nextlist.fadeOut(240, function() {
-	nextlist.removeClass('grey');
-	nextlist.children('.selected').removeClass('selected');
+    nextlist.removeClass('grey');
+    nextlist.children('.selected').removeClass('selected');
   });
 };
 
@@ -146,8 +164,8 @@ LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
   selected.removeClass('selected'); 
   item.addClass('selected');
   nextlist.fadeOut(240, function() {
-	nextlist.children('.selected').removeClass('selected');
-	nextlist.removeClass('grey');
+    nextlist.children('.selected').removeClass('selected');
+    nextlist.removeClass('grey');
     LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
   } );
   $('html').scrollTop(0);
@@ -179,7 +197,7 @@ LW.Tensor.shiftright_ = function(col, prevlist) {
 LW.Tensor.onDivClick_ = function() {
   // Do nothing while the element is being edited
   if ( $(this).find(".editBox").length > 0 ) {
-	return;
+    return;
   }
   
   list     = $(this).parent();
@@ -194,48 +212,48 @@ LW.Tensor.onDivClick_ = function() {
   nextnextlist = $('#list-' + nextnextnum);
     
   if ( numlist > 1 ) {
-	prevnum  = numlist - 1;
-	prevlist = $('#list-' + prevnum);
-	if ( numlist > 2 ) {
-	  prevprevnum  = numlist - 2;
-	  prevprevlist = $('#list-' + prevprevnum);
-	}
+    prevnum  = numlist - 1;
+    prevlist = $('#list-' + prevnum);
+    if ( numlist > 2 ) {
+      prevprevnum  = numlist - 2;
+      prevprevlist = $('#list-' + prevprevnum);
+    }
   }
 
   if ( col.attr('id') == 'rightcol' ) {
-	LW.Tensor.shiftleft_(col, nextlist);
-	LW.Tensor.select_(nextlist, list, selected, $(this));
+    LW.Tensor.shiftleft_(col, nextlist);
+    LW.Tensor.select_(nextlist, list, selected, $(this));
   }
   else if ( col.attr('id') == 'midcol' ) {
-	if ( $(this).hasClass('selected') ) {
-	  LW.Tensor.deselect_(nextlist, nextnextlist, list, selected);
-	  if ( numlist > 2) {
-		LW.Tensor.shiftright_(col, prevprevlist);
-	  }
-	} else if ( list.children().hasClass('selected') ) {
-	  LW.Tensor.reload_(nextlist, nextnextlist, selected, $(this));
-	} else {
-	  LW.Tensor.select_(nextlist, list, selected, $(this));
-	}
+    if ( $(this).hasClass('selected') ) {
+      LW.Tensor.deselect_(nextlist, nextnextlist, list, selected);
+      if ( numlist > 2) {
+        LW.Tensor.shiftright_(col, prevprevlist);
+      }
+    } else if ( list.children().hasClass('selected') ) {
+      LW.Tensor.reload_(nextlist, nextnextlist, selected, $(this));
+    } else {
+      LW.Tensor.select_(nextlist, list, selected, $(this));
+    }
   }
   else if ( col.attr('id') == 'leftcol' ) {
-	if ( $(this).hasClass('selected') ) {
-	  LW.Tensor.deselect_(nextlist, nextnextlist, list, selected);
-	  if ( numlist > 1) {
-		LW.Tensor.shiftright_(col, prevlist);
-	  }
-	} else if ( list.children().hasClass('selected') ) {
-	  LW.Tensor.reload_(nextlist, nextnextlist, selected, $(this));
-	  if ( numlist > 1) {
-		LW.Tensor.shiftright_(col, prevlist);
-	  }
-	} else {
-	  LW.Tensor.select_(nextlist, list, selected, $(this));
-	}
+    if ( $(this).hasClass('selected') ) {
+      LW.Tensor.deselect_(nextlist, nextnextlist, list, selected);
+      if ( numlist > 1) {
+        LW.Tensor.shiftright_(col, prevlist);
+      }
+    } else if ( list.children().hasClass('selected') ) {
+      LW.Tensor.reload_(nextlist, nextnextlist, selected, $(this));
+      if ( numlist > 1) {
+        LW.Tensor.shiftright_(col, prevlist);
+      }
+    } else {
+      LW.Tensor.select_(nextlist, list, selected, $(this));
+    }
   }
   
   if ( numlist == 1 && $(this).hasClass('selected') ) {
-	LW.Session.open(this.id, true, false);
+    LW.Session.open(this.id, true, false);
   }
   return false;
 };
@@ -245,7 +263,7 @@ LW.Tensor.onDivClick_ = function() {
 // @param objectid is the ID denoting a JSON array that contains a list of comments.
 LW.Tensor.createNewComment = function(objectid, text) {
   if ( !text ) {
-	text = "Hallo Welt, das ist ein neuer Kommentar";
+    text = "Hallo Welt, das ist ein neuer Kommentar";
   }
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
@@ -254,21 +272,22 @@ LW.Tensor.createNewComment = function(objectid, text) {
   var comments = LW.Inbox.getElementById(objectid);
   var mutation = [{"content":text, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
   if ( comments.length > 0 ) {
-	mutation.splice(0,0, {"$skip":comments.length});
+    mutation.splice(0,0, {"$skip":comments.length});
   }
-  var arrmut = {"$array":mutation};	
+  var arrmut = {"$array":mutation};    
   var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
 // Install the event handlers for a comment that has been inserted in an array at the specified index.
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
+    console.log("COMMENT INSERTED");
   arr[index]._cb = function(d, obj, key, mut, event) {
-	if ( event == LW.JsonOT.ObjectModified ) {
-	  LW.Tensor.commentModifiedCallback_(arr, index);
-	} else if ( event == LW.JsonOT.AttributeInserted && key == "comments" ) {
-	  obj.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-	}
+    if ( event == LW.JsonOT.ObjectModified ) {
+      LW.Tensor.commentModifiedCallback_(arr, index);
+    } else if ( event == LW.JsonOT.AttributeInserted && key == "comments" ) {
+      obj.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+    }
   }
 };
 
@@ -281,33 +300,33 @@ LW.Tensor.setTitle = function(title) {
 LW.Tensor.changeComment = function(comments, index, content) {
   var mutation = [{"$object":true, "content":content}];
   if ( index > 0 ) {
-	mutation.splice(0,0, {"$skip":index});
+    mutation.splice(0,0, {"$skip":index});
   }
   if ( comments.length > index + 1 ) {
-	mutation.push({"$skip":comments.length - index - 1});
+    mutation.push({"$skip":comments.length - index - 1});
   }
-  var arrmut = {"$array":mutation};	
+  var arrmut = {"$array":mutation};    
   var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
   LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
 LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
   if ( div._block ) {
-	return;
+    return;
   }
   var comment = comments[index];
   var newreplies = comment.comments.length;
   // TODO: newreplies
   var title = "";
   if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
-	title = LW.Tensor.currentDoc.content._data.title + " ";
+    title = LW.Tensor.currentDoc.content._data.title + " ";
   }  
   var html1 = '<span class="text">' + esc(comment._meta.author) + ": " + title + '</span> <span class="updates">' + (newreplies > 0 ? ('(' + newreplies.toString() + ')') : "") + '</span> <span class="date"> ' + comment._meta.date + ' </span>';
   var html2 = esc(comment.content);
   if ( contentOnly ) {
-	div.children[0].innerHTML = html1;
-	div.children[1].innerHTML = html2;
-	return;
+    div.children[0].innerHTML = html1;
+    div.children[1].innerHTML = html2;
+    return;
   }
   var html3 = '<div class="tools">';
   html3 += '<span class="view"><a href="#">Edit</a></span><span class="reply"><a href="#">Reply</a></span><span class="history"><a href="#">History</a></span><span class="edit"><a href="#">Delete</a></span>';
@@ -318,46 +337,46 @@ LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
   var d = $(div);
   // Edit clicked
   d.find(".view").get(0).firstChild.onclick = function(e) {
-	if ( !e ) e = window.event;
-	e.cancelBubble = true;
-	if ( e.stopPropagation ) e.stopPropagation();
-	var html = '<div class="editBox">';
-	if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
-	  html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
-	}
-	html += '<div><textarea class="textInput"></textarea></div>';
-	html += '<div><span class="submit"><a href="#">Submit</a> <a href="#" class="cancel">Cancel</a></span></div>';
-	html += '</div>';
-	div.innerHTML = html;
-	if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
-	  d.find(".titleInput").get(0).value = LW.Tensor.currentDoc.content._data.title;
-	}
-	d.find(".textInput").get(0).value = comment.content;
-	// Submit clicked
-	d.find(".submit").get(0).onclick = function(e) {
-	  if ( !e ) e = window.event;
-	  e.cancelBubble = true;
-	  if ( e.stopPropagation ) e.stopPropagation();
-	  div._block = true;
-	  var text = d.find(".textInput").get(0).value;
-	  LW.Tensor.changeComment(comments, index, text);
-	  if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
-		var title = d.find(".titleInput").get(0).value;
-		LW.Tensor.setTitle(title);
-	  }
-	  delete div._block;
-	  LW.Tensor.fillCommentDiv_(comments, index, div, false);
-	  return false;
-	};
-	// Cancel clicked
-	d.find(".cancel").get(0).onclick = function(e) {
-	  if ( !e ) e = window.event;
-	  e.cancelBubble = true;
-	  if ( e.stopPropagation ) e.stopPropagation();
-	  LW.Tensor.fillCommentDiv_(comments, index, div, false);
-	  return false;
-	};	  
-	return false;
+    if ( !e ) e = window.event;
+    e.cancelBubble = true;
+    if ( e.stopPropagation ) e.stopPropagation();
+    var html = '<div class="editBox">';
+    if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+      html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
+    }
+    html += '<div><textarea class="textInput"></textarea></div>';
+    html += '<div><span class="submit"><a href="#">Submit</a> <a href="#" class="cancel">Cancel</a></span></div>';
+    html += '</div>';
+    div.innerHTML = html;
+    if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+      d.find(".titleInput").get(0).value = LW.Tensor.currentDoc.content._data.title;
+    }
+    d.find(".textInput").get(0).value = comment.content;
+    // Submit clicked
+    d.find(".submit").get(0).onclick = function(e) {
+      if ( !e ) e = window.event;
+      e.cancelBubble = true;
+      if ( e.stopPropagation ) e.stopPropagation();
+      div._block = true;
+      var text = d.find(".textInput").get(0).value;
+      LW.Tensor.changeComment(comments, index, text);
+      if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
+        var title = d.find(".titleInput").get(0).value;
+        LW.Tensor.setTitle(title);
+      }
+      delete div._block;
+      LW.Tensor.fillCommentDiv_(comments, index, div, false);
+      return false;
+    };
+    // Cancel clicked
+    d.find(".cancel").get(0).onclick = function(e) {
+      if ( !e ) e = window.event;
+      e.cancelBubble = true;
+      if ( e.stopPropagation ) e.stopPropagation();
+      LW.Tensor.fillCommentDiv_(comments, index, div, false);
+      return false;
+    };      
+    return false;
   };
 };
 
@@ -366,19 +385,37 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   var comment = arr[index];
   var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + comment._id);
   if ( !div ) {
-	// console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
-	var list = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]").toArray()[0];
-	// Do not display the comment?
-	if ( !list ) {
-	  return;
-	}
-	div = document.createElement("div");
-	div.className = "wave new";
-	LW.Tensor.fillCommentDiv_(arr, index, div, false);
-	list.insertBefore( div, list.children[index] );
+    // console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
+    var list = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]").toArray()[0];
+    // Do not display the comment?
+    if ( !list ) {
+      return;
+    }
+    div = document.createElement("div");
+    div.className = "wave new";
+    LW.Tensor.fillCommentDiv_(arr, index, div, false);
+    list.insertBefore( div, list.children[index] );
   } else {
-	LW.Tensor.fillCommentDiv_(arr, index, div, true);
+    LW.Tensor.fillCommentDiv_(arr, index, div, true);
   }
+};
+
+LW.Tensor.participantsModifiedCallback_ = function() {
+    var bar = $("#meta-bar")
+    var users = bar.children(".user");
+    for( var i = 0; i < users.length; i++ ) {
+        bar.get(0).removeChild( users.get(i) );
+    }
+    var arr = LW.Tensor.currentDoc.content._meta.participants;
+    for( var i = 0; i < arr.length; i++ ) {
+        var li = document.createElement("li");
+        li.className = "user";
+        var a = document.createElement("a");
+        a.href = "#";
+        a.innerText = arr[i];
+        li.appendChild(a);
+        bar.get(0).insertBefore(li, $("#new-user").get(0));
+    } 
 };
 
 // Invoked when an item of the inbox has changed or been inserted
@@ -388,19 +425,19 @@ LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
   html += '<h4>' + esc(entry.digest) + ' <span class="author">' + "Today" + '</span></h4>';
   var div = document.getElementById(entry.uri);
   if ( !div ) {
-	var list = document.getElementById("list-1");
-	div = document.createElement("div")
-	div.className = "wave new";
-	div.id = entry.uri;
-	div.onclick = LW.Tensor.onDivClick_;
-	div.innerHTML = html;
-	list.insertBefore(div, list.children[index]);
-	// Is this the current document?
-	if ( LW.Tensor.currentDoc && LW.Tensor.currentDoc.url == entry.uri ) {
-	  $(div).addClass("selected");
-	}
+    var list = document.getElementById("list-1");
+    div = document.createElement("div")
+    div.className = "wave new";
+    div.id = entry.uri;
+    div.onclick = LW.Tensor.onDivClick_;
+    div.innerHTML = html;
+    list.insertBefore(div, list.children[index]);
+    // Is this the current document?
+    if ( LW.Tensor.currentDoc && LW.Tensor.currentDoc.url == entry.uri ) {
+      $(div).addClass("selected");
+    }
   } else {
-	div.innerHTML = html;
+    div.innerHTML = html;
   }
 };
 
@@ -409,18 +446,18 @@ LW.Tensor.init = function() {
   document.getElementById("username").innerText = LW.Rpc.user + "@" + LW.Rpc.domain;
   LW.Inbox.init();
   LW.Inbox.self.content._data._cb_docs = function(doc, obj, key, mut, event) {
-	if ( event == LW.JsonOT.AttributeInserted ) {
-	  // Wait for documents being inserted in the "docs" object
-	  doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
-		// Wait for changes in the inserted docs object
-		arr[index]._cb = function(doc, obj, key, mut, event) {
-		  if ( event == LW.JsonOT.ObjectModified ) {
-			LW.Tensor.inboxModifiedCallback_(arr, index);
-		  }
-		}
-	  }
-	}
-  }	
+    if ( event == LW.JsonOT.AttributeInserted ) {
+      // Wait for documents being inserted in the "docs" object
+      doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
+        // Wait for changes in the inserted docs object
+        arr[index]._cb = function(doc, obj, key, mut, event) {
+          if ( event == LW.JsonOT.ObjectModified ) {
+            LW.Tensor.inboxModifiedCallback_(arr, index);
+          }
+        }
+      }
+    }
+  }    
   LW.Session.init();
 };
 
@@ -507,37 +544,18 @@ $(function() {
   // Added by Torben
   
   $('.newwave').click( function() {
-	if ( !LW.Session.sessionCreated ) {
-	  alert("No session created yet");
-	  return;
-	}
-	LW.Tensor.deselectAll_();  
-	// Instantiate the document
-	var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
-	var doc = LW.Inbox.getOrCreateDoc(url);
-	LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
-	$("#list-2").fadeIn();
-	doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-							"_data":{"$object":true, "title":"...", "comments":[]}});
-//					  doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-//											"_data":{"$object":true, "title":"A new document", "comments":[
-//																										   {"content":"Hallo Welt, das ist ein neues Dokument mit einem sehr langen Text, der eigentlich in der Inbox nicht komplett zu sehen sein sollte!",
-//																										   "comments":[],
-//																										   "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}
-//																										   }]}});
-					  LW.Session.open(LW.Tensor.currentDoc.url, false, false);
+    if ( !LW.Session.sessionCreated ) {
+      alert("No session created yet");
+      return;
+    }
+    LW.Tensor.deselectAll_();  
+    // Instantiate the document
+    var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
+    var doc = LW.Inbox.getOrCreateDoc(url);
+    LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
+    $("#list-2").fadeIn();
+    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+                            "_data":{"$object":true, "title":"...", "comments":[]}});
+    LW.Session.open(LW.Tensor.currentDoc.url, false, false);
   } );
-  /*
-  $('.newcomment').click( function() {
-	if ( !LW.Tensor.currentDoc ) {
-	  alert("You must select a document first");
-	}
-	var col = $(this);
-	while( !col.hasClass("col") ) {
-	  col = col.parent();
-	}
-    var list = col.children('.list').toArray()[0];
-	LW.Tensor.createNewComment(list.objectid);
-  });
-   */
 });
