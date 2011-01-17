@@ -25,102 +25,104 @@ if ( !window.LW ) {
 }
 
 LW.Tensor = {
-  // Points to an instance of LW.Doc
-  currentDoc : null
+    // Points to an instance of LW.Doc
+    currentDoc : null
 };
 
-// Called when a new column is shown
+// Called when a new column is shown.
+// This includes the case that the user clicked on the inbox and a new document is shown
 LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
-  var comments = null;
-  // Clicked on a conversation in the inbox? -> Install event handlers
-  if ( id.indexOf('!') == -1 ) {
-    // This is now the current document
-    LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
-    // When the title changes update the first comment because it contains the title
-    LW.Tensor.currentDoc.content._data._cb_title = function(doc, obj, key, mutations, event) {
-        if ( LW.Tensor.currentDoc.content == doc ) {
-            if ( list.children.length > 0 && list.firstChild.firstChild.className != "editor" ) {
-                LW.Tensor.commentModifiedCallback_(LW.Tensor.currentDoc.content._data.comments, 0);
+    var comments = null;
+    // Clicked on a conversation in the inbox? -> Install event handlers
+    if ( id.indexOf('!') == -1 ) {
+        // This is now the current document
+        LW.Tensor.currentDoc = LW.Inbox.getOrCreateDoc(id);
+        // When the title changes update the first comment because it contains the title
+        LW.Tensor.currentDoc.content._data._cb_title = function(doc, obj, key, mutations, event) {
+            if ( LW.Tensor.currentDoc.content == doc ) {
+                if ( list.children.length > 0 && list.firstChild.firstChild.className != "editor" ) {
+                    LW.Tensor.commentModifiedCallback_(LW.Tensor.currentDoc.content._data.comments, 0);
+                }
             }
-        }
-    };
-    // Participants changed?
-    LW.Tensor.currentDoc.content._meta._cb_participants = function(doc, obj, key, mutation, event) {
-        if ( LW.Tensor.currentDoc.content == doc ) {
-            LW.Tensor.participantsModifiedCallback_();
-        }
-    };
-    // When a new list of top-level comments is inserted -> register event handlers
-    LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
-        if ( LW.Tensor.currentDoc.content == doc ) {
-            if ( event == LW.JsonOT.AttributeInserted ) {
-                list.objectid = LW.Tensor.currentDoc.url + "!" + doc._data.comments._id;
-                doc._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+        };
+        // Participants changed?
+        LW.Tensor.currentDoc.content._meta._cb_participants = function(doc, obj, key, mutation, event) {
+            if ( LW.Tensor.currentDoc.content == doc ) {
+                LW.Tensor.participantsModifiedCallback_();
             }
-        }
-    };
-    comments = LW.Tensor.currentDoc.content._data.comments;
-  } else {
-    comments = LW.Inbox.getElementById(id).comments;
-  }
-  // Clear the HTML for this columns
-  list.innerHTML = "";
-  // Is the document already loaded? -> Show it
-  if ( comments ) {
-    // Generate the HTML for the column
-    list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
-    for( var i = 0; i < comments.length; i++ ) {
-      LW.Tensor.commentModifiedCallback_(comments, i)
-    }
-    comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-  }
-  if ( LW.Tensor.currentDoc.content._meta.participants ) {
-      LW.Tensor.participantsModifiedCallback_();
-  }
-  // Create the HTML for the edit box that allows users to type new comments
-  var box = document.createElement("div");
-  var html = '<div class="editor">';
-  html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
-  html += '<div><textarea></textarea></div>';
-  html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
-  html += '</div>';
-  html += '<div class="info"><a href="#">Click here to reply</a></div>';
-  box.innerHTML = html;
-  box.className = "infoBox";
-  // Event handlers for the edit box.
-  box.lastChild.firstChild.onclick = function() {
-    box.className = "inputBox";
-    if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
-      box.firstChild.firstChild.lastChild.focus();
+        };
+        // When a new list of top-level comments is inserted -> register event handlers
+        LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
+            if ( LW.Tensor.currentDoc.content == doc ) {
+                if ( event == LW.JsonOT.AttributeInserted ) {
+                    list.objectid = LW.Tensor.currentDoc.url + "!" + doc._data.comments._id;
+                    doc._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+                }
+            }
+        };
+        comments = LW.Tensor.currentDoc.content._data.comments;
     } else {
-      var textarea = box.firstChild.children[1].firstChild;
-      textarea.focus();
+        comments = LW.Inbox.getElementById(id).comments;
     }
-    return false;
-  };
-  // Cancel clicked
-  box.firstChild.lastChild.firstChild.lastChild.onclick = function() {
+    // Clear the HTML for this columns
+    list.innerHTML = "";
+    // Is the document already loaded? -> Show it
+    if ( comments ) {
+        // Generate the HTML for the column
+        list.objectid = LW.Tensor.currentDoc.url + "!" + comments._id;
+        for( var i = 0; i < comments.length; i++ ) {
+            LW.Tensor.commentModifiedCallback_(comments, i)
+        }
+        comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+    }
+    if ( LW.Tensor.currentDoc.content._meta.participants ) {
+        LW.Tensor.participantsModifiedCallback_();
+    }
+    // Create the HTML for the edit box that allows users to type new comments
+    var box = document.createElement("div");
+    var html = '<div class="editor">';
+    html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
+    html += '<div><textarea></textarea></div>';
+    html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
+    html += '</div>';
+    html += '<div class="info"><a href="#">Click here to reply</a></div>';
+    box.innerHTML = html;
     box.className = "infoBox";
-    return false;
-  };
-  // Submit clicked
-  box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
-    if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
-      var title = box.firstChild.firstChild.lastChild;
-      LW.Tensor.setTitle(title.value);
-      title.value = "";
+    // Event handlers for the edit box.
+    box.lastChild.firstChild.onclick = function() {
+        box.className = "inputBox";
+        if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+            box.firstChild.firstChild.lastChild.focus();
+        } else {
+            var textarea = box.firstChild.children[1].firstChild;
+            textarea.focus();
+        }
+        return false;
+    };
+    // Cancel clicked
+    box.firstChild.lastChild.firstChild.lastChild.onclick = function() {
+        box.className = "infoBox";
+        return false;
+    };
+    // Submit clicked
+    box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
+        if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
+            var title = box.firstChild.firstChild.lastChild;
+            LW.Tensor.setTitle(title.value);
+            title.value = "";
+        }
+        var textarea = box.firstChild.children[1].firstChild;
+        LW.Tensor.createNewComment(list.objectid, textarea.value);
+        textarea.value = "";
+        textarea.focus();
+        return false;
+    };
+    list.appendChild(box);
+    // If the user just created a new document then show the input box
+    if ( isNewWave ) {
+        box.className = "inputBox";
+        box.firstChild.firstChild.lastChild.focus();
     }
-    var textarea = box.firstChild.children[1].firstChild;
-    LW.Tensor.createNewComment(list.objectid, textarea.value);
-    textarea.value = "";
-    textarea.focus();
-    return false;
-  };
-  list.appendChild(box);
-  if ( isNewWave ) {
-    box.className = "inputBox";
-    box.firstChild.firstChild.lastChild.focus();
-  }
 };
 
 LW.Tensor.deselectAll_ = function(list) {
@@ -157,7 +159,7 @@ LW.Tensor.select_ = function(nextlist, list, selected, item) {
   selected.removeClass('selected'); 
   item.addClass('selected');
   $('#container').scrollTop(0);
-  LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
+    LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0], false);
   nextlist.fadeIn(240);
 };
 
@@ -168,7 +170,7 @@ LW.Tensor.reload_ = function(nextlist, nextnextlist, selected, item) {
   nextlist.fadeOut(240, function() {
     nextlist.children('.selected').removeClass('selected');
     nextlist.removeClass('grey');
-    LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0]);
+      LW.Tensor.createColumnContent_(item.context.id, nextlist.toArray()[0], false);
   } );
   $('html').scrollTop(0);
   nextlist.fadeIn();
@@ -263,15 +265,19 @@ LW.Tensor.onDivClick_ = function() {
 // Creates and sends a document mutation to insert a new comment.
 //
 // @param objectid is the ID denoting a JSON array that contains a list of comments.
+//                 It has the form "doc-uri!id"
 LW.Tensor.createNewComment = function(objectid, text) {
   if ( !text ) {
-    text = "Hallo Welt, das ist ein neuer Kommentar";
+    text = "";
   }
+  // Split at "!"
   var i = objectid.indexOf("!");
   var id = objectid.substring(i + 1, objectid.length);
   // console.log("New Comment for " + objectid);
   // console.log(LW.Tensor.currentDoc.content);
+  // Get the JSON array that stores these comments
   var comments = LW.Inbox.getElementById(objectid);
+  // Create a mutation adding a new comment
   var mutation = [{"content":text, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
   if ( comments.length > 0 ) {
     mutation.splice(0,0, {"$skip":comments.length});
@@ -554,8 +560,10 @@ $(function() {
     // Instantiate the document
     var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
     var doc = LW.Inbox.getOrCreateDoc(url);
+    // Show the new document and allow the user to edit the first comment
     LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
     $("#list-2").fadeIn();
+    // Send delta to the server to persist the new document
     doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
                             "_data":{"$object":true, "title":"...", "comments":[]}});
     LW.Session.open(LW.Tensor.currentDoc.url, false, false);
