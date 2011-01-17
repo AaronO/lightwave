@@ -39,7 +39,6 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
     // When the title changes update the first comment because it contains the title
     LW.Tensor.currentDoc.content._data._cb_title = function(doc, obj, key, mutations, event) {
         if ( LW.Tensor.currentDoc.content == doc ) {
-            var list = $("#list-2").get(0);
             if ( list.children.length > 0 && list.firstChild.firstChild.className != "editor" ) {
                 LW.Tensor.commentModifiedCallback_(LW.Tensor.currentDoc.content._data.comments, 0);
             }
@@ -51,12 +50,14 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
             LW.Tensor.participantsModifiedCallback_();
         }
     };
-    // When a top-level comment is inserted -> show it
+    // When a new list of top-level comments is inserted -> register event handlers
     LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
-      if ( event == LW.JsonOT.AttributeInserted ) {
-        document.getElementById("list-2").objectid = LW.Tensor.currentDoc.url + "!" + LW.Tensor.currentDoc.content._data.comments._id;
-        LW.Tensor.currentDoc.content._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-      }
+        if ( LW.Tensor.currentDoc.content == doc ) {
+            if ( event == LW.JsonOT.AttributeInserted ) {
+                list.objectid = LW.Tensor.currentDoc.url + "!" + doc._data.comments._id;
+                doc._data.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
+            }
+        }
     };
     comments = LW.Tensor.currentDoc.content._data.comments;
   } else {
@@ -71,6 +72,7 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
     for( var i = 0; i < comments.length; i++ ) {
       LW.Tensor.commentModifiedCallback_(comments, i)
     }
+    comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
   }
   if ( LW.Tensor.currentDoc.content._meta.participants ) {
       LW.Tensor.participantsModifiedCallback_();
