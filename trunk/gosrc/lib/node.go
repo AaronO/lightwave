@@ -301,8 +301,16 @@ func (self *DocumentNode) Participants() []*UserId {
 
 func (self *DocumentNode) Digest() (string, string, int) {
   // TODO:
-  digestAuthors := "<b>Georg</b>"
-  // TODO:
+  // digestAuthors := "<b>Georg</b>"
+  participants := self.Participants()
+  lst := make([]string, len(participants))
+  for i, p := range participants {
+    // TODO: Escape name
+    // TODO: Try to get real name of the person
+    lst[i] = "<b>" + p.Username + "</b>"
+  }
+  digestAuthors := strings.Join(lst,",")
+  // TODO: count messages
   digestMessageCount := 123
   data := self.doc["_data"].(map[string]interface{})
   tmp, ok := data["title"];
