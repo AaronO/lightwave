@@ -421,7 +421,7 @@ LW.Tensor.participantsModifiedCallback_ = function() {
 // Invoked when an item of the inbox has changed or been inserted
 LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
   var entry = arr[index];
-  var html = '<h3><span class="text">' + "Georg...Heinz,Fritz" + '</span> <span class="updates">(' + "0" + ')</span> <div style="margin-left:4px; float:right"><img src="http://www.uni-due.de/favicon.ico"></div><span class="date"> ' + "uni-due.de" + ' </span></h3>';
+  var html = '<h3><span class="text">' + entry.authors + '</span> <span class="updates">(' + "0" + ')</span> <div style="margin-left:4px; float:right"><img src="http://www.uni-due.de/favicon.ico"></div><span class="date"> ' + "uni-due.de" + ' </span></h3>';
   html += '<h4>' + esc(entry.digest) + ' <span class="author">' + "Today" + '</span></h4>';
   var div = document.getElementById(entry.uri);
   if ( !div ) {
