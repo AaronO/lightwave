@@ -97,6 +97,9 @@ type DigestMsg struct {
   Authors string
   // Number of messages
   MessageCount int
+  // True, if the receiver of this message has already issued a subscription to this digest.
+  // False, if this message is an advertisement and the receiver might want to subscribe to it
+  IsSubscribed bool
 }
 
 // Update messages are sent to subscribers
@@ -299,9 +302,27 @@ func (self *DocumentNode) Participants() []*UserId {
   return result
 }
 
-func (self *DocumentNode) Digest() (string, string, int) {
-  // TODO:
-  // digestAuthors := "<b>Georg</b>"
+func countComments(comments []interface{}) int {
+  count := len(comments)
+  for _, x := range comments {
+    c, ok := x.(map[string]interface{})
+    if !ok {
+      continue
+    }
+    next, ok := c["comments"]
+    if !ok {
+      continue
+    }
+    nextcomments, ok := next.([]interface{})
+    if ok {
+      count += countComments(nextcomments)
+    }
+  }
+  return count
+}
+
+func (self *DocumentNode) Digest() (digest string, authors string, commentCount int) {
+  // Generate the digest HTML fragment for the authors
   participants := self.Participants()
   lst := make([]string, len(participants))
   for i, p := range participants {
@@ -310,18 +331,26 @@ func (self *DocumentNode) Digest() (string, string, int) {
     lst[i] = "<b>" + p.Username + "</b>"
   }
   digestAuthors := strings.Join(lst,",")
-  // TODO: count messages
-  digestMessageCount := 123
+  // Count comments
   data := self.doc["_data"].(map[string]interface{})
-  tmp, ok := data["title"];
+  tmp, ok := data["comments"]
+  digestCommentCount := 0
+  if ok {
+    comments, ok := tmp.([]interface{})
+    if ok {
+      digestCommentCount = countComments(comments)
+    }
+  }
+  // Generate the digest string for the document content
+  tmp, ok = data["title"];
   if !ok {
-    return "", digestAuthors, digestMessageCount;
+    return "", digestAuthors, digestCommentCount
   }
   title, ok := tmp.(string)
   if !ok {
-    return "", digestAuthors, digestMessageCount;
+    return "", digestAuthors, digestCommentCount
   }
-  return title, digestAuthors, digestMessageCount
+  return title, digestAuthors, digestCommentCount
 }
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
@@ -373,11 +402,11 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   server := self.Server()
   
   // Inform all local users of this document that the document has changed
-  newdigest, newdigestauthors, newdigestmsgcount := self.Digest()
-  if newdigest != self.digest || newdigestauthors != self.digestAuthors || newdigestmsgcount != self.digestMessageCount {
+  newdigest, newdigestauthors, newcommentscount := self.Digest()
+  if newdigest != self.digest || newdigestauthors != self.digestAuthors || newcommentscount != self.digestMessageCount {
     self.digest = newdigest
     self.digestAuthors = newdigestauthors
-    self.digestMessageCount = newdigestmsgcount
+    self.digestMessageCount = newcommentscount
     for _, u := range users {
       if u.Domain != server.manifest.Domain {
         continue
@@ -388,7 +417,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
       }
       if !ok || b {
         // Send a digest updates
-        self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount})
+        self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount, ok && b})
       }
     }
   }
@@ -685,9 +714,9 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
         log.Println("Unsubscribing node ", self.URI())
         self.subscriptions[req.Filter.Id] = Subscription{}, false
       case SubscribeDigest:
-        log.Println("Subscribing digest for ", self.URI())
+        log.Println("Subscribing digest for ", self.URI(), " on behalf of ", req.Filter.User)
         self.digestMode[req.Filter.User] = true
-        self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount})
+        self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount, true})
       case UnsubscribeDigest:
         log.Println("Unsubscribing digest for ", self.URI())
         self.digestMode[req.Filter.User] = false        
