@@ -98,9 +98,10 @@ func (self *Inbox) digest(msg *DigestMsg) {
       arraymut = append(arraymut, NewSkipMutation(i))
     }
     digmut := NewObjectMutation()
-    digmut["uri"] = msg.URI;
-    digmut["digest"] = msg.Digest;
-    digmut["authors"] = msg.Authors;
+    digmut["uri"] = msg.URI
+    digmut["digest"] = msg.Digest
+    digmut["authors"] = msg.Authors
+    digmut["msgcount"] = msg.MessageCount
     arraymut = append(arraymut, digmut)
     if len(lst) > i + 1 {
       arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
@@ -110,9 +111,10 @@ func (self *Inbox) digest(msg *DigestMsg) {
   }
   if !found {
     digmut := make(map[string]interface{})
-    digmut["uri"] = msg.URI;
-    digmut["digest"] = msg.Digest;
-    digmut["authors"] = msg.Authors;
+    digmut["uri"] = msg.URI
+    digmut["digest"] = msg.Digest
+    digmut["authors"] = msg.Authors
+    digmut["msgcount"] = msg.MessageCount
     arraymut = append(arraymut, digmut)
     if len(lst) > 0 {
       arraymut = append(arraymut, NewSkipMutation(len(lst)))
