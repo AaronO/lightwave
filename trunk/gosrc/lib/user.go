@@ -119,6 +119,8 @@ func (self *Inbox) digest(msg *DigestMsg) {
     if len(lst) > 0 {
       arraymut = append(arraymut, NewSkipMutation(len(lst)))
     }
+  }
+  if !msg.IsSubscribed {
     // Subscribe to this document to receive further digest data
     self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, Filter:&NodeFilter{User:self.parent.Name(), Prefix:msg.URI, Recursive:false}} )
   }
