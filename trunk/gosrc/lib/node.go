@@ -95,6 +95,8 @@ type DigestMsg struct {
   Digest string
   // A HTML formatted string of authors
   Authors string
+  // Number of messages
+  MessageCount int
 }
 
 // Update messages are sent to subscribers
@@ -227,6 +229,8 @@ type DocumentNode struct {
   digest string
   // Cashed digest authors
   digestAuthors string
+  // Cashed digest message count
+  digestMessageCount int
 }
 
 func DocumentNodeFactory(parent Node, name string, level int) Node {
@@ -250,6 +254,7 @@ func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   d.digestMode = make(map[string]bool)
   d.digest = ""
   d.digestAuthors = ""
+  d.digestMessageCount = 0
   return d
 }
 
@@ -294,19 +299,21 @@ func (self *DocumentNode) Participants() []*UserId {
   return result
 }
 
-func (self *DocumentNode) Digest() (string, string) {
+func (self *DocumentNode) Digest() (string, string, int) {
   // TODO:
   digestAuthors := "<b>Georg</b>"
+  // TODO:
+  digestMessageCount := 123
   data := self.doc["_data"].(map[string]interface{})
   tmp, ok := data["title"];
   if !ok {
-    return "", digestAuthors;
+    return "", digestAuthors, digestMessageCount;
   }
   title, ok := tmp.(string)
   if !ok {
-    return "", digestAuthors;
+    return "", digestAuthors, digestMessageCount;
   }
-  return title, digestAuthors
+  return title, digestAuthors, digestMessageCount
 }
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
@@ -358,10 +365,11 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   server := self.Server()
   
   // Inform all local users of this document that the document has changed
-  newdigest, newdigestauthors := self.Digest()
-  if newdigest != self.digest || newdigestauthors != self.digestAuthors {
+  newdigest, newdigestauthors, newdigestmsgcount := self.Digest()
+  if newdigest != self.digest || newdigestauthors != self.digestAuthors || newdigestmsgcount != self.digestMessageCount {
     self.digest = newdigest
     self.digestAuthors = newdigestauthors
+    self.digestMessageCount = newdigestmsgcount
     for _, u := range users {
       if u.Domain != server.manifest.Domain {
         continue
@@ -372,7 +380,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
       }
       if !ok || b {
         // Send a digest updates
-        self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest, self.digestAuthors})
+        self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount})
       }
     }
   }
@@ -661,7 +669,7 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
           tail := self.history.Tail(0)
           for i, d := range tail {
             m, _ := json.Marshal(d)
-            lst[i] = string(m);
+            lst[i] = string(m)
           }
           req.Subscriber.Update( &UpdateMsg{self.URI(), lst} )
         }
@@ -670,11 +678,11 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
         self.subscriptions[req.Filter.Id] = Subscription{}, false
       case SubscribeDigest:
         log.Println("Subscribing digest for ", self.URI())
-        self.digestMode[req.Filter.User] = true;
-        self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest, self.digestAuthors})
+        self.digestMode[req.Filter.User] = true
+        self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount})
       case UnsubscribeDigest:
         log.Println("Unsubscribing digest for ", self.URI())
-        self.digestMode[req.Filter.User] = false;        
+        self.digestMode[req.Filter.User] = false        
       default:
         panic("Unsupported PubSub action")
     }
