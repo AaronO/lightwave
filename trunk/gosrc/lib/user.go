@@ -18,7 +18,7 @@ type UserId struct {
 func NewUserId(userid string) (result *UserId, err os.Error) {
   r := regexp.MustCompile("^([\\-_A-Za-z0-9.]+)@([\\-_A-Za-z0-9.]+)$")
   if submatches := r.FindStringSubmatch(userid); submatches != nil {
-	return &UserId{submatches[1], submatches[2]}, nil
+    return &UserId{submatches[1], submatches[2]}, nil
   }
   return nil, os.NewError("Malformed userid")
 }
@@ -53,18 +53,18 @@ func NewInbox(parent Node) *Inbox {
 
 func (self *Inbox) Run() {
   for {
-	select {
-	  case req := <-self.postChannel:
-		self.post(req)
-	  case req := <-self.getChannel:
-		self.get(req)
-	  case req := <-self.pubSubChannel:
-		self.pubSub(req)		
-	  case msg := <-self.digestChannel:
-		self.digest(msg)
-	  case <-self.stopChannel:
-		return
-	}
+    select {
+      case req := <-self.postChannel:
+        self.post(req)
+      case req := <-self.getChannel:
+        self.get(req)
+      case req := <-self.pubSubChannel:
+        self.pubSub(req)        
+      case msg := <-self.digestChannel:
+        self.digest(msg)
+      case <-self.stopChannel:
+        return
+    }
   }
 }
 
@@ -82,7 +82,7 @@ func (self *Inbox) docs() []interface{} {
 }
 
 func (self *Inbox) digest(msg *DigestMsg) {
-  log.Println("DIGEST: Got digest message for " + msg.URI)
+  log.Println("DIGEST: Got digest message for " + msg.URI + " authors " + msg.Authors)
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.Revision())
   arraymut := make([]interface{}, 0, 3)
@@ -90,40 +90,42 @@ func (self *Inbox) digest(msg *DigestMsg) {
   found := false
   lst := self.docs()  
   for i, doc := range lst {
-	docmap := doc.(map[string]interface{})
-	if msg.URI != docmap["uri"].(string) {
-	  continue
-	}
-	if i > 0 {
-	  arraymut = append(arraymut, NewSkipMutation(i))
-	}
-	digmut := NewObjectMutation()
-	digmut["uri"] = msg.URI;
-	digmut["digest"] = msg.Digest;
-	arraymut = append(arraymut, digmut)
-	if len(lst) > i + 1 {
-	  arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
-	} 
-	found = true
-	break
+    docmap := doc.(map[string]interface{})
+    if msg.URI != docmap["uri"].(string) {
+      continue
+    }
+    if i > 0 {
+      arraymut = append(arraymut, NewSkipMutation(i))
+    }
+    digmut := NewObjectMutation()
+    digmut["uri"] = msg.URI;
+    digmut["digest"] = msg.Digest;
+    digmut["authors"] = msg.Authors;
+    arraymut = append(arraymut, digmut)
+    if len(lst) > i + 1 {
+      arraymut = append(arraymut, NewSkipMutation(len(lst) - i - 1))
+    } 
+    found = true
+    break
   }
   if !found {
-	digmut := make(map[string]interface{})
-	digmut["uri"] = msg.URI;
-	digmut["digest"] = msg.Digest;
-	arraymut = append(arraymut, digmut)
-	if len(lst) > 0 {
-	  arraymut = append(arraymut, NewSkipMutation(len(lst)))
-	}
-	// Subscribe to this document to receive further digest data
-	self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, Filter:&NodeFilter{User:self.parent.Name(), Prefix:msg.URI, Recursive:false}} )
+    digmut := make(map[string]interface{})
+    digmut["uri"] = msg.URI;
+    digmut["digest"] = msg.Digest;
+    digmut["authors"] = msg.Authors;
+    arraymut = append(arraymut, digmut)
+    if len(lst) > 0 {
+      arraymut = append(arraymut, NewSkipMutation(len(lst)))
+    }
+    // Subscribe to this document to receive further digest data
+    self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, Filter:&NodeFilter{User:self.parent.Name(), Prefix:msg.URI, Recursive:false}} )
   }
   datamut := NewObjectMutation()
   datamut["docs"] = NewArrayMutation(arraymut)
   mut["_data"] = datamut
   ok := self.apply(mut)
   if !ok {
-	panic("Failed to apply mutation for meta data of " + self.Name())
+    panic("Failed to apply mutation for meta data of " + self.Name())
   }
 }
 
@@ -150,16 +152,16 @@ func (self *UserNode) Digest(msg *DigestMsg) {
 
 func (self *UserNode) Run() {
   for {
-	select {
-	  case req := <-self.postChannel:
-		self.post(req)
-	  case req := <-self.getChannel:
-		self.get(req)
-	  case req := <-self.pubSubChannel:
-		self.pubSub(req)				
-	  case <-self.stopChannel:
-		return
-	}
+    select {
+      case req := <-self.postChannel:
+        self.post(req)
+      case req := <-self.getChannel:
+        self.get(req)
+      case req := <-self.pubSubChannel:
+        self.pubSub(req)                
+      case <-self.stopChannel:
+        return
+    }
   }
 }
 
@@ -178,25 +180,25 @@ func NewUserRootNode(parent Node) *UserRootNode {
 
 func (self *UserRootNode) Run() {
   for {
-	select {
-	  case req := <-self.postChannel:
-		self.post(req)
-	  case req := <-self.getChannel:
-		self.get(req)
-	  case req := <-self.pubSubChannel:
-		self.pubSub(req)				
-	  case req := <-self.digestChannel:
-		self.digest(req)
-	  case <-self.stopChannel:
-		return
-	}
+    select {
+      case req := <-self.postChannel:
+        self.post(req)
+      case req := <-self.getChannel:
+        self.get(req)
+      case req := <-self.pubSubChannel:
+        self.pubSub(req)                
+      case req := <-self.digestChannel:
+        self.digest(req)
+      case <-self.stopChannel:
+        return
+    }
   }
 }
 
 func (self *UserRootNode) CreateUser(name string) *UserNode {
   if _, ok := self.users[name]; ok {
-	log.Println("User already exists")
-	return nil
+    log.Println("User already exists")
+    return nil
   }
   u := NewUserNode(self, name)
   go u.Run()
@@ -211,15 +213,15 @@ func (self *UserRootNode) Digest(msg *DigestMsg) {
 func (self *UserRootNode) post(req *PostRequest) {
   uri := req.URI.(DocumentURI)
   if len(uri.NameSeq) < 2 {
-	makeErrorResponse(req.Response, "Cannot get _user")
-	req.FinishSignal <- false
-	return
+    makeErrorResponse(req.Response, "Cannot get _user")
+    req.FinishSignal <- false
+    return
   }
   // Check for the user node
   u, ok := self.users[uri.NameSeq[1]]
   if ok {
-	u.Post(req)
-	return
+    u.Post(req)
+    return
   }
   u = NewUserNode(self, uri.NameSeq[1])
   oldfinish := req.FinishSignal
@@ -229,9 +231,9 @@ func (self *UserRootNode) post(req *PostRequest) {
   u.Post(req)
   ok = <-finish
   if ok {
-	self.addChild(u)
+    self.addChild(u)
   } else {
-	u.Stop()
+    u.Stop()
   }
   oldfinish <- ok
 }
@@ -239,16 +241,16 @@ func (self *UserRootNode) post(req *PostRequest) {
 func (self *UserRootNode) get(req *GetRequest) {  
   uri := req.URI.(DocumentURI)
   if len(uri.NameSeq) < 2 {
-	makeErrorResponse(req.Response, "Cannot post _user")
-	req.FinishSignal <- false
-	return
+    makeErrorResponse(req.Response, "Cannot post _user")
+    req.FinishSignal <- false
+    return
   }
   // Check for the user node
   u, ok := self.users[uri.NameSeq[1]]
   if !ok {
-	makeErrorResponse(req.Response, "The user does not exist")
-	req.FinishSignal <- false
-	return
+    makeErrorResponse(req.Response, "The user does not exist")
+    req.FinishSignal <- false
+    return
   }
   u.Get(req)
 }
@@ -256,13 +258,13 @@ func (self *UserRootNode) get(req *GetRequest) {
 func (self *UserRootNode) pubSub(req* PubSubRequest) {
   seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
   if len(seq) < 3 {
-	log.Println("Malformed NodeFilter prefix")
-	return
+    log.Println("Malformed NodeFilter prefix")
+    return
   }
   // Send to all host nodes
   node, ok := self.users[seq[2]]
   if ok {
-	node.PubSub(req)
+    node.PubSub(req)
   }  
 }
 
@@ -270,8 +272,8 @@ func (self *UserRootNode) digest(msg *DigestMsg) {
   // Check for the user node
   u, ok := self.users[msg.User]
   if !ok {
-	log.Println("The user ", msg.User, " does not exist")
-	return
+    log.Println("The user ", msg.User, " does not exist")
+    return
   }
   u.Digest(msg)
 }
