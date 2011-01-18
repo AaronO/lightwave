@@ -108,11 +108,11 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
     box.firstChild.lastChild.firstChild.firstChild.onclick = function() {
         if ( LW.Tensor.currentDoc.url == id && LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
             var title = box.firstChild.firstChild.lastChild;
-            LW.Tensor.setTitle(title.value);
+            LW.Model.setTitle(LW.Tensor.currentDoc, title.value);
             title.value = "";
         }
         var textarea = box.firstChild.children[1].firstChild;
-        LW.Tensor.createNewComment(list.objectid, textarea.value);
+        LW.Model.createNewComment(LW.Tensor.currentDoc, list.objectid, textarea.value);
         textarea.value = "";
         textarea.focus();
         return false;
@@ -262,31 +262,6 @@ LW.Tensor.onDivClick_ = function() {
   return false;
 };
 
-// Creates and sends a document mutation to insert a new comment.
-//
-// @param objectid is the ID denoting a JSON array that contains a list of comments.
-//                 It has the form "doc-uri!id"
-LW.Tensor.createNewComment = function(objectid, text) {
-  if ( !text ) {
-    text = "";
-  }
-  // Split at "!"
-  var i = objectid.indexOf("!");
-  var id = objectid.substring(i + 1, objectid.length);
-  // console.log("New Comment for " + objectid);
-  // console.log(LW.Tensor.currentDoc.content);
-  // Get the JSON array that stores these comments
-  var comments = LW.Inbox.getElementById(objectid);
-  // Create a mutation adding a new comment
-  var mutation = [{"content":text, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain, "date":"Dec 4"}, "comments":[]}];
-  if ( comments.length > 0 ) {
-    mutation.splice(0,0, {"$skip":comments.length});
-  }
-  var arrmut = {"$array":mutation};    
-  var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
-  LW.Tensor.currentDoc.submitDocMutation( mut );
-};
-
 // Install the event handlers for a comment that has been inserted in an array at the specified index.
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
     console.log("COMMENT INSERTED");
@@ -297,25 +272,6 @@ LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
       obj.comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
     }
   }
-};
-
-LW.Tensor.setTitle = function(title) {
-  var datamut = {"$object":true, "title":title};
-  var mut = LW.Tensor.currentDoc.createMutationForId(LW.Tensor.currentDoc.content._data._id, datamut);
-  LW.Tensor.currentDoc.submitDocMutation( mut );
-};
-
-LW.Tensor.changeComment = function(comments, index, content) {
-  var mutation = [{"$object":true, "content":content}];
-  if ( index > 0 ) {
-    mutation.splice(0,0, {"$skip":index});
-  }
-  if ( comments.length > index + 1 ) {
-    mutation.push({"$skip":comments.length - index - 1});
-  }
-  var arrmut = {"$array":mutation};    
-  var mut = LW.Tensor.currentDoc.createMutationForId(comments._id, arrmut);
-  LW.Tensor.currentDoc.submitDocMutation( mut );
 };
 
 LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
@@ -367,10 +323,10 @@ LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
       if ( e.stopPropagation ) e.stopPropagation();
       div._block = true;
       var text = d.find(".textInput").get(0).value;
-      LW.Tensor.changeComment(comments, index, text);
+        LW.Model.changeComment(LW.Tensor.currentDoc, comments, index, text);
       if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
         var title = d.find(".titleInput").get(0).value;
-        LW.Tensor.setTitle(title);
+          LW.Model.setTitle(LW.Tensor.currentDoc, title);
       }
       delete div._block;
       LW.Tensor.fillCommentDiv_(comments, index, div, false);
@@ -563,9 +519,9 @@ $(function() {
     // Show the new document and allow the user to edit the first comment
     LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
     $("#list-2").fadeIn();
-    // Send delta to the server to persist the new document
-    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
-                            "_data":{"$object":true, "title":"...", "comments":[]}});
-    LW.Session.open(LW.Tensor.currentDoc.url, false, false);
+    // Fill the document with initialization data
+    LW.Model.initCommentsDoc(doc);
+    // Subscribe to all changes regarding this document
+    LW.Session.open(doc.url, false, false);
   } );
 });
