@@ -276,7 +276,6 @@ LW.Tensor.onDivClick_ = function() {
 
 // Install the event handlers for a comment that has been inserted in an array at the specified index.
 LW.Tensor.commentInsertedCallback_ = function(doc, arr, index, mut, event) {
-    console.log("COMMENT INSERTED");
   arr[index]._cb = function(d, obj, key, mut, event) {
     if ( event == LW.JsonOT.ObjectModified ) {
       LW.Tensor.commentModifiedCallback_(arr, index);
@@ -361,7 +360,6 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   var comment = arr[index];
   var div = document.getElementById(LW.Tensor.currentDoc.url + "!" + comment._id);
   if ( !div ) {
-    // console.log("Comment has been inserted: " + JSON.stringify(comment) + " at position " + index.toString());
     var list = $('.list[objectid=' + LW.Tensor.currentDoc.url + "!" + arr._id + "]").toArray()[0];
     // Do not display the comment?
     if ( !list ) {
@@ -377,30 +375,8 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
 };
 
 LW.Tensor.renderParticipant = function(dom, doc, obj) {
-    console.log("RENDER");
-    console.log(obj);
     dom.innerHTML = '<a href="#" class="button">' + esc(obj.displayName) + '</a>';
 };
-
-/*
-LW.Tensor.participantsModifiedCallback_ = function() {
-    var bar = $("#meta-bar")
-    var users = bar.children(".user");
-    for( var i = 0; i < users.length; i++ ) {
-        bar.get(0).removeChild( users.get(i) );
-    }
-    var arr = LW.Tensor.currentDoc.content._meta.participants;
-    for( var i = 0; i < arr.length; i++ ) {
-        var li = document.createElement("li");
-        li.className = "user";
-        var a = document.createElement("a");
-        a.href = "#";
-        a.innerText = arr[i];
-        li.appendChild(a);
-        bar.get(0).insertBefore(li, $("#new-user").get(0));
-    } 
-};
-*/
 
 // Invoked when an item of the inbox has changed or been inserted
 LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
