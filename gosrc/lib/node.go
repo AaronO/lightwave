@@ -292,10 +292,14 @@ func (self *DocumentNode) Participants() []*UserId {
   }
   var result = make([]*UserId, 0, len(arr))
   for _, p := range arr {
-    if s, ok := p.(string); ok {
-      u, err := NewUserId(s)
-      if err == nil {
-        result = append( result, u )
+    if user, ok := p.(map[string]interface{}); ok {
+      if d, ok := user["userid"]; ok {
+	if s, ok := d.(string); ok {
+	  u, err := NewUserId(s)
+	  if err == nil {
+            result = append( result, u )
+	  }
+	}
       }
     }
   }

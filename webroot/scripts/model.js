@@ -21,7 +21,7 @@ LW.Model = {
 // @param doc is a LW.Doc object
 LW.Model.initCommentsDoc = function(doc) {
     // Send delta to the server to persist the new document
-    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[LW.Rpc.user + "@" + LW.Rpc.domain]},
+    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[{userid:LW.Rpc.user + "@" + LW.Rpc.domain, displayName:LW.Rpc.displayName}]},
                             "_data":{"$object":true, "title":"...", "comments":[]}});
 };
 

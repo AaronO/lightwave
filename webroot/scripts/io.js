@@ -6,10 +6,11 @@ if ( !window.LW ) {
 // Implementation of HTTP Post and Get using XMLHTTPRequest
 
 LW.Rpc = {
-  // TODO
-  user : "weis",
-  domain : "localhost",
-  queue : [ ]
+    // TODO
+    user : "weis",
+    domain : "localhost",
+    displayName : "Torben",
+    queue : [ ]
 };
 
 LW.Rpc.post = function(url, jsonData, callback, errCallback) {
