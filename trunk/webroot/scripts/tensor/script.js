@@ -26,7 +26,8 @@ if ( !window.LW ) {
 
 LW.Tensor = {
     // Points to an instance of LW.Doc
-    currentDoc : null
+    currentDoc : null,
+    participantsViewController : null
 };
 
 // Called when a new column is shown.
@@ -45,12 +46,19 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
                 }
             }
         };
-        // Participants changed?
-        LW.Tensor.currentDoc.content._meta._cb_participants = function(doc, obj, key, mutation, event) {
-            if ( LW.Tensor.currentDoc.content == doc ) {
-                LW.Tensor.participantsModifiedCallback_();
-            }
-        };
+        // Render Participants
+        if ( !LW.Tensor.participantsViewController ) {
+            var objfactory = function() {
+                var dom = document.createElement("li");
+                dom.className = "user";
+                return new LW.Controller.ObjectController(dom, LW.Tensor.renderParticipant, null );
+            };
+            var arrfactory = function() {
+                return new LW.Controller.ListController( document.getElementById("meta-bar"), null, objfactory);
+            };
+            LW.Tensor.participantsViewController = new LW.Controller.AttributeController(arrfactory);
+        }
+        LW.Tensor.participantsViewController.bind(LW.Tensor.currentDoc, LW.Tensor.currentDoc.content._meta, "participants");
         // When a new list of top-level comments is inserted -> register event handlers
         LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
             if ( LW.Tensor.currentDoc.content == doc ) {
@@ -74,9 +82,6 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
             LW.Tensor.commentModifiedCallback_(comments, i)
         }
         comments._cb_inserted = LW.Tensor.commentInsertedCallback_;
-    }
-    if ( LW.Tensor.currentDoc.content._meta.participants ) {
-        LW.Tensor.participantsModifiedCallback_();
     }
     // Create the HTML for the edit box that allows users to type new comments
     var box = document.createElement("div");
@@ -126,32 +131,39 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
 };
 
 LW.Tensor.deselectAll_ = function(list) {
-  LW.Tensor.currentDoc = null;
-  var content = $('#content');
-  content.animate({left : '+=' + content.position().left}, 240);
-  var i = 1;
-  while( true ) {
-    var list = $('#list-' + i.toString());
-    if ( list.length == 0 ) {
-      break;
+    if ( LW.Tensor.participantsViewController ) {
+        LW.Tensor.participantsViewController.unbind();
     }
-    list.removeClass('grey');
-    list.children('.selected').removeClass('selected');
-    if ( i > 1 ) {
-      list.fadeOut(0);
+    LW.Tensor.currentDoc = null;
+    var content = $('#content');
+    content.animate({left : '+=' + content.position().left}, 240);
+    var i = 1;
+    while( true ) {
+        var list = $('#list-' + i.toString());
+        if ( list.length == 0 ) {
+            break;
+        }
+        list.removeClass('grey');
+        list.children('.selected').removeClass('selected');
+        if ( i > 1 ) {
+            list.fadeOut(0);
+        }
+        i++;
     }
-    i++;
-  }
 };
 
 LW.Tensor.deselect_ = function(nextlist, nextnextlist, list, selected) {
-  nextnextlist.fadeOut();
-  list.removeClass('grey');
-  selected.removeClass('selected');
-  nextlist.fadeOut(240, function() {
-    nextlist.removeClass('grey');
-    nextlist.children('.selected').removeClass('selected');
-  });
+    // Deselecting a document in the inbox -> do not show participants any more
+    if ( list[0].id == "list-1" && LW.Tensor.participantsViewController ) {
+        LW.Tensor.participantsViewController.unbind();
+    }
+    nextnextlist.fadeOut();
+    list.removeClass('grey');
+    selected.removeClass('selected');
+    nextlist.fadeOut(240, function() {
+        nextlist.removeClass('grey');
+        nextlist.children('.selected').removeClass('selected');
+    });
 };
 
 LW.Tensor.select_ = function(nextlist, list, selected, item) {
@@ -364,6 +376,13 @@ LW.Tensor.commentModifiedCallback_ = function(arr, index) {
   }
 };
 
+LW.Tensor.renderParticipant = function(dom, doc, obj) {
+    console.log("RENDER");
+    console.log(obj);
+    dom.innerHTML = '<a href="#" class="button">' + esc(obj.displayName) + '</a>';
+};
+
+/*
 LW.Tensor.participantsModifiedCallback_ = function() {
     var bar = $("#meta-bar")
     var users = bar.children(".user");
@@ -381,6 +400,7 @@ LW.Tensor.participantsModifiedCallback_ = function() {
         bar.get(0).insertBefore(li, $("#new-user").get(0));
     } 
 };
+*/
 
 // Invoked when an item of the inbox has changed or been inserted
 LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
