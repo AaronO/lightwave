@@ -427,6 +427,51 @@ function esc(str) {
   return str;
 }
 
+LW.Tensor.populateAddParticipants = function() {
+    dom = document.getElementById("footer-content");
+    dom.innerHTML = '<div class="contactsearch"><input type="search"> <span>Search for people</div>';
+    LW.Rpc.enqueueGet("/client/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "?kind=friends", LW.Tensor.populateAddParticipantsCallback_);
+};
+
+LW.Tensor.populateAddParticipantsCallback_ = function(reply) {
+    // Parse the reply
+    var json = JSON.parse(reply);
+    // Remember the list of friends
+    LW.Tensor.friends = json.friends;
+    dom = document.getElementById("footer-content");
+    var ul = document.createElement("div");
+    ul.className = "contacts";
+    for( var i = 0; i < json.friends.length; ++i ) {
+        var li = document.createElement("div");
+        li.className = "contact";
+        li.innerHTML = '<div style="float:left"><img src="/images/unknown.png"></div>' + esc(json.friends[i].displayName) + '<br>' + esc(json.friends[i].userid) + '<br><a class="adduser" href="#" name="' + json.friends[i].userid + '">Add to conversation</a>';
+        ul.appendChild(li);
+    }
+    dom.appendChild(ul);
+
+    $('.adduser').click(
+        function() {
+            if ( !LW.Tensor.currentDoc ) {
+                return;
+            }
+            var userid = this.name;
+            var user;
+            for( var i = 0; i < LW.Tensor.friends.length; ++i ) {
+                console.log(LW.Tensor.friends[i].userid + " | " + userid);
+                if ( LW.Tensor.friends[i].userid == userid ) {
+                    user = LW.Tensor.friends[i];
+                    break;
+                }
+            }
+            if ( !user ) {
+                return;
+            }
+            this.parentNode.parentNode.removeChild(this.parentNode);
+            LW.Model.addParticipant(LW.Tensor.currentDoc, user);
+        }
+    );
+};
+
 $(function() {
   // Header pulldown
   var headspace = 0;
@@ -458,8 +503,10 @@ $(function() {
     function() {
       if (footspace != 1) {
         $(this).addClass('active');
+// TODO: Only if clicked on +add button
+          LW.Tensor.populateAddParticipants();
         $('footer').animate({
-          bottom : "+=150"
+          bottom : "+=120"
         }, 500, function() {
           footspace++;
         })
@@ -469,7 +516,7 @@ $(function() {
       if (footspace != 0) {
         $(this).removeClass('active');
         $('footer').animate({
-          bottom : "-=150"
+          bottom : "-=120"
         }, 500, function() {
           footspace--;
         });

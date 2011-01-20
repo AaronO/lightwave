@@ -64,26 +64,37 @@ LW.Rpc.postOrGet_ = function(url, httpMethod, jsonData, callback, errCallback) {
   return false;
 };
 
+LW.Rpc.enqueueGet = function(url, callback, errCallback) {
+    LW.Rpc.queue.push( { method:"get", url:url, callback:callback, errCallback:errCallback } );
+  if ( LW.Rpc.queue.length == 1 ) {
+	LW.Rpc.get(url, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
+  }
+};
+
 LW.Rpc.enqueue = function(url, jsonData, callback, errCallback) {
-  LW.Rpc.queue.push( { url:url, data:jsonData, callback:callback, errCallback:errCallback } );
+    LW.Rpc.queue.push( { method:"post", url:url, data:jsonData, callback:callback, errCallback:errCallback } );
   if ( LW.Rpc.queue.length == 1 ) {
 	LW.Rpc.post(url, jsonData, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
   }
 };
 
 LW.Rpc.enqueueCallback_ = function(reply) {
-  console.log("Answer ...");
-  console.log(reply);
-  var msg = LW.Rpc.queue[0];
-  if ( msg.callback ) {
+    console.log("Answer ...");
+    console.log(reply);
+    var msg = LW.Rpc.queue[0];
+    if ( msg.callback ) {
 	msg.callback(reply);
-  }
-  LW.Rpc.queue.splice(0,1);
-  // Send more?
-  if ( LW.Rpc.queue.length > 0 ) {
+    }
+    LW.Rpc.queue.splice(0,1);
+    // Send more?
+    if ( LW.Rpc.queue.length > 0 ) {
 	var msg = LW.Rpc.queue[0];
-	LW.Rpc.post(msg.url, msg.data, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
-  }
+        if ( msg.method == "get" ) {
+	    LW.Rpc.get(msg.url, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
+        } else {
+	    LW.Rpc.post(msg.url, msg.data, LW.Rpc.enqueueCallback_, LW.Rpc.enqueueErrCallback_);
+        }
+    }
 };
 
 LW.Rpc.enqueueErrCallback_ = function(reply) {

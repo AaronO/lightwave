@@ -114,41 +114,9 @@ a:hover, a:active { outline: none; }
 a, a:active, a:visited { color: #047; text-decoration: none;}
 a:hover { color: #036; text-decoration:underline;}
 
-
 ul, ol { margin-left: 1.8em; }
-ol { list-style-type: decimal; }
-
-/* Remove margins for navigation lists */
-nav ul, nav li { margin: 0; } 
-
-small { font-size: 85%; }
-strong, th { font-weight: bold; }
-
-td, td img { vertical-align: top; } 
-
-sub { vertical-align: sub; font-size: smaller; }
-sup { vertical-align: super; font-size: smaller; }
-
-pre { 
-  padding: 15px; 
-  
-  /* www.pathf.com/blogs/2008/05/formatting-quoted-code-in-blog-posts-css21-white-space-pre-wrap/ */
-  white-space: pre; /* CSS2 */
-  white-space: pre-wrap; /* CSS 2.1 */
-  white-space: pre-line; /* CSS 3 (and 2.1 as well, actually) */
-  word-wrap: break-word; /* IE */
-}
  
 textarea { overflow: auto; } /* thnx ivannikolic! www.sitepoint.com/blogs/2010/08/20/ie-remove-textarea-scrollbars/ */
-
-.ie6 legend, .ie7 legend { margin-left: -7px; } /* thnx ivannikolic! */
-
-/* align checkboxes, radios, text inputs with their label
-   by: Thierry Koblentz tjkdesign.com/ez-css/css/base.css  */
-input[type="radio"] { vertical-align: text-bottom; }
-input[type="checkbox"] { vertical-align: bottom; }
-.ie7 input[type="checkbox"] { vertical-align: baseline; }
-.ie6 input { vertical-align: text-bottom; }
 
 /* hand cursor on clickable input elements */
 label, input[type=button], input[type=submit], button { cursor: pointer; }
@@ -167,7 +135,6 @@ input:invalid, textarea:invalid {
 .no-boxshadow input:invalid, 
 .no-boxshadow textarea:invalid { background-color: #f0dddd; }
 
-
 /* These selection declarations have to be separate.
    No text-shadow: twitter.com/miketaylr/status/12228805301 
    Also: hot pink. */
@@ -180,19 +147,10 @@ a:link { -webkit-tap-highlight-color: #FF995E; }
 /* make buttons play nice in IE:    
    www.viget.com/inspire/styling-the-button-element-in-internet-explorer/ */
 button {  width: auto; overflow: visible; }
- 
-/* bicubic resizing for non-native sized IMG: 
-   code.flickr.com/blog/2008/11/12/on-ui-quality-the-little-things-client-side-image-resizing/ */
-.ie7 img { -ms-interpolation-mode: bicubic; }
-
-
 
 /* 
  * Non-semantic helper classes 
  */
-
-/* for image replacement */
-.ir { display: block; text-indent: -999em; overflow: hidden; background-repeat: no-repeat; text-align: left; direction: ltr; }
 
 /* Hide for both screenreaders and browsers
    css-discuss.incutio.com/wiki/Screenreader_Visibility */
@@ -216,11 +174,6 @@ button {  width: auto; overflow: visible; }
 /* Fix clearfix: blueprintcss.lighthouseapp.com/projects/15318/tickets/5-extra-margin-padding-bottom-of-page */
 .clearfix { zoom: 1; }
 
-
-
-
-
-
  /* Primary Styles
   *  Authors: Kai Chang and Mary Becica
   */
@@ -239,17 +192,6 @@ p {
   margin: 12px 0;
   color: #333;
 }
-.entry h1 {
-  font-weight:bold;
-  margin:18px 0 2px 0;
-  font-size:24px;
-  border-bottom:1px solid #d3d3d3;
-  }
-.entry h2 {
-  font-size:18px;
-  margin:18px 0 2px 0;
-  border-bottom:1px solid #d3d3d3;
-}
 .left {
   float:left;
 }
@@ -266,15 +208,6 @@ a.button {
   -moz-border-radius: 14px !important;
   border-radius: 14px !important;
   font-weight: bold;
-}
-.green, .wave:hover .green {
-  color: #070;
-}
-.yellow, .wave:hover .yellow {
-  color: #c70;
-}
-.red, .wave:hover .red {
-  color: #700;
 }
 header, footer {
   background: #333;
@@ -294,11 +227,11 @@ header {
   height: 178px;
 }
 footer {
-  bottom: -150px;
-  padding-bottom: 150px;
+  bottom: -120px;
+  padding-bottom: 120px;
   height: 28px;
 }
- .inner {
+.inner {
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -306,14 +239,14 @@ footer {
 } 
 .outer {
   width: 100%;
-  height: 150px;
-  text-align: center;
+  height: 120px;
+/*  text-align: center; */
 
   /* TEMPORARY */
   overflow: hidden;
 }
 footer .outer {
-  margin-top:28px;
+  margin-top:0px;
 }
 header ul, footer ul, .meta ul {
   list-style: none;
@@ -326,19 +259,18 @@ header li, footer li, .meta li  {
 }
 header li a, header li a:visited,
 footer li a, footer li a:visited,  
-.meta li a, .meta li a:visited  {
+.meta .bar li a, .meta .bar li a:visited  {
   font-weight: bold;
   color: #ccc;
   display: block;
   height: 18px;
   padding: 0px 6px;
   margin: 5px 5px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
   text-decoration:none;
 }
 header li a:hover,
-header li a.active {
+header li a.active,
+.meta .bar li a.active, .meta .bar li a:hover {
   color:#6bf;
   text-decoration:none;
 }
@@ -368,8 +300,8 @@ header input[type="submit"] {
 }
 .meta input {
   color:#bbb;
-  background:#4d4d4d;
-  width:70px;
+  /* background:#4d4d4d; */
+  width:270px;
 }
 .meta input:hover, .meta input:focus {
   color:#333;
@@ -511,15 +443,6 @@ header .inner p {
 .grey {
   color: #bbb;
 }
-.grey .green {
-  color: #7CCC7C;
-}
-.grey .yellow {
-  color: #D4B07F;
-}
-.grey .red {
-  color: #B07D7D;
-}
 #content .selected {
   background: #fff;
   color: #000;
@@ -529,11 +452,11 @@ header .inner p {
   border-top:1px solid #b8b8b8;
   border-bottom:1px solid #b8b8b8;
 }
-#content .selected h3, #content .selected h4{
+#content .selected h3,
+#content .selected h4 {
   padding: 0 12px;
   color: #000;
 }
-#content .list .project:hover,
 #content .list .wave:hover {
   background: #ffe6a3;
   color: #333;
@@ -541,66 +464,21 @@ header .inner p {
   padding: 6px 12px;
   cursor:pointer;
 }
-#content .list .project.selected:hover,
 #content .list .wave.selected:hover {
-  cursor:auto;
+  background: #fff;
 }
-.list .date, .list .author {
+.list .date,
+.list .author {
   float:right;
   color:#aaa;
   font-weight:normal;
-}
-.project:hover .date, .wave:hover .date, .wave:hover .author {
-  color: #333;
 }
 .list h4 {
   font-weight: normal;
   clear:left;
 }
-.list .tally span {
-  margin-right: 12px;
-}
 
-#main .entry {
-  font-size:14px;
-  padding:1px 28px 28px;
-}
-#main .entry p {
-  line-height:1.5em;
-}
-#main .entry h1 {
-  padding-right:220px;
-}
-.entry .tools {
-  margin-top:28px;
-  float:right;
-}
-.entry .tools .wrap {
-  width:auto;
-}
-.entry .tools .view, .entry .tools .edit, .entry .tools .discuss, .entry .tools .history {
-  padding:0px 8px 0px 1px;
-  font-size:11px;
-  float:none;
-}
-
-/* Wikipedia */
-.entry #siteSub {
-  font-size:11px;
-  padding-bottom:6px;
-}
-.entry .rellink {
-  font-size:11px;
-}
-.entry .editsection {
-  font-size:11px;
-  float:right;
-  font-weight:normal;
-  padding:5px 6px 0 0;
-}
-/* End Wikipedia*/
-
-#main .meta {
+.meta {
   height: 128px;
   position: fixed;
   bottom: -72px;
@@ -611,47 +489,34 @@ header .inner p {
   box-shadow: 0px 0px 6px #333;
   z-index:6;
 }
-#main .meta .bar {
+.meta .bar {
   width:100%;
 }
-#main .meta p {
+.meta p {
   height: 20px;
   padding: 5px 8px 3px;
   margin: 0 0 0 12px;
   color: #eee;
 }
-#main .meta a, #main .meta a:visited {
+.meta .bar a, .meta .bar a:visited {
   font-weight: normal;
-  color: #bbb;
+  color: #ccc;
   height: 20px;
   padding: 5px 4px 3px;
   margin: 0 2px;
 }
-#main .meta a:hover {
+.meta .bar a:hover {
   color: #fff;
   background: transparent;
 }
-#navbg {
-  height: 100%;
-  background: #3D3E42;
-  border-right: 2px solid #555;
-  width: 208px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index:1;
+.contactsearch {
+  margin-left:15px;
+  margin-top:2px;
 }
-#nav {
-  padding: 12px 2px 12px 14px;
-  width: 194px;
-  float: left;
-  position: relative;
-  z-index: 1;
+.contactsearch span {
+  color: #bbb
 }
-#contacts {
-  width:180px;
-}
-#contacts input {
+.contactsearch input {
   margin: 0;
   padding: 1px 2px;
   width: 170px;
@@ -659,23 +524,32 @@ header .inner p {
   border: none;
   background: #c3c3c3;
 }
-#nav #contacts ul {
-  width: 180px;
-  margin: 8px 0px 15px;
+.contacts {
+  margin: 8px 12px 15px;
   padding: 0;
   text-indent: 0;
   list-style: none;
 }
-#contacts li {
-  padding: 2px 0 1px 18px;
-  margin: 0;
+.contact {
+  border: 1px solid #333;
+  background-color: #ccc;
+  float: left;
+  width: 200px;
+  border-radius: 5px;
+  margin-right: 3px;
+  padding: 4px;
 }
-#contacts li.online {
-  background: transparent url('../images/online.png') no-repeat 0px 5px;
+.contact a {
+  color: #036;
 }
-#contacts li.away {
-  background: transparent url('../images/away.png') no-repeat 0px 5px;
-  }
+.contact a:hover {
+    text-decoration: underline
+}
+.contact img {
+  margin-right:3px;
+  border:1px solid #888;
+}
+
 footer ul {
   float: right;
 }
@@ -744,47 +618,4 @@ footer ul {
 
 .infoBox .info {
   display:block
-}
-
-/*
- * Media queries for responsive design
- * These follow after primary styles so they will successfully override. 
- */
-
-@media all and (orientation:portrait) { 
-  /* Style adjustments for portrait mode goes here */
-  
-}
-
-@media all and (orientation:landscape) { 
-  /* Style adjustments for landscape mode goes here */
-  
-}
-
-/* Grade-A Mobile Browsers (Opera Mobile, iPhone Safari, Android Chrome)  
-   Consider this: www.cloudfour.com/css-media-query-for-mobile-is-fools-gold/ */
-@media screen and (max-device-width: 480px) {
-  
-  
-  /* Uncomment if you don't want iOS and WinMobile to mobile-optimize the text for you
-     j.mp/textsizeadjust 
-  html { -webkit-text-size-adjust:none; -ms-text-size-adjust:none; } */
-}
-
-/* 
- * print styles
- * inlined to avoid required HTTP connection www.phpied.com/delay-loading-your-print-css/ 
- */
-@media print {
-  * { background: transparent !important; color: #444 !important; text-shadow: none !important; }
-  a, a:visited { color: #444 !important; text-decoration: underline; }
-  a:after { content: " (" attr(href) ")"; } 
-  abbr:after { content: " (" attr(title) ")"; }
-  .ir a:after { content: ""; }  /* Don't show links for images */
-  pre, blockquote { border: 1px solid #999; page-break-inside: avoid; }
-  thead { display: table-header-group; } /* css-discuss.incutio.com/wiki/Printing_Tables */ 
-  tr, img { page-break-inside: avoid; }
-  @page { margin: 0.5cm; }
-  p, h2, h3 { orphans: 3; widows: 3; }
-  h2, h3{ page-break-after: avoid; }
 }
