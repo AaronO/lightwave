@@ -25,6 +25,11 @@ LW.Model.initCommentsDoc = function(doc) {
                             "_data":{"$object":true, "title":"...", "comments":[]}});
 };
 
+LW.Model.addParticipant = function(doc, user) {
+    var mut = {"_meta":{"$object":true, "participants":{"$array":[{"$skip":doc.content._meta.participants.length},{"userid":user.userid, "displayName":user.displayName}]}}};
+    doc.submitDocMutation(mut);
+};
+
 // Creates a document mutation to change the title of a conversation and sends it to the server
 // @param doc is a LW.Doc object
 // @param title is a string

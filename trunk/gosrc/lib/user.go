@@ -5,6 +5,7 @@ import (
   "log"
   "os"
   "strings"
+  "http"
 )
 
 // -------------------------------------
@@ -166,6 +167,51 @@ func (self *UserNode) Run() {
       case <-self.stopChannel:
         return
     }
+  }
+}
+
+func (self *UserNode) get(req *GetRequest) {
+  docuri := req.URI.(DocumentURI)
+  
+  // Request is aimed at this document?
+  if req.RawQuery != "" && len(docuri.NameSeq) == self.level {
+    // Parse the query
+    query, err := http.ParseQuery(req.RawQuery)
+    if err != nil {
+      log.Println("Failed parsing query")
+      makeErrorResponse(req.Response, "Failed parsing query")
+      req.FinishSignal <- false
+      return
+    }
+    kind, ok := query["kind"]
+    if !ok || ( kind != nil && len(kind) != 1 ) {
+      log.Println("Missing kind in query or malformed kind")
+      makeErrorResponse(req.Response, "Failed parsing query")
+      req.FinishSignal <- false
+      return
+    }
+    switch kind[0] {
+    case "friends":
+      // TODO
+      reply := []byte("{\"friends\":[{\"displayName\":\"Tux\", \"userid\":\"tux@localhost\"},{\"displayName\":\"Konqi\", \"userid\":\"konqi@localhost\"}]}")
+      req.Response.SetHeader("Content-Type", "application/json")
+      _, err = req.Response.Write( reply )
+      if err != nil {
+	log.Println("Failed writing HTTP response")
+	req.FinishSignal <- false
+	return
+      }
+    default:
+      log.Println("Unknown kind in query or malformed kind")
+      makeErrorResponse(req.Response, "Failed parsing query")
+      req.FinishSignal <- false
+      return
+    }
+    req.FinishSignal <- true
+    return
+  } else {
+    // Forward request to the default implementation
+    self.DocumentNode.get(req)
   }
 }
 
