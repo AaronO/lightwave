@@ -10,6 +10,7 @@ LW.Rpc = {
     user : "weis",
     domain : "localhost",
     displayName : "Torben",
+    logout : false,
     queue : [ ]
 };
 
@@ -98,11 +99,14 @@ LW.Rpc.enqueueCallback_ = function(reply) {
 };
 
 LW.Rpc.enqueueErrCallback_ = function(reply) {
-  var msg = LW.Rpc.queue[0];
-  if ( msg.errCallback ) {
+    if ( LW.Rpc.logout ) {
+        return;
+    }
+    var msg = LW.Rpc.queue[0];
+    if ( msg.errCallback ) {
 	msg.errCallback(reply);
-  }
-  alert("Offline", "You seem to be offline");
+    }
+    alert("Offline", "You seem to be offline");
 };
 
 // -------------------------------------------------------------
@@ -149,7 +153,10 @@ LW.Session.createSessionCallback_ = function(reply) {
 
 // Callback for the failed attempt of creating a session on the server
 LW.Session.createSessionErrCallback_ = function() {
-  alert("Offline", "You seem to be offline");
+    if ( LW.Rpc.logout ) {
+        return;
+    }
+    alert("Offline", "You seem to be offline");
 };
 	
 // HTTP long call to get updates on the documents
@@ -174,7 +181,10 @@ LW.Session.sessionPollCallback_ = function(reply) {
 
 // Failed response from the HTTP long call
 LW.Session.sessionPollErrCallback_ = function() {
-  alert("Offline", "You seem to be offline");
+    if ( LW.Rpc.logout ) {
+        return;
+    }
+    alert("Offline", "You seem to be offline");
 };
 	
 // Adds a new document to the session

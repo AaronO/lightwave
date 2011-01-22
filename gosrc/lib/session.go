@@ -527,13 +527,15 @@ type Session struct {
   Username string
   Cookie string
   CreationTime int64
+  sessionDatabase *SessionDB
 }
 
-func NewSession(username string) *Session {
+func NewSession(sessionDatabase *SessionDB, username string) *Session {
   s := &Session{Username:username}
   s.Id = createSessionId(username)
   s.CreationTime = time.UTC().Seconds()
   s.Cookie = s.Id
+  s.sessionDatabase = sessionDatabase
   return s
 }
 
@@ -544,6 +546,38 @@ func (self *Session) ExpirationTime() *time.Time {
 func (self *Session) SetCookie(writer http.ResponseWriter) {
   cookie := fmt.Sprintf("sid=%s; expires=%s", self.Cookie, webTime(self.ExpirationTime()))
   writer.SetHeader("Set-Cookie", cookie)
+}
+
+/*
+ * @return information about this session
+ */
+func (self *Session) InfoHandler(w http.ResponseWriter, r *http.Request) os.Error {
+  // Find the user of this session
+  user, err := self.sessionDatabase.server.UserAccountDatabase.FindUser(self.Username)
+  if err != nil {
+    makeErrorResponse(w, err.String())
+    return err
+  }
+  
+  result := make(map[string]string)
+  result["sid"] = self.Id;
+  result["user"] = self.Username
+  result["displayName"] = user.DisplayName
+  result["domain"] = self.sessionDatabase.server.Capabilities().Domain
+  json, err := json.Marshal(result)
+  if err != nil {
+    log.Println("Failed marshaling to json")
+    makeErrorResponse(w, "Failed marshaling to json")
+    return err
+  }
+  w.SetHeader("Content-Type", "application/json")
+  _, err = w.Write( json )
+  if err != nil {
+    log.Println("Failed writing HTTP response")
+    makeErrorResponse(w, "Failed writing HTTP response")
+    return err
+  }
+  return nil
 }
 
 // ------------------------------------------------------
@@ -560,7 +594,7 @@ func NewSessionDB(server *Server) *SessionDB {
 
 func (self *SessionDB) CreateSession(username string) (*Session, os.Error) {
   // TODO avoid that one user is creating too many concurrent sessions
-  s := NewSession(username)
+  s := NewSession(self, username)
   self.sessions[s.Id] = s;
   return s, nil
 }
@@ -575,6 +609,11 @@ func (self *SessionDB) FindSession(req *http.Request) (*Session, os.Error) {
     return nil, os.NewError("No SID cookie")
   }
   return self.findSession(sid)
+}
+
+func (self *SessionDB) DeleteSession(session *Session) {
+  log.Println("Deleting session ", session.Id)
+  self.sessions[session.Id] = nil, false
 }
 
 func (self *SessionDB) findSession(cookie string) (*Session, os.Error) {

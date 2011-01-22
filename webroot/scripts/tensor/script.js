@@ -92,7 +92,7 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
     html += '<div><textarea></textarea></div>';
     html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
     html += '</div>';
-    html += '<div class="info"><a href="#">Click here to reply</a></div>';
+    html += '<div class="info"><a href="#">Click here to write a message</a></div>';
     box.innerHTML = html;
     box.className = "infoBox";
     // Event handlers for the edit box.
@@ -405,22 +405,33 @@ LW.Tensor.inboxModifiedCallback_ = function(arr, index) {
 
 // Install the event handlers for the Inbox
 LW.Tensor.init = function() {
-  document.getElementById("username").innerText = LW.Rpc.user + "@" + LW.Rpc.domain;
-  LW.Inbox.init();
-  LW.Inbox.self.content._data._cb_docs = function(doc, obj, key, mut, event) {
-    if ( event == LW.JsonOT.AttributeInserted ) {
-      // Wait for documents being inserted in the "docs" object
-      doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
-        // Wait for changes in the inserted docs object
-        arr[index]._cb = function(doc, obj, key, mut, event) {
-          if ( event == LW.JsonOT.ObjectModified ) {
-            LW.Tensor.inboxModifiedCallback_(arr, index);
-          }
+    // Retrieve session info from the server
+    LW.Rpc.enqueueGet("/_sessioninfo", LW.Tensor.initCallback_, function() { } );
+};
+
+LW.Tensor.initCallback_ = function(reply) {
+    // Parse the reply
+    var info = JSON.parse(reply);
+    LW.Rpc.user = info.user;
+    LW.Rpc.domain = info.domain;
+    LW.Rpc.displayName = info.displayName;
+    // Show which user is logged in
+    document.getElementById("username").innerText = LW.Rpc.user + "@" + LW.Rpc.domain;
+    LW.Inbox.init();
+    LW.Inbox.self.content._data._cb_docs = function(doc, obj, key, mut, event) {
+        if ( event == LW.JsonOT.AttributeInserted ) {
+            // Wait for documents being inserted in the "docs" object
+            doc._data.docs._cb_inserted = function(doc, arr, index, mut, event) {
+                // Wait for changes in the inserted docs object
+                arr[index]._cb = function(doc, obj, key, mut, event) {
+                    if ( event == LW.JsonOT.ObjectModified ) {
+                        LW.Tensor.inboxModifiedCallback_(arr, index);
+                    }
+                }
+            }
         }
-      }
-    }
-  }    
-  LW.Session.init();
+    }    
+    LW.Session.init();
 };
 
 // UGLY
@@ -572,22 +583,27 @@ $(function() {
 
   // ------------------------------------------------
   // Added by Torben
-  
-  $('.newwave').click( function() {
-    if ( !LW.Session.sessionCreated ) {
-      alert("No session created yet");
-      return;
-    }
-    LW.Tensor.deselectAll_();  
-    // Instantiate the document
-    var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
-    var doc = LW.Inbox.getOrCreateDoc(url);
-    // Show the new document and allow the user to edit the first comment
-    LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
-    $("#list-2").fadeIn();
-    // Fill the document with initialization data
-    LW.Model.initCommentsDoc(doc);
-    // Subscribe to all changes regarding this document
-    LW.Session.open(doc.url, false, false);
-  } );
+
+    $('#logout').click( function() {
+        LW.Rpc.logout = true;
+        window.location.pathname = "/_logout";
+    });
+
+    $('.newwave').click( function() {
+        if ( !LW.Session.sessionCreated ) {
+            alert("No session created yet");
+            return;
+        }
+        LW.Tensor.deselectAll_();  
+        // Instantiate the document
+        var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
+        var doc = LW.Inbox.getOrCreateDoc(url);
+        // Show the new document and allow the user to edit the first comment
+        LW.Tensor.createColumnContent_(doc.url, document.getElementById("list-2"), true);
+        $("#list-2").fadeIn();
+        // Fill the document with initialization data
+        LW.Model.initCommentsDoc(doc);
+        // Subscribe to all changes regarding this document
+        LW.Session.open(doc.url, false, false);
+    } );
 });

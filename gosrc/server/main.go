@@ -224,6 +224,27 @@ func federationHandler(w http.ResponseWriter, r *http.Request) {
   }
 }
 
+func sessionInfoHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  session.InfoHandler(w, r)
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
   server, err := findServer(r.Host)
@@ -248,6 +269,28 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
   }
   s.SetCookie(w)
   http.Redirect(w, r, "/tensor.html", 303)
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  server.SessionDatabase.DeleteSession(session)
+  http.Redirect(w, r, "/index.html", 303)
 }
 
 func main() {  
@@ -279,6 +322,8 @@ func main() {
   lightwave.RegisterNodeFactory("application/json", lightwave.DocumentNodeFactory)
   
   http.HandleFunc("/_login", loginHandler)
+  http.HandleFunc("/_logout", logoutHandler)
+  http.HandleFunc("/_sessioninfo", sessionInfoHandler)
   // Behave like a wave server with HTTP transport
 //  http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
