@@ -245,6 +245,36 @@ func sessionInfoHandler(w http.ResponseWriter, r *http.Request) {
   session.InfoHandler(w, r)
 }
 
+func signupHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  
+  username := r.FormValue("username")
+  password := r.FormValue("password")
+  email := r.FormValue("email")
+  nickname := r.FormValue("nickname")
+
+  log.Println("Register:",username)
+  user, err := server.UserAccountDatabase.SignUpUser(email, nickname, username, password)
+  if err != nil {
+    log.Println(err)
+    http.Redirect(w, r, "/index.html", 303)
+    return
+  }
+  s, err := server.SessionDatabase.CreateSession(user.Username)
+  if err != nil {
+    log.Println(err)
+    http.Redirect(w, r, "/index.html", 303)
+    return
+  }  
+  s.SetCookie(w)
+  http.Redirect(w, r, "/tensor.html", 303)
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
   server, err := findServer(r.Host)
@@ -255,7 +285,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
   
   username := r.FormValue("username")
   password := r.FormValue("password")
-  log.Println("LOGIN:",username,password)
+  log.Println("LOGIN:",username)
   if err = server.UserAccountDatabase.CheckCredentials(username, password); err != nil {
     log.Println(err)
     http.Redirect(w, r, "/index.html", 303)
@@ -324,6 +354,7 @@ func main() {
   http.HandleFunc("/_login", loginHandler)
   http.HandleFunc("/_logout", logoutHandler)
   http.HandleFunc("/_sessioninfo", sessionInfoHandler)
+  http.HandleFunc("/_signup", signupHandler)
   // Behave like a wave server with HTTP transport
 //  http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
