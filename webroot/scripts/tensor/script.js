@@ -59,6 +59,8 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
             LW.Tensor.participantsViewController = new LW.Controller.AttributeController(arrfactory);
         }
         LW.Tensor.participantsViewController.bind(LW.Tensor.currentDoc, LW.Tensor.currentDoc.content._meta, "participants");
+        // Update the list of contacts that could be added to this wave
+        LW.Tensor.updateAddParticipants();
         // When a new list of top-level comments is inserted -> register event handlers
         LW.Tensor.currentDoc.content._data._cb_comments = function(doc, obj, key, mutations, event) {
             if ( LW.Tensor.currentDoc.content == doc ) {
@@ -428,27 +430,48 @@ function esc(str) {
 }
 
 LW.Tensor.populateAddParticipants = function() {
-    dom = document.getElementById("footer-content");
+    var dom = document.getElementById("footer-content");
     dom.innerHTML = '<div class="contactsearch"><input type="search"> <span>Search for people</div>';
     LW.Rpc.enqueueGet("/client/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "?kind=friends", LW.Tensor.populateAddParticipantsCallback_);
 };
 
+LW.Tensor.updateAddParticipants = function() {
+    var contacts = $('.contacts');
+    if ( contacts.length == 1 ) {
+        contacts[0].parentNode.removeChild(contacts[0]);
+        LW.Tensor.populateAddParticipantsCallback_();
+    }
+};
+
+/**
+ * @param reply is optional
+ */
 LW.Tensor.populateAddParticipantsCallback_ = function(reply) {
-    // Parse the reply
-    var json = JSON.parse(reply);
-    // Remember the list of friends
-    LW.Tensor.friends = json.friends;
+    if ( reply ) {
+        // Parse the reply
+        var friends = JSON.parse(reply).friends;
+        // Remember the list of friends
+        LW.Tensor.friends = friends;
+    } else if ( !LW.Tensor.friends ) {
+        return;
+    }
     dom = document.getElementById("footer-content");
     var ul = document.createElement("div");
     ul.className = "contacts";
-    for( var i = 0; i < json.friends.length; ++i ) {
+    for( var i = 0; i < LW.Tensor.friends.length; ++i ) {
+        var contact = LW.Tensor.friends[i];
+        // If this user is already part of the wave, then do not show it
+        if ( LW.Tensor.currentDoc && LW.Model.hasParticipant( contact.userid ) ) {
+            continue;
+        }
         var li = document.createElement("div");
         li.className = "contact";
-        li.innerHTML = '<div style="float:left"><img src="/images/unknown.png"></div>' + esc(json.friends[i].displayName) + '<br>' + esc(json.friends[i].userid) + '<br><a class="adduser" href="#" name="' + json.friends[i].userid + '">Add to conversation</a>';
+        li.innerHTML = '<div style="float:left"><img src="/images/unknown.png"></div>' + esc(contact.displayName) + '<br>' + esc(contact.userid) + '<br><a class="adduser" href="#" name="' + contact.userid + '">Add to conversation</a>';
         ul.appendChild(li);
     }
     dom.appendChild(ul);
 
+    // Event handler for adding a contact to the list of participants
     $('.adduser').click(
         function() {
             if ( !LW.Tensor.currentDoc ) {
