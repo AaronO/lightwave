@@ -360,13 +360,14 @@ func (self *UserAccountDB) FindUser(username string) (*UserAccount, os.Error) {
   return user, nil
 }
 
-func (self *UserAccountDB) SignUpUser(email string, displayname string, username string, password string) os.Error {
+func (self *UserAccountDB) SignUpUser(email string, displayname string, username string, password string) (*UserAccount, os.Error) {
   _, ok := self.users[username]
   if ok {
-    return os.NewError("User already exists");
+    return nil, os.NewError("User already exists");
   }
-  self.users[username] = &UserAccount{EMail:email, Username:username, Password:password, DisplayName:displayname}
-  return nil
+  user := &UserAccount{EMail:email, Username:username, Password:password, DisplayName:displayname}
+  self.users[username] = user
+  return user, nil
 }
 
 func (self *UserAccountDB) CheckCredentials(username string, password string) os.Error {
