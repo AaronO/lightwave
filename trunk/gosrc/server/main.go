@@ -334,9 +334,15 @@ func main() {
   // TODO: This is a hack
   server.LocalHost().Users().CreateUser("weis")
   // TODO: This is a hack
-  server.UserAccountDatabase.SignUpUser("weis@mail.com", "Torben", "weis", "pass")
-  server.UserAccountDatabase.SignUpUser("tux123@mail.com", "Tux", "tux", "pass2")
-  server.UserAccountDatabase.SignUpUser("kon@mail.com", "Konqi", "konqi", "pass3")
+  if _, err := server.UserAccountDatabase.FindUser("weis"); err != nil {
+    server.UserAccountDatabase.SignUpUser("weis@mail.com", "Torben", "weis", "pass")
+  }
+  if _, err := server.UserAccountDatabase.FindUser("tux"); err != nil {
+    server.UserAccountDatabase.SignUpUser("tux123@mail.com", "Tux", "tux", "pass2")
+  }
+  if _, err := server.UserAccountDatabase.FindUser("konqi"); err != nil {  
+    server.UserAccountDatabase.SignUpUser("kon@mail.com", "Konqi", "konqi", "pass3")
+  }
   // End hack
   go server.Run()
 

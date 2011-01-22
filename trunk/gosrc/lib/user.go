@@ -6,6 +6,7 @@ import (
   "os"
   "strings"
   "http"
+  sqlite "gosqlite.googlecode.com/hg/sqlite"
 )
 
 // -------------------------------------
@@ -345,34 +346,74 @@ type UserAccount struct {
 
 type UserAccountDB struct {
   server *Server
-  users map[string]*UserAccount
+  dbcon *sqlite.Conn
 }
 
 func NewUserAccountDB(server *Server) *UserAccountDB {
-  return &UserAccountDB{server:server, users: make(map[string]*UserAccount)}
+  db := &UserAccountDB{server:server}
+  dbcon, err := sqlite.Open(server.Capabilities().Domain + "_user.db")
+  if err != nil {
+    panic("Cannot access user database")
+  }
+  stmnt, err := dbcon.Prepare("CREATE TABLE IF NOT EXISTS Accounts ( id VARCHAR(20) PRIMARY KEY, email VARCHAR(30), nick VARCHAR(30), passwd VARCHAR(16) )")
+  if err != nil {
+    panic("Cannot prepare stmnt for create account table")
+  }
+  err = stmnt.Exec()
+  if err != nil {
+    panic("Cannot create account table")
+  }
+  stmnt.Next()
+  db.dbcon = dbcon
+  return db
 }
 
 func (self *UserAccountDB) FindUser(username string) (*UserAccount, os.Error) {
-  user, ok := self.users[username]
-  if !ok {
+  // user, ok := self.users[username]
+  // if !ok {
+  //   return nil, os.NewError("Unknown user")
+  // }
+  stmnt, err := self.dbcon.Prepare("SELECT * FROM Accounts WHERE id = ?1")
+  if err != nil {
+    log.Println(err)
+    return nil, err
+  }
+  err = stmnt.Exec(username)
+  if err != nil {
+    return nil, err
+  }
+  if !stmnt.Next() {
     return nil, os.NewError("Unknown user")
   }
-  return user, nil
+  var user UserAccount
+  err = stmnt.Scan(&user.Username, &user.EMail, &user.DisplayName, &user.Password)
+  if err != nil {
+    return nil, err
+  }  
+  return &user, nil
 }
 
 func (self *UserAccountDB) SignUpUser(email string, displayname string, username string, password string) (*UserAccount, os.Error) {
-  _, ok := self.users[username]
-  if ok {
+  _, err := self.FindUser(username)
+  if err == nil {
     return nil, os.NewError("User already exists");
   }
   user := &UserAccount{EMail:email, Username:username, Password:password, DisplayName:displayname}
-  self.users[username] = user
+  stmnt, err := self.dbcon.Prepare("INSERT INTO Accounts VALUES ( ?1, ?2, ?3, ?4 )")
+  if err != nil {
+    return nil, err
+  }
+  err = stmnt.Exec(username, email, displayname, password)
+  if err != nil {
+    return nil, err
+  }  
+  stmnt.Next()
   return user, nil
 }
 
 func (self *UserAccountDB) CheckCredentials(username string, password string) os.Error {
-  user, ok := self.users[username]
-  if !ok {
+  user, err := self.FindUser(username)
+  if err != nil {
     return os.NewError("User does not exists");
   }
   if user.Password != password {
