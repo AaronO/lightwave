@@ -4,6 +4,12 @@ import (
   "log"
   "json"
   "fmt"
+  "http"
+  "strings"
+  "strconv"
+  "time"
+  hmac "crypto/hmac"
+  "os"
 )
 
 // ------------------------------------------------------
@@ -419,4 +425,162 @@ func (self *SessionRootNode) get(req *GetRequest) {
 
 func (self *SessionRootNode) addChild(child *SessionNode) {
   self.sessions[ child.Name() ] = child
+}
+
+// ----------------------------------------------------
+// Some constants
+
+const (
+  SessionDuration = 60 * 60 * 24
+  ServerSecret = "MakeMeASecret"
+)
+
+// ----------------------------------------------------
+// Helper function, thanks to web.go
+
+/*
+func getCookieSig(val []byte, timestamp string) string {
+  hm := hmac.NewSHA1( []byte(ServerSecret) )
+  hm.Write(val)
+  hm.Write([]byte(timestamp))
+
+  hex := fmt.Sprintf("%02x", hm.Sum())
+  return hex
+}
+
+func (ctx *Context) encodeSecureCookie(val string, creationTime int64) {
+  var buf bytes.Buffer
+  encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+  encoder.Write([]byte(val))
+  encoder.Close()
+  timestamp := strconv.Itoa64(creationTime)
+  sig := getCookieSig(buf.Bytes(), timestamp)
+  return strings.Join([]string{buf.String(), timestamp, sig}, "|")
+}
+
+func decodeSecureCookie(string value, int64 maxAge) (string, os.Error) {
+  parts := strings.Split(value, "|", 3)
+  val := parts[0]
+  timestamp := parts[1]
+  sig := parts[2]
+  // Check signature
+  if getCookieSig(ServerSecret, []byte(val), timestamp) != sig {
+    return "", os.NewError("Signature error, cookie is invalid")
+  }
+  // Check time stamp
+  ts, _ := strconv.Atoi64(timestamp)
+  if ts + maxAge < time.UTC().Seconds() {
+    return "", os.NewError("Cookie is outdated")
+  }
+
+  buf := bytes.NewBufferString(val)
+  encoder := base64.NewDecoder(base64.StdEncoding, buf)
+  res, _ := ioutil.ReadAll(encoder)
+  return string(res), nil
+}
+*/
+
+func parseCookies(req *http.Request) (map[string]string, os.Error) {
+  result := make(map[string]string)
+
+  if v, ok := req.Header["Cookie"]; ok {
+    cookies := strings.Split(v, ";", -1)
+    for _, cookie := range cookies {
+      cookie = strings.TrimSpace(cookie)
+      parts := strings.Split(cookie, "=", 2)
+      if len(parts) != 2 {
+        continue
+      }
+      result[parts[0]] = parts[1]
+    }
+  }
+
+  return result, nil
+}
+
+func webTime(t *time.Time) string {
+  ftime := t.Format(time.RFC1123)
+  if strings.HasSuffix(ftime, "UTC") {
+    ftime = ftime[0:len(ftime)-3] + "GMT"
+  }
+  return ftime
+}
+
+var sessionIdCounter int64 = 1
+
+func createSessionId(username string) string {
+  hm := hmac.NewSHA1( []byte(ServerSecret) )
+  hm.Write([]byte(username))
+  hm.Write([]byte(strconv.Itoa64(sessionIdCounter)))
+  hm.Write([]byte(strconv.Itoa64(time.Seconds())))
+  sessionIdCounter++
+  hex := fmt.Sprintf("%02x", hm.Sum())
+  return hex
+}
+
+// ------------------------------------------------------
+// Session
+
+type Session struct {
+  // The name of the user without the domain postfix 
+  Id string
+  Username string
+  Cookie string
+  CreationTime int64
+}
+
+func NewSession(username string) *Session {
+  s := &Session{Username:username}
+  s.Id = createSessionId(username)
+  s.CreationTime = time.UTC().Seconds()
+  s.Cookie = s.Id
+  return s
+}
+
+func (self *Session) ExpirationTime() *time.Time {
+  return time.SecondsToUTC(self.CreationTime + SessionDuration)
+}
+
+func (self *Session) SetCookie(writer http.ResponseWriter) {
+  cookie := fmt.Sprintf("sid=%s; expires=%s", self.Cookie, webTime(self.ExpirationTime()))
+  writer.SetHeader("Set-Cookie", cookie)
+}
+
+// ------------------------------------------------------
+// SessionDB
+
+type SessionDB struct {
+  sessions map[string]*Session
+  server *Server
+}
+
+func NewSessionDB(server *Server) *SessionDB {
+  return &SessionDB{server:server, sessions:make(map[string]*Session)}
+}
+
+func (self *SessionDB) CreateSession(username string) (*Session, os.Error) {
+  // TODO avoid that one user is creating too many concurrent sessions
+  s := NewSession(username)
+  self.sessions[s.Id] = s;
+  return s, nil
+}
+
+func (self *SessionDB) FindSession(req *http.Request) (*Session, os.Error) {
+  cookies, err := parseCookies(req)
+  if err != nil {
+    return nil, err
+  }
+  sid, ok := cookies["sid"]
+  if !ok {
+    return nil, os.NewError("No SID cookie")
+  }
+  return self.findSession(sid)
+}
+
+func (self *SessionDB) findSession(cookie string) (*Session, os.Error) {
+  session, ok := self.sessions[cookie]
+  if !ok {
+    return nil, os.NewError("No such session")
+  }
+  return session, nil
 }

@@ -114,26 +114,47 @@ a:hover, a:active { outline: none; }
 a, a:active, a:visited { color: #047; text-decoration: none;}
 a:hover { color: #036; text-decoration:underline;}
 
+
 ul, ol { margin-left: 1.8em; }
+ol { list-style-type: decimal; }
+
+/* Remove margins for navigation lists */
+nav ul, nav li { margin: 0; } 
+
+small { font-size: 85%; }
+strong, th { font-weight: bold; }
+
+td, td img { vertical-align: top; } 
+
+sub { vertical-align: sub; font-size: smaller; }
+sup { vertical-align: super; font-size: smaller; }
+
+pre { 
+  padding: 15px; 
+  
+  /* www.pathf.com/blogs/2008/05/formatting-quoted-code-in-blog-posts-css21-white-space-pre-wrap/ */
+  white-space: pre; /* CSS2 */
+  white-space: pre-wrap; /* CSS 2.1 */
+  white-space: pre-line; /* CSS 3 (and 2.1 as well, actually) */
+  word-wrap: break-word; /* IE */
+}
  
 textarea { overflow: auto; } /* thnx ivannikolic! www.sitepoint.com/blogs/2010/08/20/ie-remove-textarea-scrollbars/ */
+
+.ie6 legend, .ie7 legend { margin-left: -7px; } /* thnx ivannikolic! */
+
+/* align checkboxes, radios, text inputs with their label
+   by: Thierry Koblentz tjkdesign.com/ez-css/css/base.css  */
+input[type="radio"] { vertical-align: text-bottom; }
+input[type="checkbox"] { vertical-align: bottom; }
+.ie7 input[type="checkbox"] { vertical-align: baseline; }
+.ie6 input { vertical-align: text-bottom; }
 
 /* hand cursor on clickable input elements */
 label, input[type=button], input[type=submit], button { cursor: pointer; }
  
 /* webkit browsers add a 2px margin outside the chrome of form elements */  
 button, input, select, textarea { margin: 0; }
-
-/* colors for form validity */
-input:valid, textarea:valid   {  }
-input:invalid, textarea:invalid { 
-      border-radius: 1px;
-    -moz-box-shadow: 0px 0px 5px red; 
- -webkit-box-shadow: 0px 0px 5px red; 
-         box-shadow: 0px 0px 5px red;
-}
-.no-boxshadow input:invalid, 
-.no-boxshadow textarea:invalid { background-color: #f0dddd; }
 
 /* These selection declarations have to be separate.
    No text-shadow: twitter.com/miketaylr/status/12228805301 
@@ -147,6 +168,12 @@ a:link { -webkit-tap-highlight-color: #FF995E; }
 /* make buttons play nice in IE:    
    www.viget.com/inspire/styling-the-button-element-in-internet-explorer/ */
 button {  width: auto; overflow: visible; }
+ 
+/* bicubic resizing for non-native sized IMG: 
+   code.flickr.com/blog/2008/11/12/on-ui-quality-the-little-things-client-side-image-resizing/ */
+.ie7 img { -ms-interpolation-mode: bicubic; }
+
+
 
 /* 
  * Non-semantic helper classes 
@@ -167,12 +194,17 @@ button {  width: auto; overflow: visible; }
 
 /* >> The Magnificent CLEARFIX: Updated to prevent margin-collapsing on child elements << j.mp/bestclearfix */
 .clearfix:before, .clearfix:after {
-  content: "\0020"; display: block; height: 0; visibility: hidden;	
+  content: "\0020"; display: block; height: 0; visibility: hidden;      
 } 
 
 .clearfix:after { clear: both; }
 /* Fix clearfix: blueprintcss.lighthouseapp.com/projects/15318/tickets/5-extra-margin-padding-bottom-of-page */
 .clearfix { zoom: 1; }
+
+
+
+
+
 
  /* Primary Styles
   *  Authors: Kai Chang and Mary Becica
@@ -227,11 +259,11 @@ header {
   height: 178px;
 }
 footer {
-  bottom: -120px;
-  padding-bottom: 120px;
+  bottom: -150px;
+  padding-bottom: 150px;
   height: 28px;
 }
-.inner {
+ .inner {
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -239,8 +271,7 @@ footer {
 } 
 .outer {
   width: 100%;
-  height: 120px;
-/*  text-align: center; */
+  height: 150px;
 
   /* TEMPORARY */
   overflow: hidden;
@@ -259,18 +290,19 @@ header li, footer li, .meta li  {
 }
 header li a, header li a:visited,
 footer li a, footer li a:visited,  
-.meta .bar li a, .meta .bar li a:visited  {
+.meta li a, .meta li a:visited  {
   font-weight: bold;
   color: #ccc;
   display: block;
   height: 18px;
   padding: 0px 6px;
   margin: 5px 5px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
   text-decoration:none;
 }
 header li a:hover,
-header li a.active,
-.meta .bar li a.active, .meta .bar li a:hover {
+header li a.active {
   color:#6bf;
   text-decoration:none;
 }
@@ -300,8 +332,8 @@ header input[type="submit"] {
 }
 .meta input {
   color:#bbb;
-  /* background:#4d4d4d; */
-  width:270px;
+  background:#4d4d4d;
+  width:70px;
 }
 .meta input:hover, .meta input:focus {
   color:#333;
@@ -443,6 +475,15 @@ header .inner p {
 .grey {
   color: #bbb;
 }
+.grey .green {
+  color: #7CCC7C;
+}
+.grey .yellow {
+  color: #D4B07F;
+}
+.grey .red {
+  color: #B07D7D;
+}
 #content .selected {
   background: #fff;
   color: #000;
@@ -452,11 +493,11 @@ header .inner p {
   border-top:1px solid #b8b8b8;
   border-bottom:1px solid #b8b8b8;
 }
-#content .selected h3,
-#content .selected h4 {
+#content .selected h3, #content .selected h4{
   padding: 0 12px;
   color: #000;
 }
+#content .list .project:hover,
 #content .list .wave:hover {
   background: #ffe6a3;
   color: #333;
@@ -464,11 +505,11 @@ header .inner p {
   padding: 6px 12px;
   cursor:pointer;
 }
+#content .list .project.selected:hover,
 #content .list .wave.selected:hover {
-  background: #fff;
+  cursor:auto;
 }
-.list .date,
-.list .author {
+.list .date, .list .author {
   float:right;
   color:#aaa;
   font-weight:normal;
@@ -477,8 +518,11 @@ header .inner p {
   font-weight: normal;
   clear:left;
 }
+.list .tally span {
+  margin-right: 12px;
+}
 
-.meta {
+#main .meta {
   height: 128px;
   position: fixed;
   bottom: -72px;
@@ -489,34 +533,47 @@ header .inner p {
   box-shadow: 0px 0px 6px #333;
   z-index:6;
 }
-.meta .bar {
+#main .meta .bar {
   width:100%;
 }
-.meta p {
+#main .meta p {
   height: 20px;
   padding: 5px 8px 3px;
   margin: 0 0 0 12px;
   color: #eee;
 }
-.meta .bar a, .meta .bar a:visited {
+#main .meta a, #main .meta a:visited {
   font-weight: normal;
-  color: #ccc;
+  color: #bbb;
   height: 20px;
   padding: 5px 4px 3px;
   margin: 0 2px;
 }
-.meta .bar a:hover {
+#main .meta a:hover {
   color: #fff;
   background: transparent;
 }
-.contactsearch {
-  margin-left:15px;
-  margin-top:2px;
+#navbg {
+  height: 100%;
+  background: #3D3E42;
+  border-right: 2px solid #555;
+  width: 208px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index:1;
 }
-.contactsearch span {
-  color: #bbb
+#nav {
+  padding: 12px 2px 12px 14px;
+  width: 194px;
+  float: left;
+  position: relative;
+  z-index: 1;
 }
-.contactsearch input {
+#contacts {
+  width:180px;
+}
+#contacts input {
   margin: 0;
   padding: 1px 2px;
   width: 170px;
@@ -524,32 +581,23 @@ header .inner p {
   border: none;
   background: #c3c3c3;
 }
-.contacts {
-  margin: 8px 12px 15px;
+#nav #contacts ul {
+  width: 180px;
+  margin: 8px 0px 15px;
   padding: 0;
   text-indent: 0;
   list-style: none;
 }
-.contact {
-  border: 1px solid #333;
-  background-color: #ccc;
-  float: left;
-  width: 200px;
-  border-radius: 5px;
-  margin-right: 3px;
-  padding: 4px;
+#contacts li {
+  padding: 2px 0 1px 18px;
+  margin: 0;
 }
-.contact a {
-  color: #036;
+#contacts li.online {
+  background: transparent url('../images/online.png') no-repeat 0px 5px;
 }
-.contact a:hover {
-    text-decoration: underline
-}
-.contact img {
-  margin-right:3px;
-  border:1px solid #888;
-}
-
+#contacts li.away {
+  background: transparent url('../images/away.png') no-repeat 0px 5px;
+  }
 footer ul {
   float: right;
 }
@@ -618,4 +666,45 @@ footer ul {
 
 .infoBox .info {
   display:block
+}
+
+.contactsearch {
+  margin-left:15px;
+  margin-top:2px;
+}
+.contactsearch span {
+  color: #bbb
+}
+.contactsearch input {
+  margin: 0;
+  padding: 1px 2px;
+  width: 170px;
+  height: 18px;
+  border: none;
+  background: #c3c3c3;
+}
+.contacts {
+  margin: 8px 12px 15px;
+  padding: 0;
+  text-indent: 0;
+  list-style: none;
+}
+.contact {
+  border: 1px solid #333;
+  background-color: #ccc;
+  float: left;
+  width: 200px;
+  border-radius: 5px;
+  margin-right: 3px;
+  padding: 4px;
+}
+.contact a {
+  color: #036;
+}
+.contact a:hover {
+    text-decoration: underline
+}
+.contact img {
+  margin-right:3px;
+  border:1px solid #888;
 }

@@ -30,6 +30,19 @@ LW.Model.addParticipant = function(doc, user) {
     doc.submitDocMutation(mut);
 };
 
+LW.Model.hasParticipant = function(doc, userid ) {
+    if ( !doc.content._meta.participants ) {
+        return false;
+    }
+    for( var i = 0; i < doc.content._meta.participants.length; ++i ) {
+        var p = doc.content._meta.participants[i];
+        if ( p.userid == userid ) {
+            return true;
+        }
+    }
+    return false;
+};
+
 // Creates a document mutation to change the title of a conversation and sends it to the server
 // @param doc is a LW.Doc object
 // @param title is a string

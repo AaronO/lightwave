@@ -331,3 +331,43 @@ func (self *UserRootNode) digest(msg *DigestMsg) {
 func (self *UserRootNode) addChild(child *UserNode) {
   self.users[ child.Name() ] = child
 }
+
+// -------------------------------------
+// UserDB
+
+type UserAccount struct {
+  EMail string
+  // The name of the user without the domain postfix 
+  Username string
+  Password string
+  DisplayName string
+}
+
+type UserAccountDB struct {
+  server *Server
+  users map[string]*UserAccount
+}
+
+func NewUserAccountDB(server *Server) *UserAccountDB {
+  return &UserAccountDB{server:server, users: make(map[string]*UserAccount)}
+}
+
+func (self *UserAccountDB) SignUpUser(email string, displayname string, username string, password string) os.Error {
+  _, ok := self.users[username]
+  if ok {
+    return os.NewError("User already exists");
+  }
+  self.users[username] = &UserAccount{EMail:email, Username:username, Password:password, DisplayName:displayname}
+  return nil
+}
+
+func (self *UserAccountDB) CheckCredentials(username string, password string) os.Error {
+  user, ok := self.users[username]
+  if !ok {
+    return os.NewError("User does not exists");
+  }
+  if user.Password != password {
+    return os.NewError("Wrong password");
+  }
+  return nil
+}

@@ -46,6 +46,7 @@ type Request struct {
   Origin int32
   // A unique identifier of the destination of this request, i.e. it identifies a Node
   URI URI
+  SessionPtr *Session
 }
 
 const (
@@ -909,6 +910,8 @@ type Server struct {
   manifest *ServerManifest
   children map[string]Node
   sessions *SessionRootNode
+  SessionDatabase *SessionDB
+  UserAccountDatabase *UserAccountDB
   gateways map[string]*FederationGateway
   gatewaysMutex sync.Mutex
 }
@@ -917,6 +920,8 @@ func NewServer(manifest *ServerManifest) *Server {
   r := &Server{manifest:manifest, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:manifest.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   r.sessions = NewSessionRootNode(r)
   r.gateways = make(map[string]*FederationGateway)
+  r.SessionDatabase = NewSessionDB(r)
+  r.UserAccountDatabase = NewUserAccountDB(r)
   // Launch the server, i.e. start processing messages
   go r.sessions.Run()
   return r
