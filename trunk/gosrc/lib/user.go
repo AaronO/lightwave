@@ -352,6 +352,14 @@ func NewUserAccountDB(server *Server) *UserAccountDB {
   return &UserAccountDB{server:server, users: make(map[string]*UserAccount)}
 }
 
+func (self *UserAccountDB) FindUser(username string) (*UserAccount, os.Error) {
+  user, ok := self.users[username]
+  if !ok {
+    return nil, os.NewError("Unknown user")
+  }
+  return user, nil
+}
+
 func (self *UserAccountDB) SignUpUser(email string, displayname string, username string, password string) os.Error {
   _, ok := self.users[username]
   if ok {
