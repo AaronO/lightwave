@@ -177,6 +177,7 @@ func TestRichTextOT(t *testing.T) {
   text[0] = line
   text[1] = "Huhu"
   richtext["text"] = text
+  richtext["$rtf"] = true
   data["richtext"] = richtext
   obj["_data"] = data
   obj["_meta"] = meta
