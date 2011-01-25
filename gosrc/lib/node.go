@@ -369,8 +369,8 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   
   // Apply the mutation at the most recent version of the document?
   if m.AppliedAtRevision() == self.Revision() {
-    if !m.Apply(self.doc, NoFlags) {
-      log.Println("Failed applying delta")
+    if err := m.Apply(self.doc, NoFlags); err != nil {
+      log.Println("Failed applying delta: ", err)
       return false
     }    
   } else if m.AppliedAtRevision() > self.Revision() {

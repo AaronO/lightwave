@@ -190,7 +190,7 @@ func (self *DocumentHistory) initialRead() {
   
   // Apply deltas to the snapshot
   for _, delta := range self.history {
-    if !delta.Apply(doc, NoFlags) {
+    if err := delta.Apply(doc, NoFlags); err != nil {
       log.Println("Failed applying delta")
       self.broken = true
       return

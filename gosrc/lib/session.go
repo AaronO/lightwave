@@ -218,7 +218,7 @@ func (self *SessionNode) apply( mutation map[string]interface{} ) bool {
   if m.AppliedAtRevision() == self.Revision() {
 	rev := float64(self.Revision() + 1)
 	m["_rev"] = rev
-	if !m.Apply(self.doc, CreateIDs) {
+    if err := m.Apply(self.doc, CreateIDs); err != nil {
 	  log.Println("Failed applying delta")
 	  return false
 	}
