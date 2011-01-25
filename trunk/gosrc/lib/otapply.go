@@ -145,6 +145,7 @@ func (self DocumentMutation) Check(val interface{}, mutation interface{} ) os.Er
     if !test {
       obj = make(map[string]interface{})
       obj["text"] = make([]interface{},0)[:]
+      obj["$rtf"] = true
     }      
     return self.checkRichTextMutation( obj, toRichTextMutation(mutation) )
   case IsInsertMutation(mutation):
@@ -346,6 +347,9 @@ func (self DocumentMutation) checkTextMutation(str string, mutation TextMutation
 
 func (self DocumentMutation) checkRichTextMutation(obj map[string]interface{}, mutation RichTextMutation ) os.Error {
   // Test that the object is really a rich text object
+  if _, ok := obj["$rtf"]; !ok {
+    return os.NewError("Not a richtext object")
+  }
   tmp, ok := obj["text"]
   if !ok {
     return os.NewError("Richtext object has no text field")
@@ -452,6 +456,7 @@ func (self DocumentMutation) apply(val interface{}, mutation interface{}, flags 
       if !test {
         o = make(map[string]interface{})
         o["text"] = make([]interface{},0)[:]
+        o["$rtf"] = true
       }  
       self.applyRichTextMutation( o, toRichTextMutation(mutation), flags )
       return o;
