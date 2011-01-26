@@ -472,7 +472,7 @@ LW.Tensor.populateAddParticipantsCallback_ = function(reply) {
     for( var i = 0; i < LW.Tensor.friends.length; ++i ) {
         var contact = LW.Tensor.friends[i];
         // If this user is already part of the wave, then do not show it
-        if ( LW.Tensor.currentDoc && LW.Model.hasParticipant( contact.userid ) ) {
+        if ( LW.Tensor.currentDoc && LW.Model.hasParticipant( LW.Tensor.currentDoc, contact.userid ) ) {
             continue;
         }
         var li = document.createElement("div");
