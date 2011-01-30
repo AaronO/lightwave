@@ -23,7 +23,11 @@ LW.Richtext.prototype.startUpdate = function() {
 };
 
 LW.Richtext.prototype.insertReturn = function(pos, paragFormat) {
-    if ( pos.paragIndex == this.paragraphs.length ) {
+    if ( pos.paragIndex == -1 ) {
+        var pnew = { paragFormat:paragFormat, text:"", format:[] };
+        this.paragraphs.unshift(pnew);
+        this.enqueueUpdate_(this.paragraphs.length - 1, LW.Richtext.ParagInsertAction);
+    } else if ( pos.paragIndex == this.paragraphs.length ) {
         var pnew = { paragFormat:paragFormat, text:"", format:[] };
         this.paragraphs.push(pnew);
         this.enqueueUpdate_(this.paragraphs.length - 1, LW.Richtext.ParagInsertAction);
@@ -100,4 +104,5 @@ LW.Richtext.prototype.finishUpdate = function() {
             this.view.viewInsertParagraph( u.paragIndex );
         }
     }
+    console.log(this.paragraphs);
 };

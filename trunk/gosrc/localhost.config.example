@@ -1,0 +1,10 @@
+{
+  "Domain": "localhost",
+  "Hostname": "localhost",
+  "DataRoot": "localhost_data",
+  "StaticRoot": "../webroot",
+  "MainPage": "/social.html",
+  "LoginPage": "/index.html",
+  "SignupPage": "/signup.html",
+  "UserDB": "localhost_user.db"
+}

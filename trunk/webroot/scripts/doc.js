@@ -3,12 +3,14 @@ if ( !window.LW ) {
 }
 
 LW.Doc = function(url) {
-  this.url = url;
-  this.version = 0;
-  this.hash = "TODOHASH";
-  this.content = { "_rev":0, "_data":{"_rev":0, "_id":LW.JsonOT.uniqueId_()}, "_meta":{"_rev":0, "_id":LW.JsonOT.uniqueId_()} };
-  this.pendingSubmit = null;
-  this.queue = [];
+    this.url = url;
+    this.version = 0;
+    this.hash = "TODOHASH";
+    this.content = { "_rev":0, "_data":{"_rev":0, "_id":LW.JsonOT.uniqueId_()}, "_meta":{"_rev":0, "_id":LW.JsonOT.uniqueId_()} };
+    this.content._data._parent = this.content;
+    this.content._meta._parent = this.content;
+    this.pendingSubmit = null;
+    this.queue = [];
 };
 
 // Called when a new mutation arrived for this document
@@ -67,31 +69,37 @@ LW.Doc.prototype.getElementById = function(id) {
 };
 
 LW.Doc.prototype.getElementById_ = function(obj, id) {
-  if ( obj == null ) {
+    if ( obj == null ) {
 	return null;
-  }
-  if ( Array.isArray(obj) ) {
+    }
+    if ( Array.isArray(obj) ) {
 	if ( obj._id == id ) {
-	  return obj;
+	    return obj;
 	}
 	for( var i = 0; i < obj.length; ++i ) {
-	  var element = this.getElementById_(obj[i], id);
-	  if ( element ) {
+	    var element = this.getElementById_(obj[i], id);
+	    if ( element ) {
 		return element;
-	  }	  
+	    }	  
 	}
-  } else if ( typeof(obj) == "object" ) {
+    } else if ( typeof(obj) == "object" ) {
 	if ( obj._id == id ) {
-	  return obj;
+	    return obj;
 	}
+        if ( obj["$rtf"] ) {
+            return null;
+        }
 	for( var i in obj ) {
-	  var element = this.getElementById_(obj[i], id);
-	  if ( element ) {
+            if ( i == "_parent" ) {
+                continue;
+            }
+	    var element = this.getElementById_(obj[i], id);
+	    if ( element ) {
 		return element;
-	  }	  
+	    }	  
 	}
-  }
-  return null;
+    }
+    return null;
 };
 
 // Creats a mutation for this document that mutates the object specified by the id,
@@ -103,40 +111,46 @@ LW.Doc.prototype.createMutationForId = function(id, mutation) {
 };
 
 LW.Doc.prototype.createMutationForId_ = function(obj, id, mutation) {
-  if ( obj == null ) {
+    if ( obj == null ) {
 	return null;
-  }
-  if ( Array.isArray(obj) ) {
+    }
+    if ( Array.isArray(obj) ) {
 	if ( obj._id == id ) {
-	  return mutation;
+	    return mutation;
 	}
 	for( var i = 0; i < obj.length; ++i ) {
-	  var mut = this.createMutationForId_(obj[i], id, mutation);
-	  if ( mut ) {
+	    var mut = this.createMutationForId_(obj[i], id, mutation);
+	    if ( mut ) {
 		arr = [ mut ];
 		if ( i > 0 ) {
-		  arr.splice(0, 0, {"$skip":i});
+		    arr.splice(0, 0, {"$skip":i});
 		}
 		if ( i + 1 < obj.length ) {
-		  arr.push({"$skip":(obj.length - i - 1)});
+		    arr.push({"$skip":(obj.length - i - 1)});
 		}
 		var r = {"$array":arr};
 		return r;
-	  }	  
+	    }	  
 	}
-  } else if ( typeof(obj) == "object" ) {
+    } else if ( typeof(obj) == "object" ) {
 	if ( obj._id == id ) {
-	  return mutation;
+	    return mutation;
 	}
 	for( var i in obj ) {
-	  var mut = this.createMutationForId_(obj[i], id, mutation);
-	  if ( mut ) {
+            if ( i == "_parent" ) {
+                continue;
+            }
+            if ( obj["$rtf"] ) {
+                return null;
+            }
+	    var mut = this.createMutationForId_(obj[i], id, mutation);
+	    if ( mut ) {
 		var r = {"$object":true};
 		r[i] = mut;
 		return r;
-	  }
+	    }
 	}
-  }
-  return null;
+    }
+    return null;
 };
 

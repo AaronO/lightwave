@@ -13,7 +13,8 @@ GOFILES=\
 	user.go \
 	history.go \
 	capabilities_store.go \
-	staticnode.go
+	staticnode.go \
+	config.go
 
 GC += -I ../wave/_obj
 LD += -L ../wave/_obj

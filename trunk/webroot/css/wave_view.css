@@ -1,0 +1,170 @@
+body {
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:12pt;
+}
+.author {
+  margin:3px;
+  margin-left:0px;
+  border:1px solid #ccc;
+  float:left;
+  display:block;
+  width:27px;
+  height:27px;
+}
+.clearfix:after {
+    content: ".";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+.authorname {
+  color:#888;
+  font-weight:bold;
+  float:left;
+  margin-right:4px
+}
+.blip {
+  margin-top:6px;
+  margin-bottom:6px;
+}
+.date {
+  float:right;
+  display:block;
+  color:#888;
+}
+.thread {
+  margin-left:12px;
+  border-left:1px solid #ccc;
+  border-bottom-left-radius:6px;
+  border-bottom:1px solid #ccc;
+  padding-left:8px;
+ box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+  -moz-box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+  -webkit-box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+}
+.editor {
+  margin-right:4px;
+  -webkit-user-modify: read-write-plaintext-only;
+  outline:0px;
+}
+.editor+.editor-buttons {
+  display:none;
+  text-align: right;
+  margin-top:5px;
+}
+.editor:focus+.editor-buttons {
+  display:block;
+}
+.inline-reply-container {
+  border-color: transparent
+}
+.inline-reply {
+  position:absolute;
+  border:2px solid transparent;
+  border-radius:3px;
+  top:-4px;
+  bottom:-4px;
+  right:-1px;
+  left:30px;
+   z-index:2;
+}
+.inline-reply-container:hover .inline-reply {
+  border-color: #5590D2;
+}
+.border {
+  border-top:1px dotted #ccc;
+  margin-bottom:6px;
+  position:relative;
+  padding-left:20px;
+  padding-right:10px;
+}
+.thread-border {
+  position:relative;
+  top:0px;
+  clear:both;
+  height:0px;
+}
+.blip-border {
+  position:relative;
+  height:0px;
+  top:6px;
+  clear:both;
+}
+.mainthread > .blip:first-child > .border {
+  display:none;
+}
+.mainthread > .blip:last-child > .blip-border {
+  display:none;
+}
+.inline-reply-image {
+  display:none;
+  position:absolute;
+  top:-9px;
+  left:12px;
+  width:15px;
+  height:20px;
+}
+.inline-reply-container:hover .inline-reply-image {
+  display:block;
+  background-image: url(/images/reply.png);
+  background-position: 0px; 0px;
+}
+.thread > .blip:last-child > .blip-border > .inline-reply-container:hover .inline-reply-image {
+  display:block;
+  background-image: url(/images/followup.png);
+  background-position: 0px; 0px;
+}
+.inbox-entry {
+  height:36px;
+  overflow:hidden;
+  border-bottom:1px solid #ccc;
+  margin-bottom:1px;
+}
+.inbox-entry:hover {
+  background-color:#eee;
+}
+.inbox-text {
+  color:#888;
+}
+.inbox-entry-right {
+  float:right;
+  margin-left:10px;
+}
+.inbox-msgcount {
+  color:#888;
+}
+
+.participants {
+  height:48px;
+  padding-top:8px;
+  padding-left:10px;
+  padding-right:10px;
+  padding-bottom:0px;
+  overflow:hidden;
+}
+.participants img {
+  border:1px solid #ccc;
+  margin-right:4px;
+}
+.search {
+  height:56px;
+  padding:0px;
+  display:table;
+  width:100%;
+  border-collapse:collapse;
+}
+.searchInner {
+  vertical-align:middle;
+  display:table-cell;
+  width:100%;
+  padding-left:10px;
+  padding-right:10px;
+}
+html, body {
+  height:100%;
+  background-color:#ccc;
+  overflow:hidden;
+  margin:0px;
+  padding:0px;
+}

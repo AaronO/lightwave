@@ -9,7 +9,8 @@ if ( !window.LW ) {
   * @constructor
   * @param text is an instance of LW.Richtext
   */
-LW.Editor = function(text, dom) {
+LW.Editor = function(jsDoc, text, dom) {
+    this.jsDoc = jsDoc;
     /**
      * The text object
      */
@@ -28,6 +29,7 @@ LW.Editor = function(text, dom) {
     dom.onkeyup = function(e) { self.keyup(e); }
     
     // Render the document
+    this.dom.innerHTML = "";
     for( var i = 0; i < this.text.paragraphs.length; ++i ) {
         this.renderParagraph(i, true);
     }
@@ -89,11 +91,7 @@ LW.Editor.prototype.keydown = function(e)
             pos = { paragIndex: pos.paragIndex - 1, charCount: parag.text.length };
 
             // Execute doc op locally in the DOM
-            LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
-            // {
-                // HACK
-            //    this.deleteRange( pos, {paragIndex:pos.paragIndex + 1, charCount:0});
-            // }
+            this.submitMutation(mut);
 
             var domPos = this.getDomPosition(pos);
             sel.collapse( domPos.element, domPos.index );
@@ -109,11 +107,7 @@ LW.Editor.prototype.keydown = function(e)
             pos = {paragIndex: pos.paragIndex, charCount: 0};
 
             // Submit doc op and execute it locally
-            // {
-            //    // HACK
-            //     this.deleteRange(pos, {paragIndex:pos.paragIndex, charCount:1});
-            // }
-            LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+            this.submitMutation(mut);
 
             var domPos = this.getDomPosition(pos);
             sel.collapse( domPos.element, domPos.index );
@@ -121,12 +115,8 @@ LW.Editor.prototype.keydown = function(e)
         }
 
         // Submit doc op but do NOT execute it in the DOM. Let the editor do it
-        // {
-            // HACK
-        //    parag.text = parag.text.substr(0, pos.charCount - 1) + parag.text.substring(pos.charCount, parag.text.length);
-        // }
         this.blockViewUpdates = true;
-        LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+        this.submitMutation(mut);
         this.blockViewUpdates = false;
     }
     // Delete?
@@ -143,7 +133,6 @@ LW.Editor.prototype.keydown = function(e)
         if ( count > 0 ) {
             mut.text.push({"$skip": count});
         }
-        console.log( JSON.stringify(mut) );
 
         var parag = this.text.paragrapgs[pos.paragIndex];
         // Delete a line break?
@@ -156,11 +145,7 @@ LW.Editor.prototype.keydown = function(e)
                 return;
             
             // Submit doc op and execute it locally
-            LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
-            // {
-                // HACK
-            //    this.removeRange(pos, {paragIndex:pos.paragIndex + 1, charCount:0});
-            // }
+            this.submitMutation(mut);
 
             var domPos = this.getDomPosition(pos);
             sel.collapse( domPos.element, domPos.index );
@@ -178,12 +163,7 @@ LW.Editor.prototype.keydown = function(e)
             pos = {paragIndex: pos.paragIndex, charCount: 0};
  
             // Submit doc op and execute it locally
-            LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
-            // {
-                // HACK
-            //    parag.text = "";
-            //    this.renderParag(pos.paragIndex)
-            // }
+            this.submitMutation(mut);
 
             // Position the cursor behind the character we just inserted
             var domPos = this.getDomPosition(pos);
@@ -191,15 +171,9 @@ LW.Editor.prototype.keydown = function(e)
             return
         }
 
-        // TODO: submit doc op but DO NOT execute it in the DOM
-        // {
-            // HACK
-        //     parag.text = parag.text.substr(0, pos.charCount) + parag.text.substring(pos.charCount + 1, parag.text.length);
-        // }
         this.blockViewUpdates = true;
-        LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+        this.submitMutation(mut);
         this.blockViewUpdates = false;
-
     }
     else
         throw "Unsupported keycode";
@@ -228,11 +202,7 @@ LW.Editor.prototype.keypress = function(e) {
         e.stopPropagation();
         e.preventDefault();
 
-        // TODO: create Doc op and execute it locally
-        // {
-            // HACK
-        //    this.insertReturn(pos);
-        // }
+        // Create Doc op and execute it locally
         var mut = {"$rtf":true, text:[]};
         var count = this.otCharCountTo_(pos);
         if ( count > 0 ) {
@@ -243,8 +213,7 @@ LW.Editor.prototype.keypress = function(e) {
         if ( count > 0 ) {
             mut.text.push({"$skip": count});
         }
-        console.log( JSON.stringify(mut) );
-        LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+        this.submitMutation(mut);
 
         pos = {paragIndex: pos.paragIndex + 1, charCount: 0};
         var domPos = this.getDomPosition(pos);
@@ -252,7 +221,7 @@ LW.Editor.prototype.keypress = function(e) {
         return;
     }
 
-    // TODO: Create a doc op
+    // Create a doc op
     var mut = {"$rtf":true, text:[]};
     var count = this.otCharCountTo_(pos);
     if ( count > 0 ) {
@@ -263,7 +232,6 @@ LW.Editor.prototype.keypress = function(e) {
     if ( count > 0 ) {
         mut.text.push({"$skip": count});
     }
-    console.log( JSON.stringify(mut) );
 
     // First character? Needs some special treatment -> let the OT logic do it
     if ( pos.charCount == 0 && parag.text.length == 0 ) {
@@ -272,30 +240,17 @@ LW.Editor.prototype.keypress = function(e) {
 
         pos = {paragIndex: pos.paragIndex, charCount: 1};
 
-        // TODO: Submit the doc op and let it execute locally in the DOM
-        //{
-            // HACK
-        //    var parag = this.text.paragraphs[pos.paragIndex];
-        //    parag.text = String.fromCharCode(e.charCode);
-        //}
-        //this.renderParag(pos.paragIndex)
-        // TODO: doc is null
-        LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+        // Submit the doc op and let it execute locally in the DOM
+        this.submitMutation(mut);
 
         var domPos = this.getDomPosition(pos);
         sel.collapse( domPos.element, domPos.index );
         return;
     }
      
-    // TODO: Submit the doc op but DO NOT execute it locally in the DOM, let the browser editor do it.
-    // {
-        // HACK
-    //    console.log("Insert at paragIndex " + pos.paragIndex.toString());
-    //    var parag = this.text.paragraphs[pos.paragIndex];
-    //    parag.text = parag.text.substr(0, pos.charCount) + String.fromCharCode(e.charCode) + parag.text.substring(pos.charCount, parag.text.length);
-    // }
+    // Submit the doc op but DO NOT execute it locally in the DOM, let the browser editor do it.
     this.blockViewUpdates = true;
-    LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+    this.submitMutation(mut);
     this.blockViewUpdates = false;
 };
 
@@ -365,6 +320,7 @@ LW.Editor.prototype.keyup = function(e)
 };
 
 /**
+ * TODO!!!
  * Changes the style of the current selection.
  *
  * @param {string} styleKey defines the style, e.g. "style/fontWeight"
@@ -423,8 +379,7 @@ LW.Editor.prototype.deleteSelection = function(showCursor)
     if ( count > 0 ) {
         mut.text.push({"$skip": count});
     }
-    console.log( JSON.stringify(mut) );
-    LW.JsonOT.applyRichtextMutation_(null, this.text, mut, 0);
+    this.submitMutation(mut);
 
     if ( showCursor ) {
         var domPos = this.getDomPosition(pos1);
@@ -586,7 +541,7 @@ LW.Editor.prototype.viewDeleteParagraph = function(paragIndex, insert) {
 };
 
 LW.Editor.prototype.otCharCountTo_ = function(pos) {
-    var count = 0;
+    var count = 1;
     for( var i = 0; i < pos.paragIndex; ++i ) {
         count += this.text.paragraphs[i].text.length + 1;
     }
@@ -612,6 +567,15 @@ LW.Editor.prototype.otCharCountFromTo_ = function(pos1, pos2) {
     }
     count += pos2.charCount;
     return count;
+};
+
+LW.Editor.prototype.submitMutation = function(mut) {
+    var docmut = this.jsDoc.createMutationForId(this.text._id, mut);
+    if ( !docmut ) {
+        throw "FUCK docmut null";
+    }
+    // send the mutation to the server
+    this.jsDoc.submitDocMutation( docmut );
 };
 
 // TODO
