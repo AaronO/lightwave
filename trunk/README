@@ -1,0 +1,28 @@
+File structure
+
+/webroot
+        This is the web-based front-end of lightwave
+
+/gosrc
+        The GO implementation of the lightwave server
+
+/gosrc/lib
+        The implementation of the server without the HTTP front-end
+
+/gosrc/server
+        Contains the main function and implements the HTTP front end
+        and server configuration/startup
+
+/gosrc/lightwave.config.example
+        Copy to gosrc/lightwave.config and adapt it to your settings.
+        Basically it just defined the port and enumerates the virtual
+        servers.
+
+/gosrc/localhost.config.example
+        Copy to gosrc/localhost.config. This is the configuration file for
+        a virtual server. Make sure that all virtual servers are listed in
+        the lightwave.config file.
+
+/gosrc/server/lightwave
+        The server executable. It is a stand-alone server with a HTTP
+        interface. Use your web browser and point it to http://host:port/index.html.
