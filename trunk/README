@@ -1,4 +1,16 @@
+Dependencies
+============
+
+lightwave is implemented in GO. Download it from http://golang.org and compile and
+install it.
+
+lightwave uses a simple sqlite database. Install the GO wrappers from
+http://code.google.com/p/gosqlite. Compile and install the GO wrappers.
+On some systems you need to install sqlite3 and the corresponding C header files
+first, before the GO wrappers can be compiled
+
 File structure
+==============
 
 /webroot
         This is the web-based front-end of lightwave
