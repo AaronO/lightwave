@@ -168,3 +168,32 @@ html, body {
   margin:0px;
   padding:0px;
 }
+.friend-image {
+  margin:3px;
+  margin-left:0px;
+  border:1px solid #ccc;
+  float:left;
+  display:block;
+  width:27px;
+  height:27px;
+}
+.friend {
+  height:34px;
+  overflow:hidden;
+  padding:2px;
+}
+.friend:hover {
+  background-color:#789E35;
+}
+.friend-name {
+  font-size:16px;
+}
+.friend-id {
+  color:#888
+}
+.friend:hover .friend-name {
+  color:white;
+}
+.friend:hover .friend-id {
+  color:#ccc;
+}

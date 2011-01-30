@@ -37,7 +37,9 @@
 
 <div class="wave-panel" style="position:absolute; top:10px; bottom:20px; left:530px; right:10px;" id="document-panel">
   <div class="wave-titlebar">Title</div>
-  <div class="wave-section-blue participants"></div>
+  <div class="wave-section-blue participants">
+    <div id="add-participant-button" style="float:left; position:relative; top:5px;"><button><span style="font-size:16px">+</span></button></div>
+  </div>
   <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
     <div class="mainthread"></div>
     <div class="reply clearfix" style="display:none; border-radius:6px; background-color:#ddd;color:#888;border:1px solid #888; padding:3px; font-style:italic; font-size:16px"><img class="author" src="../images/unknown.png"><div style="padding-top:4px">Click here to reply</div></div>
@@ -45,6 +47,18 @@
     
   </div>
 </div>
+
+<div class="wave-dialog" id="dlg-add-participants" style="position:absolute; left:50%; top:25%; width:300px; height:50%;">
+  <div class="wave-titlebar">Add participants</div>
+  <div class="wave-section-blue search">
+    <div class="searchInner">
+      <button style="float:left" onclick="">Add</button><span style="display:block; overflow:hidden"><input style="font-size:16px; outline:none; width:100%" type="text" class="wave-searchbox"></span>
+    </div>
+  </div>
+  <div class="wave-section" id="newfriends" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;">
+  </div>
+</div>
+
  <!-- Javascript at the bottom for fast page loading -->
 
   <!-- Grab Google CDN's jQuery. fall back to local if necessary -->

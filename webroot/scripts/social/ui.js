@@ -54,6 +54,15 @@ LW.Social.initCallback_ = function(reply) {
 
     LW.Social.documentController = LW.Social.createConversationController(document.getElementById("document"));
     LW.Social.participantsController = LW.Social.createParticipantsController(document.getElementById("document-panel"));
+
+    $("#add-participant-button").find("button").click( function() {
+        var dlg = document.getElementById("dlg-add-participants");
+        if ( dlg.style.visibility != "visible" ) {
+            dlg.style.visibility = "visible";
+        } else {
+            dlg.style.visibility = "hidden";
+        }
+    });
 };
 
 LW.Social.createParticipantsController = function(parentdom) {
@@ -77,7 +86,7 @@ LW.Social.createParticipantsController = function(parentdom) {
     };
     var bindFunc = function(jsDoc, jsObject, state) {
         if ( !state.controller ) {
-            state.controller = new LW.Controller.ListController( $(parentdom).children(".participants")[0], null, createParticipant, deleteParticipant);
+            state.controller = new LW.Controller.ListController( $(parentdom).children(".participants")[0], document.getElementById("add-participant-button"), createParticipant, deleteParticipant);
         }
         state.controller.bind(jsDoc, jsObject);
     };
@@ -211,3 +220,4 @@ LW.Social.newDocument = function() {
     LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
     LW.Session.open(newdoc.url, false, false);
 };
+
