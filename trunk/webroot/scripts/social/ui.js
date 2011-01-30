@@ -61,13 +61,25 @@ LW.Social.initCallback_ = function(reply) {
             var callback = function(reply) {
                 var friends = JSON.parse(reply).friends;
                 var dom = document.getElementById("newfriends");
-                var html = ""
+                // Render HTML
+                var html = "";
                 for( var i = 0; i < friends.length; ++i ) {
                     var contact = friends[i];
                     html += '<div class="friend">';
                     html += '<img class="friend-image" src="../images/unknown.png"><div><span class="friend-name">' + esc(contact.displayName) + '</span><br><span class="friend-id">' + esc(contact.userid) + '</span></div></div>';
                 }
                 dom.innerHTML = html;
+                // Install event handlers
+                for( var i = 0; i < friends.length; ++i ) {
+                    var f = function(c) {
+                        $(dom.children[i]).click( function() {
+                            if ( !LW.Model.hasParticipant(LW.Social.documentController.jsDoc, c.userid) ) {
+                                LW.Model.addParticipant(LW.Social.documentController.jsDoc, c);
+                            }
+                        });
+                    };
+                    f(friends[i]);
+                }
             };
             dlg.style.visibility = "visible";
             LW.Rpc.enqueueGet("/client/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "?kind=friends", callback);
