@@ -1,26 +1,6 @@
 if ( !window.LW ) {
     LW = { };
 }
-
-/**
-var update = function(dom, doc, obj) {
-   dom.innerHTML = foo(obj)l
-};
-var clear = function(dom, doc, obj) {
-   dom.innerHTML = "";
-};
-var objfactory = function() {
-   var dom = document.createElement("div");
-   return new LW.Controller.ObjectController(dom, update, clear);
-};
-var arrfactory = funtion() {
-  return new LW.Controller.ListController( document.getElementById("foo"), null, objfactory);
-};
-var attr = new LW.Controller.AttributeController(arrfactory);
-attr.bind(doc, obj, "comments");
-
-**/
-
 LW.Controller = {
 };
 
@@ -33,54 +13,102 @@ LW.Controller.getDomElement_ = function(doc, objectid) {
  * Binds another controller to the attribute of a javascript object.
  * If the attribute is replaced or deleted the other controller is bound of unbound accordingly.
  */
-LW.Controller.AttributeController = function(controllerFactory) {
-    this.controllerFactory = controllerFactory;
+LW.Controller.AttributeController = function(dom, jsParentKey, onBindFunc, onUnbindFunc) {
+    this.jsParentKey = jsParentKey;
+    this.onBindFunc = onBindFunc;
+    this.onUnbindFunc = onUnbindFunc;
+    this.state = { dom: dom };
 };
 
-LW.Controller.AttributeController.prototype.bind = function(jsDoc, jsParentObj, jsParentKey) {
+LW.Controller.AttributeController.prototype.bind = function(jsDoc, jsParentObj) {
     this.unbind();
+    this.jsDoc = jsDoc;
     this.jsParentObj = jsParentObj;
-    this.jsParentKey = jsParentKey;
 
-    self = this;
+    var self = this;
     var func = function(doc, obj, key, mutation, event) {
         if ( event == LW.JsonOT.AttributeInserted ) {
-            if ( this.controller ) {
-                this.controller.unbind();
+            if ( self.onUnbindFunc ) {
+                self.onUnbindFunc(self.jsDoc, self.jsParentObj[self.jsParentKey], self.state);
             }
-            self.controller = self.controllerFactory();
-            self.controller.bind(jsDoc, obj[key]);
+            if ( self.onBindFunc ) {
+                self.onBindFunc(self.jsDoc, obj[key], self.state);
+            }
         }
         else if ( event == LW.JsonOT.AttributeDeleted ) {
-            if ( this.controller ) {
-                this.controller.unbind();
+            if ( self.onUnbindFunc ) {
+                self.onUnbindFunc(self.jsDoc, self.jsParentObj[self.jsParentKey], self.state);
             }
         }
     }
 
-    jsParentObj["_cb_" + jsParentKey] = func;
-    if ( jsParentObj[jsParentKey] ) {
-        func(jsDoc.content, jsParentObj, jsParentKey, null, LW.JsonOT.AttributeInserted );
+    jsParentObj["_cb_" + this.jsParentKey] = func;
+    if ( jsParentObj[this.jsParentKey] != null ) {
+        func(jsDoc.content, jsParentObj, this.jsParentKey, null, LW.JsonOT.AttributeInserted );
     }
 };
 
 LW.Controller.AttributeController.prototype.unbind = function() {
     if ( this.jsParentObj ) {
-        this.jsParentObj["_cb_" + this.jsParentKey];
-        if ( this.controller ) {
-            this.controller.unbind();
-            delete this.controller;
+        delete this.jsParentObj["_cb_" + this.jsParentKey];
+        if ( this.onUnbindFunc ) {
+            this.onUnbindFunc(this.jsDoc, this.jsParentObj[this.jsParentKey], this.state);
         }
     }
+    delete this.jsDoc;
     delete this.jsParentObj;
-    delete this.jsParentKey;
 };
 
-LW.Controller.AttributeController.prototype.getDom = function() {
-    if ( this.controller ) {
-        return this.controller.getDom();
+/**
+ * Binds another controller to the attribute of a javascript object.
+ * If the attribute is replaced or deleted the other controller is bound of unbound accordingly.
+ */
+LW.Controller.ConditionController = function(dom, condition, onBindFunc, onUnbindFunc) {
+    this.condition = condition;
+    this.onBindFunc = onBindFunc;
+    this.onUnbindFunc = onUnbindFunc;
+    this.isbound_ = false;
+    this.state = { dom: dom };
+};
+
+LW.Controller.ConditionController.prototype.bind = function(jsDoc, jsObject) {
+    this.unbind();
+    this.jsDoc = jsDoc;
+    this.jsObject = jsObject;
+
+    var self = this;
+    var func = function(doc, obj, key, mutation, event) {
+        if ( event == LW.JsonOT.ObjectModified ) {
+            var bound = self.condition(self.jsDoc, self.jsObject, self.state);
+            if ( bound == self.isbound_ ) {
+                return;
+            }
+            self.isbound_ = bound;
+            if ( !bound ) {
+                if ( self.onUnbindFunc ) {
+                    self.onUnbindFunc(self.jsDoc, self.jsObject, self.state);
+                }
+                return;
+            }
+            if ( self.onBindFunc ) {
+                self.onBindFunc(self.jsDoc, self.jsObject, self.state);
+            }
+        }
     }
-    return null;
+
+    jsObject._cb = func;
+    func(jsDoc.content, jsObject, null, null, LW.JsonOT.ObjectModified );
+};
+
+LW.Controller.ConditionController.prototype.unbind = function() {
+    if ( this.jsObject ) {
+        delete this.jsObject._cb;
+        if ( this.onUnbindFunc ) {
+            this.onUnbindFunc(this.jsDoc, this.jsObject, this.state);
+        }
+    }
+    delete this.jsDoc;
+    delete this.jsObject;
 };
 
 /**
@@ -92,10 +120,10 @@ LW.Controller.AttributeController.prototype.getDom = function() {
  *        If the keys are null, any change to the bound object triggers the updateFunc.
  */
 LW.Controller.ObjectController = function(dom, updateFunc, clearFunc, keys) {
-    this.dom = dom;
     this.updateFunc = updateFunc;
     this.clearFunc = clearFunc;
     this.keys = keys;
+    this.state = { dom: dom };
 };
 
 LW.Controller.ObjectController.prototype.bind = function(jsDoc, jsObject) {
@@ -113,14 +141,14 @@ LW.Controller.ObjectController.prototype.bind = function(jsDoc, jsObject) {
             }
             else if ( event == LW.JsonOT.ObjectModified && jsObject._dirty ) {
                 delete jsObject._dirty;
-                self.updateFunc(self.dom, jsDoc, jsObject);
+                self.updateFunc(jsDoc, jsObject, self.state);
             }       
         } else if ( event == LW.JsonOT.ObjectModified ) {
-            self.updateFunc(self.dom, jsDoc, jsObject);
+            self.updateFunc(jsDoc, jsObject, self.state);
         }
     }
 
-    this.updateFunc(this.dom, jsDoc, jsObject);
+    this.updateFunc(jsDoc, jsObject, this.state);
 };
 
 LW.Controller.ObjectController.prototype.unbind = function() {
@@ -128,14 +156,10 @@ LW.Controller.ObjectController.prototype.unbind = function() {
         return;
     }
     if ( this.clearFunc ) {
-        this.clearFunc(this.dom, this.jsDoc, this.jsObject);
+        this.clearFunc(this.jsDoc, this.jsObject, this.state);
     }
     delete this.jsDoc;
     delete this.jsObject;
-};
-
-LW.Controller.ObjectController.prototype.getDom = function() {
-    return this.dom;
 };
 
 /**
@@ -147,8 +171,8 @@ LW.Controller.ObjectController.prototype.getDom = function() {
  * @param domInsertBefore may be null, then the list elements are appened to the dom element.
  * @param controllerFactory is a function that returns a new controller object.
  */
-LW.Controller.ListController = function(dom, domInsertBefore, controllerFactory) {
-    this.dom = dom;
+LW.Controller.ListController = function(dom, domInsertBefore, createFunc, deleteFunc) {
+    this.state = { dom: dom };
     this.startChildrenIndex = 0;
     if ( domInsertBefore ) {
         for( var i = 0; i < dom.children.length; ++i ) {
@@ -158,9 +182,10 @@ LW.Controller.ListController = function(dom, domInsertBefore, controllerFactory)
             this.startChildrenIndex++;
         }
     } else {
-        this.startChildrenIndex = this.dom.children.length;
+        this.startChildrenIndex = dom.children.length;
     }
-    this.controllerFactory = controllerFactory;
+    this.createFunc = createFunc;
+    this.deleteFunc = deleteFunc;
 };
 
 LW.Controller.ListController.prototype.bind = function(jsDoc, jsArr) {
@@ -168,26 +193,28 @@ LW.Controller.ListController.prototype.bind = function(jsDoc, jsArr) {
     // An instance of LW.Doc
     this.jsDoc = jsDoc;
     this.jsArr = jsArr;
-    this.controllers = [];
+    this.states = [];
 
     var self = this;
 
     jsArr._cb_inserted = function(doc, arr, index, mutation, event) {
-        var c = self.controllerFactory();
-        c.bind( jsDoc, arr[index] );
-        self.dom.insertBefore( c.getDom(), self.dom.children[self.startChildrenIndex + index] );
-        self.controllers.splice(index, 0, c);
+        self.states.splice(index, 0, { });
+        self.createFunc(jsDoc, arr[index], self.states, index);
+        self.state.dom.insertBefore( self.states[index].dom, self.state.dom.children[self.startChildrenIndex + index] );
     };
     jsArr._cb_deleted = function(doc, arr, index, mutation, event) {
-        self.dom.removeChild(self.controllers[index].getDom());
-        self.controllers[index].unbind();
+        if ( self.deleteFunc ) {
+            self.deleteFunc(jsDoc, arr[index], self.states, index);
+        }
+        self.states.splice(index, 1);
+        self.state.dom.removeChild(self.states[index].dom);
     };
     // TODO lift and squeeze
 
     for( var i = 0; i < jsArr.length; ++i ) {
-        this.controllers[i] = this.controllerFactory();
-        this.controllers[i].bind( jsDoc, jsArr[i] );
-        this.dom.insertBefore( this.controllers[i].getDom(), this.dom.children[this.startChildrenIndex + i] );
+        this.states[i] = { };
+        this.createFunc(jsDoc, jsArr[i], this.states, i);
+        this.state.dom.insertBefore( this.states[i].dom, this.state.dom.children[this.startChildrenIndex + i] );
     }
 };
 
@@ -195,17 +222,16 @@ LW.Controller.ListController.prototype.unbind = function() {
     if ( this.jsArr ) {
         delete this.jsArr._cb_inserted;
         delete this.jsArr._cb_deleted;
-        delete this.jsArr;
     }
-    if ( this.controllers ) {
-        for( var i = 0; i < this.controllers.length; ++i ) {
-            this.dom.removeChild(this.controllers[i].getDom());
-            this.controllers[i].unbind();
+    if ( this.states ) {
+        for( var i = 0; i < this.states.length; ++i ) {
+            if ( this.deleteFunc ) {
+                this.deleteFunc(this.jsDoc, this.jsArr[i], this.states, i);
+            }
+            this.state.dom.removeChild(this.states[i].dom);
         }
-        delete this.controllers;
+        delete this.states;
     }
-};
-
-LW.Controller.ListController.prototype.getDom = function() {
-    return this.dom;
+    delete this.jsDoc;
+    delete this.jsArr;
 };

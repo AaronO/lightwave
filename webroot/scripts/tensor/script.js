@@ -89,7 +89,7 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
     var box = document.createElement("div");
     var html = '<div class="editor">';
     html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
-    html += '<div><textarea></textarea></div>';
+    html += '<div class="editor" contentEditable="true"></div>';
     html += '<div><span><a href="#">Submit</a> <a href="#">Cancel</a></span></div>';
     html += '</div>';
     html += '<div class="info"><a href="#">Click here to write a message</a></div>';
@@ -101,8 +101,10 @@ LW.Tensor.createColumnContent_ = function(id, list, isNewWave) {
         if ( LW.Tensor.currentDoc.content._data.comments && LW.Tensor.currentDoc.content._data.comments.length == 0 ) {
             box.firstChild.firstChild.lastChild.focus();
         } else {
-            var textarea = box.firstChild.children[1].firstChild;
-            textarea.focus();
+            var editorDiv = box.firstChild.children[1];
+            var newComment = LW.Model.createNewComment(LW.Tensor.currentDoc, list.objectid);
+            var editor = new LW.Editor(newComment, editorDiv);
+            editorDiv.focus();
         }
         return false;
     };
@@ -321,22 +323,25 @@ LW.Tensor.fillCommentDiv_ = function(comments, index, div, contentOnly) {
     if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
       html += '<div class="title"><span class="label">Title:</span> <input type="text" class="titleInput"></input></div>';
     }
-    html += '<div><textarea class="textInput"></textarea></div>';
+    html += '<div class="editor" contentEditable="true"></div>';
     html += '<div><span class="submit"><a href="#">Submit</a> <a href="#" class="cancel">Cancel</a></span></div>';
     html += '</div>';
     div.innerHTML = html;
     if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
       d.find(".titleInput").get(0).value = LW.Tensor.currentDoc.content._data.title;
     }
-    d.find(".textInput").get(0).value = comment.content;
+    var editor = new LW.Editor(comment, document.getElementById(d.find(".editor").get(0)));
+
+    // TODO: This should go away
+
     // Submit clicked
     d.find(".submit").get(0).onclick = function(e) {
       if ( !e ) e = window.event;
       e.cancelBubble = true;
       if ( e.stopPropagation ) e.stopPropagation();
       div._block = true;
-      var text = d.find(".textInput").get(0).value;
-        LW.Model.changeComment(LW.Tensor.currentDoc, comments, index, text);
+      // var text = d.find(".textInput").get(0).value;
+      // LW.Model.changeComment(LW.Tensor.currentDoc, comments, index, text);
       if ( LW.Tensor.currentDoc.content._data.comments[0] == comment ) {
         var title = d.find(".titleInput").get(0).value;
           LW.Model.setTitle(LW.Tensor.currentDoc, title);

@@ -22,7 +22,7 @@ type DocumentHistory struct {
   broken bool
 }
 
-func isDocumentPersisted(uri string) bool {
+func isDocumentPersisted(server* Server, uri string) bool {
   lst := strings.Split(uri[1:], "/", -1)
   pathlst := make([]string, len(lst) - 1)
   // Create the path
@@ -31,7 +31,7 @@ func isDocumentPersisted(uri string) bool {
       pathlst[i] = s + ".dir"
     }
   }
-  path := strings.Join(pathlst, "/") + "/" + lst[len(lst)-1] + ".deltas"
+  path := server.Config.DataRoot + "/" + strings.Join(pathlst, "/") + "/" + lst[len(lst)-1] + ".deltas"
   _, err := os.Stat(path)
   if err != nil {
     return false
@@ -40,6 +40,7 @@ func isDocumentPersisted(uri string) bool {
 }
 
 func NewDocumentHistory(node *DocumentNode) *DocumentHistory {
+  dataRoot := node.Server().Config.DataRoot;
   uri := node.URI()
   lst := strings.Split(uri[1:], "/", -1)
   pathlst := make([]string, len(lst) - 1)
@@ -48,14 +49,14 @@ func NewDocumentHistory(node *DocumentNode) *DocumentHistory {
     for i, s := range lst[0:len(lst)-1] {
       pathlst[i] = s + ".dir"
     }
-    path := strings.Join(pathlst, "/")
+    path := dataRoot + "/" + strings.Join(pathlst, "/")
     err := os.MkdirAll(path, 0700)
     if err != nil {
       log.Println("Cannot create path " + path)
     }
   }
   // Create the files
-  path := strings.Join(pathlst, "/") + "/" + lst[len(lst)-1]
+  path := dataRoot + "/" + strings.Join(pathlst, "/") + "/" + lst[len(lst)-1]
   fdelta, err1 := os.Open(path + ".deltas", os.O_RDWR | os.O_CREATE, 0700)
   findex, err2 := os.Open(path + ".index", os.O_RDWR | os.O_CREATE, 0700)
   fsnapshot, err3 := os.Open(path + ".snapshot", os.O_RDWR | os.O_CREATE, 0700)

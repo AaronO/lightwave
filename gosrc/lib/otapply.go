@@ -167,7 +167,7 @@ func (self DocumentMutation) checkInsertMutation(mutation interface{}) os.Error 
 
 func (self DocumentMutation) checkInsertObjectMutation(obj map[string]interface{}) os.Error {
   for key, val := range obj {
-    if key[0] == '$' {
+    if key[0] == '$' && key != "$rtf" {
       log.Println("$ is not allowed in attribute names")
       return os.NewError("$ is not allowed in attribute names")
     }
@@ -582,19 +582,20 @@ func (self DocumentMutation) applyRichTextMutation(obj map[string]interface{}, m
       for count > 0 {
 	if str, ok := text[index].(string); ok {
 	  l := min(len(str) - inside, count)
-	  inside += l
-	  str = str[inside:]
+	  // inside += l
+	  // str = str[inside:]
+	  str = str[:inside] + str[inside + l:]
 	  if len(str) == 0 {
 	    text.Delete(index)
 	    inside = 0
 	  } else if inside == len(str) {
+	    text[index] = str
 	    index++
 	    inside = 0
-	    text[index] = str
 	  } else {
 	    text[index] = str
 	  }
-	  count -= count
+	  count -= l
 	} else {
 	  inside = 0
 	  text.Delete(index)

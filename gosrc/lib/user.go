@@ -194,7 +194,7 @@ func (self *UserNode) get(req *GetRequest) {
     switch kind[0] {
     case "friends":
       // TODO
-      reply := []byte("{\"friends\":[{\"displayName\":\"Tux\", \"userid\":\"tux@localhost\"},{\"displayName\":\"Konqi\", \"userid\":\"konqi@localhost\"}]}")
+      reply := []byte("{\"friends\":[{\"displayName\":\"Torben\", \"userid\":\"weis@localhost\"}, {\"displayName\":\"Tux\", \"userid\":\"tux@localhost\"},{\"displayName\":\"Konqi\", \"userid\":\"konqi@localhost\"}]}")
       req.Response.SetHeader("Content-Type", "application/json")
       _, err = req.Response.Write( reply )
       if err != nil {

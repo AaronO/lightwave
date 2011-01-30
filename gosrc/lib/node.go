@@ -742,7 +742,7 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
 }
 
 func (self *DocumentNode) loadDocument(name string) Node {
-  if !isDocumentPersisted(self.URI() + "/" + name) {
+  if !isDocumentPersisted(self.Server(), self.URI() + "/" + name) {
     return nil
   }
   doc := NewDocumentNode(self, name, self.level + 1)
@@ -879,7 +879,7 @@ func (self *HostNode) pubSub(req* PubSubRequest) {
 }
 
 func (self *HostNode) loadDocument(name string) Node {
-  if !isDocumentPersisted("/" + self.name + "/" + name) {
+  if !isDocumentPersisted(self.Server(), "/" + self.name + "/" + name) {
     return nil
   }
   doc, err := CreateNode(self, name, 1, "application/json")
@@ -907,6 +907,7 @@ type ServerManifest struct {
 
 type Server struct {
   NodeBase
+  Config *ServerConfig
   manifest *ServerManifest
   children map[string]Node
   sessions *SessionRootNode
@@ -916,8 +917,9 @@ type Server struct {
   gatewaysMutex sync.Mutex
 }
 
-func NewServer(manifest *ServerManifest) *Server {
-  r := &Server{manifest:manifest, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:manifest.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
+func NewServer(config *ServerConfig) *Server {
+  r := &Server{Config:config, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:config.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
+  r.manifest = &ServerManifest{Domain:config.Domain, Port:config.MainConfig.Port, HostName:config.Hostname};
   r.sessions = NewSessionRootNode(r)
   r.gateways = make(map[string]*FederationGateway)
   r.SessionDatabase = NewSessionDB(r)
@@ -1081,7 +1083,7 @@ func (self *Server) pubSub(req* PubSubRequest) {
 }
 
 func (self *Server) loadHost(hostName string) *HostNode {
-  if !isDocumentPersisted("/" + hostName) {
+  if !isDocumentPersisted(self, "/" + hostName) {
     return nil
   }
   h := NewHostNode(self, hostName)

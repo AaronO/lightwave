@@ -51,11 +51,11 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
   }
   
   // Requests for the application page are redirected to the login page
-  if r.URL.Path == "/tensor.html" { 
+  if r.URL.Path == server.Config.MainPage { 
     // Find the session
     _, err := server.SessionDatabase.FindSession(r)
     if err != nil {
-      http.Redirect(w, r, "/index.html", 303)
+      http.Redirect(w, r, server.Config.LoginPage, 303)
       return
     }
   }
@@ -262,17 +262,17 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
   user, err := server.UserAccountDatabase.SignUpUser(email, nickname, username, password)
   if err != nil {
     log.Println(err)
-    http.Redirect(w, r, "/index.html", 303)
+    http.Redirect(w, r, server.Config.SignupPage, 303)
     return
   }
   s, err := server.SessionDatabase.CreateSession(user.Username)
   if err != nil {
     log.Println(err)
-    http.Redirect(w, r, "/index.html", 303)
+    http.Redirect(w, r, server.Config.LoginPage, 303)
     return
   }  
   s.SetCookie(w)
-  http.Redirect(w, r, "/tensor.html", 303)
+  http.Redirect(w, r, server.Config.MainPage, 303)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -288,17 +288,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
   log.Println("LOGIN:",username)
   if err = server.UserAccountDatabase.CheckCredentials(username, password); err != nil {
     log.Println(err)
-    http.Redirect(w, r, "/index.html", 303)
+    http.Redirect(w, r, server.Config.LoginPage, 303)
     return
   }
   s, err := server.SessionDatabase.CreateSession(username)
   if err != nil {
     log.Println(err)
-    http.Redirect(w, r, "/index.html", 303)
+    http.Redirect(w, r, server.Config.LoginPage, 303)
     return
   }
   s.SetCookie(w)
-  http.Redirect(w, r, "/tensor.html", 303)
+  http.Redirect(w, r, server.Config.MainPage, 303)
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,13 +320,60 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
     return
   }
   server.SessionDatabase.DeleteSession(session)
-  http.Redirect(w, r, "/index.html", 303)
+  http.Redirect(w, r, server.Config.LoginPage, 303)
+}
+
+func configure() (*lightwave.Config, os.Error) {
+  config, err := lightwave.ReadConfig()
+  if err != nil {
+    return nil, err
+  }
+  // Start all servers listed in the configuration file
+  for _, s := range config.Servers {
+    serverconfig, err := lightwave.ReadServerConfig(config, s)
+    if err != nil {
+      return nil, err
+    }
+    // Start the server
+    server := lightwave.NewServer(serverconfig)
+    servers[serverconfig.Hostname] = server
+    // Make static files available
+    f := lightwave.NewStaticNode(server, serverconfig.StaticRoot)
+    go f.Run()
+    server.AddChild(f)
+    // TODO: This is a hack
+    server.LocalHost().Users().CreateUser("weis")
+    server.LocalHost().Users().CreateUser("tux")
+    server.LocalHost().Users().CreateUser("konqi")
+    // TODO: This is a hack
+    if _, err := server.UserAccountDatabase.FindUser("weis"); err != nil {
+      server.UserAccountDatabase.SignUpUser("weis@mail.com", "Torben", "weis", "pass")
+    }
+    if _, err := server.UserAccountDatabase.FindUser("tux"); err != nil {
+      server.UserAccountDatabase.SignUpUser("tux123@mail.com", "Tux", "tux", "pass2")
+    }
+    if _, err := server.UserAccountDatabase.FindUser("konqi"); err != nil {  
+      server.UserAccountDatabase.SignUpUser("kon@mail.com", "Konqi", "konqi", "pass3")
+    }
+    // End hack
+    // Start the server
+    go server.Run()
+  }
+  return config, nil
 }
 
 func main() {  
   log.SetFlags( log.Lshortfile)
-
-  server := lightwave.NewServer(&lightwave.ServerManifest{Domain:"localhost", HostName:"localhost", Port:8080})
+  // Configure and start all servers
+  config, err := configure()
+  if err != nil {
+    log.Exitln( err )
+    return
+  }
+  
+  /*
+  config := &lightwave.Config{Port:8080}
+  server := lightwave.NewServer(&lightwave.ServerConfig{MainConfig:config, Domain:"localhost", Hostname:"localhost"})
   servers["localhost"] = server
   f := lightwave.NewStaticNode(server, "../webroot")
   go f.Run()
@@ -348,26 +395,34 @@ func main() {
   // End hack
   go server.Run()
 
-  server2 := lightwave.NewServer(&lightwave.ServerManifest{Domain:"sony", HostName:"sony", Port:8080})
+  server2 := lightwave.NewServer(&lightwave.ServerConfig{MainConfig:config, Domain:"sony", Hostname:"sony"})
   servers["sony"] = server2
   f2 := lightwave.NewStaticNode(server, "../webroot")
   go f2.Run()
   server2.AddChild(f2)
   go server2.Run()
-
+*/
+  
 //  lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
 //  lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
-  lightwave.RegisterNodeFactory("application/json", lightwave.DocumentNodeFactory)
   
+  // Allow for JSON documents
+  lightwave.RegisterNodeFactory("application/json", lightwave.DocumentNodeFactory)
+  // Login pages post here to login and to be redirected
   http.HandleFunc("/_login", loginHandler)
+  // Logout gets thus page to logout and to be redirected
   http.HandleFunc("/_logout", logoutHandler)
+  // RPC to retrieve information about the session bound to the session cookie
   http.HandleFunc("/_sessioninfo", sessionInfoHandler)
+  // The SignUp page posts here to register a new user and to be redirected
   http.HandleFunc("/_signup", signupHandler)
   // Behave like a wave server with HTTP transport
 //  http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
   http.HandleFunc("/fed/", federationHandler)
+  // Run the client/server protocol
   http.HandleFunc("/client/", clientHandler)
+  // Serve static files (HTML, images)
   http.HandleFunc("/", fileHandler)
-  http.ListenAndServe(":8080", nil)
+  http.ListenAndServe(fmt.Sprintf(":%v", config.Port), nil)
 }

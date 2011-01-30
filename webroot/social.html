@@ -1,0 +1,66 @@
+<!doctype html>  
+
+<head>
+  <meta charset="utf-8">
+
+  <!-- Always force latest IE rendering engine (even in intranet) & Chrome Frame 
+       Remove this if you use the .htaccess -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Lightwave</title>
+  <meta name="description" content="">
+  <meta name="author" content="Torben Weis">
+
+  <!--  Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Place favicon.ico & apple-touch-icon.png in the root of your domain and delete these references -->
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <!-- CSS : implied media="all" -->
+  <link rel="stylesheet" href="css/wave.css">
+  <link rel="stylesheet" href="css/wave_view.css">
+</head>
+
+<body onload="LW.Social.init()">
+<div class="wave-panel" style="position:absolute; top:10px; bottom:20px; left:10px; width:500px;">
+  <div class="wave-titlebar">Title</div>
+  <div class="wave-section-blue search">
+    <div class="searchInner">
+      <button style="float:left" onclick="LW.Social.newDocument()">New</button><span style="display:block; overflow:hidden"><input style="font-size:16px; outline:none; width:100%" type="text" class="wave-searchbox"></span>
+    </div>
+  </div>
+  <div class="wave-section" id="inbox" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;">
+  </div>
+</div>
+
+<div class="wave-panel" style="position:absolute; top:10px; bottom:20px; left:530px; right:10px;" id="document-panel">
+  <div class="wave-titlebar">Title</div>
+  <div class="wave-section-blue participants"></div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
+    <div class="mainthread"></div>
+    <div class="reply clearfix" style="display:none; border-radius:6px; background-color:#ddd;color:#888;border:1px solid #888; padding:3px; font-style:italic; font-size:16px"><img class="author" src="../images/unknown.png"><div style="padding-top:4px">Click here to reply</div></div>
+
+    
+  </div>
+</div>
+ <!-- Javascript at the bottom for fast page loading -->
+
+  <!-- Grab Google CDN's jQuery. fall back to local if necessary -->
+  <script src="/scripts/tensor/jquery.js"></script>
+ 
+  <!-- scripts concatenated and minified via ant build script-->
+  <script src="scripts/social/ui.js"></script>
+  <!-- end concatenated and minified scripts-->
+  
+  <script type="text/javascript" src="scripts/io.js"></script>
+  <script type="text/javascript" src="scripts/ot.js"></script>
+  <script type="text/javascript" src="scripts/doc.js"></script>
+  <script type="text/javascript" src="scripts/inbox.js"></script>
+  <script type="text/javascript" src="scripts/model.js"></script>
+  <script type="text/javascript" src="scripts/controller.js"></script>
+  <script type="text/javascript" src="scripts/editor.js"></script>
+  <script type="text/javascript" src="scripts/richtext.js"></script>
+</body>
+</html>
