@@ -58,7 +58,19 @@ LW.Social.initCallback_ = function(reply) {
     $("#add-participant-button").find("button").click( function() {
         var dlg = document.getElementById("dlg-add-participants");
         if ( dlg.style.visibility != "visible" ) {
+            var callback = function(reply) {
+                var friends = JSON.parse(reply).friends;
+                var dom = document.getElementById("newfriends");
+                var html = ""
+                for( var i = 0; i < friends.length; ++i ) {
+                    var contact = friends[i];
+                    html += '<div class="friend">';
+                    html += '<img class="friend-image" src="../images/unknown.png"><div><span class="friend-name">' + esc(contact.displayName) + '</span><br><span class="friend-id">' + esc(contact.userid) + '</span></div></div>';
+                }
+                dom.innerHTML = html;
+            };
             dlg.style.visibility = "visible";
+            LW.Rpc.enqueueGet("/client/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "?kind=friends", callback);
         } else {
             dlg.style.visibility = "hidden";
         }
@@ -221,3 +233,7 @@ LW.Social.newDocument = function() {
     LW.Session.open(newdoc.url, false, false);
 };
 
+// TODO
+function esc(str) {
+    return str;
+}
