@@ -24,7 +24,13 @@
 </head>
 
 <body onload="LW.Social.init()">
-<div class="wave-panel" style="position:absolute; top:10px; bottom:20px; left:10px; width:500px;">
+
+<div style="float:right; font-size:10pt; margin-right:14px; margin-top:2px;">
+  <span id="username">x@y</span> |
+  <span id="logout" style="cursor:pointer; color:blue; text-decoration:underline">Logout</span>
+</div>
+  
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:10px; width:500px;">
   <div class="wave-titlebar">Title</div>
   <div class="wave-section-blue search">
     <div class="searchInner">
@@ -35,7 +41,7 @@
   </div>
 </div>
 
-<div class="wave-panel" style="position:absolute; top:10px; bottom:20px; left:530px; right:10px;" id="document-panel">
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:530px; right:10px;" id="document-panel">
   <div class="wave-titlebar">Title</div>
   <div class="wave-section-blue participants">
     <div id="add-participant-button" style="float:left; position:relative; top:5px;"><button><span style="font-size:16px">+</span></button></div>
