@@ -17,7 +17,7 @@ LW.Social.initCallback_ = function(reply) {
     LW.Rpc.domain = info.domain;
     LW.Rpc.displayName = info.displayName;
     // Show which user is logged in
-    window.name = LW.Rpc.user + "@" + LW.Rpc.domain;
+    document.getElementById("username").innerText = LW.Rpc.displayName;
     LW.Inbox.init();
     LW.Session.init();
 
@@ -86,6 +86,11 @@ LW.Social.initCallback_ = function(reply) {
         } else {
             dlg.style.visibility = "hidden";
         }
+    });
+
+    $('#logout').click( function() {
+        LW.Rpc.logout = true;
+        window.location.pathname = "/_logout";
     });
 };
 
