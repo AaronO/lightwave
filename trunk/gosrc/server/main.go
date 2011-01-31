@@ -424,5 +424,8 @@ func main() {
   http.HandleFunc("/client/", clientHandler)
   // Serve static files (HTML, images)
   http.HandleFunc("/", fileHandler)
-  http.ListenAndServe(fmt.Sprintf(":%v", config.Port), nil)
+  err = http.ListenAndServe(fmt.Sprintf(":%v", config.Port), nil)
+  if err != nil {
+    log.Exitln(err)
+  }
 }
