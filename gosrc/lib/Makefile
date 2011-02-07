@@ -14,7 +14,8 @@ GOFILES=\
 	history.go \
 	capabilities_store.go \
 	staticnode.go \
-	config.go
+	config.go \
+	indexer.go
 
 GC += -I ../wave/_obj
 LD += -L ../wave/_obj

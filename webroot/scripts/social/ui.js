@@ -27,7 +27,7 @@ LW.Social.initCallback_ = function(reply) {
             var newdoc = LW.Inbox.getOrCreateDoc(jsObject.uri);
             LW.Social.documentController.bind(newdoc, newdoc.content._data);
             LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
-            LW.Session.open(jsObject.uri, true, false);
+            LW.Session.open(jsObject.uri);
         };
     };
     // Controller for the inbox
@@ -247,7 +247,7 @@ LW.Social.newDocument = function() {
     var newdoc = LW.Model.createDocument();
     LW.Social.documentController.bind(newdoc, newdoc.content._data);
     LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
-    LW.Session.open(newdoc.url, false, false);
+    LW.Session.open(newdoc.url);
 };
 
 // TODO

@@ -124,7 +124,7 @@ func (self *Inbox) digest(msg *DigestMsg) {
   }
   if !msg.IsSubscribed {
     // Subscribe to this document to receive further digest data
-    self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, Filter:&NodeFilter{User:self.parent.Name(), Prefix:msg.URI, Recursive:false}} )
+    self.Server().PubSub( &PubSubRequest{Action:SubscribeDigest, User:self.parent.Name(), DocumentURI:msg.URI, Id:"_user/" + self.parent.Name()} )
   }
   datamut := NewObjectMutation()
   datamut["docs"] = NewArrayMutation(arraymut)
@@ -307,7 +307,7 @@ func (self *UserRootNode) get(req *GetRequest) {
 }
 
 func (self *UserRootNode) pubSub(req* PubSubRequest) {
-  seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
+  seq := strings.Split(req.DocumentURI[1:], "/", -1)
   if len(seq) < 3 {
     log.Println("Malformed NodeFilter prefix")
     return

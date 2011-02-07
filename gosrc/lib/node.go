@@ -81,10 +81,17 @@ const (
 )
 
 type PubSubRequest struct {
+  // Id of the subscription. Required to remove a subscription later on.
+  Id string
+  // Used for SubscribeDigest
+  User string
+  // Used for Subscribe
+  Snapshot bool
   // Subscribe or Unsubscribe
   Action uint32
-  Filter *NodeFilter
+  DocumentURI string
   Subscriber Subscriber
+  FinishSignal chan bool
 }
 
 type DigestMsg struct {
@@ -213,17 +220,12 @@ func CreateNode(parent Node, name string, level int, mimeType string) (node Node
 // -------------------------------------------
 // DocumentNode
 
-type Subscription struct {
-  Subscriber Subscriber
-  Filter *NodeFilter
-}
-
 type DocumentNode struct {
   NodeBase
   children map[string]Node
   level int
   doc map[string]interface{}
-  subscriptions map[string]Subscription
+  subscriptions map[string]Subscriber
   // Maps user names to a bool. If true, send digest updates to the user's inbox.
   digestMode map[string]bool
   // List of domains which participate in federating this document
@@ -243,13 +245,7 @@ func DocumentNodeFactory(parent Node, name string, level int) Node {
 
 func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   d := &DocumentNode{children:make(map[string]Node), level:level, NodeBase:NodeBase{parent:parent, name:name,postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
-  d.subscriptions = make(map[string]Subscription)
-//  d.doc = make(map[string]interface{})
-//  d.doc["_meta"] = make(map[string]interface{})
-//  d.doc["_data"] = make(map[string]interface{})
-//  d.doc["_rev"] = float64(0)
-  // TODO
-//  d.doc["_hash"] = "TODOHASH"
+  d.subscriptions = make(map[string]Subscriber)
   d.federatedDomains = make(map[string]bool)
   d.history = NewDocumentHistory(d)
   if d.history.broken {
@@ -399,7 +395,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   // Send message to subscribers
   for _, s := range self.subscriptions {
     jsonmsg, _ := json.Marshal(m)
-    s.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
+    s.Update( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
   }
   // At this point we know that the mutation is applied.
 
@@ -550,12 +546,6 @@ func (self *DocumentNode) post(req *PostRequest) {
   ok = <- finish
   if ok {
     self.addChild(doc)
-    // Forward recursive subscriptions
-    for _, s := range self.subscriptions {
-      if s.Filter.Recursive {
-        doc.PubSub( &PubSubRequest{Action:Subscribe, Subscriber:s.Subscriber, Filter:s.Filter} )
-      }
-    }
   } else {
     doc.Stop()
   }
@@ -683,50 +673,68 @@ func (self *DocumentNode) get(req *GetRequest) {
 }
 
 func (self *DocumentNode) pubSub(req *PubSubRequest) {
-  seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
-  if len(seq) < 1 + self.level && !req.Filter.Recursive {
+  uri := self.URI()
+  seq := strings.Split(req.DocumentURI[1:], "/", -1)
+  if len(seq) < 1 + self.level {
     panic("The subscription must not reach this node")
     return
   }
-  if len(seq) <= self.level + 1 {
+  if len(seq) == 1 + self.level && uri != req.DocumentURI {
+    panic("The subscription must not reach this node")
+    return
+  }
+    
+  if uri == req.DocumentURI {
     // Subscribe/Unsubscribe
     switch req.Action {
-      case Subscribe:
-        log.Println("Subscribing node ", self.URI())
-        self.subscriptions[req.Filter.Id] = Subscription{req.Subscriber, req.Filter}
-        if req.Filter.Snapshot {
-          // Send a snapshot to the subscriber
-          clone := cloneJsonObject(self.doc)
-          clone["_endRev"] = clone["_rev"]
-          clone["_endHash"] = clone["_hash"]
-          clone["_rev"] = 0
-          clone["_hash"] = "TODOHASH"
-          clone["_data"].(map[string]interface{})["$object"] = true;
-          clone["_meta"].(map[string]interface{})["$object"] = true;
-          m, _ := json.Marshal(clone)
-          req.Subscriber.Update( &UpdateMsg{self.URI(), []string{string(m)}} )
-        } else {
-          // Send delta history to subscriber
-          lst := make([]string, self.Revision())
-          tail := self.history.Tail(0)
-          for i, d := range tail {
-            m, _ := json.Marshal(d)
-            lst[i] = string(m)
-          }
-          req.Subscriber.Update( &UpdateMsg{self.URI(), lst} )
+    case Subscribe:
+      log.Println("Subscribing node ", uri)
+      if req.FinishSignal != nil {
+	req.FinishSignal <- true
+      }
+      self.subscriptions[req.Id] = req.Subscriber
+      if req.Snapshot {
+        // Send a snapshot to the subscriber
+        clone := cloneJsonObject(self.doc)
+        clone["_endRev"] = clone["_rev"]
+        // clone["_endHash"] = clone["_hash"]
+        clone["_rev"] = 0
+        // clone["_hash"] = "TODOHASH"
+        clone["_data"].(map[string]interface{})["$object"] = true;
+        clone["_meta"].(map[string]interface{})["$object"] = true;
+        m, _ := json.Marshal(clone)
+        req.Subscriber.Update( &UpdateMsg{uri, []string{string(m)}} )
+      } else {
+        // Send delta history to subscriber
+        lst := make([]string, self.Revision())
+        tail := self.history.Tail(0)
+        for i, d := range tail {
+          m, _ := json.Marshal(d)
+          lst[i] = string(m)
         }
-      case Unsubscribe:
-        log.Println("Unsubscribing node ", self.URI())
-        self.subscriptions[req.Filter.Id] = Subscription{}, false
-      case SubscribeDigest:
-        log.Println("Subscribing digest for ", self.URI(), " on behalf of ", req.Filter.User)
-        self.digestMode[req.Filter.User] = true
-        self.Server().LocalHost().Users().Digest(&DigestMsg{req.Filter.User, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount, true})
-      case UnsubscribeDigest:
-        log.Println("Unsubscribing digest for ", self.URI())
-        self.digestMode[req.Filter.User] = false        
-      default:
-        panic("Unsupported PubSub action")
+        req.Subscriber.Update( &UpdateMsg{uri, lst} )
+      }
+    case Unsubscribe:
+      log.Println("Unsubscribing node ", uri)
+      self.subscriptions[req.Id] = nil, false
+      if req.FinishSignal != nil {
+	req.FinishSignal <- true
+      }
+    case SubscribeDigest:
+      log.Println("Subscribing digest for ", uri, " on behalf of ", req.User)
+      self.digestMode[req.User] = true
+      if req.FinishSignal != nil {
+	req.FinishSignal <- true
+      }
+      self.Server().LocalHost().Users().Digest(&DigestMsg{req.User, uri, self.digest, self.digestAuthors, self.digestMessageCount, true})
+    case UnsubscribeDigest:
+      log.Println("Unsubscribing digest for ", uri)
+      self.digestMode[req.User] = false        
+      if req.FinishSignal != nil {
+	req.FinishSignal <- true
+      }
+    default:
+      panic("Unsupported PubSub action")
     }
   } else {
     node, ok := self.children[seq[self.level + 1]]
@@ -862,7 +870,7 @@ func (self *HostNode) get(req *GetRequest) {
 }
 
 func (self *HostNode) pubSub(req* PubSubRequest) {
-  seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
+  seq := strings.Split(req.DocumentURI[1:], "/", -1)
   if len(seq) < 2 {
     log.Println("Malformed NodeFilter prefix")
     return
@@ -910,7 +918,6 @@ type Server struct {
   Config *ServerConfig
   manifest *ServerManifest
   children map[string]Node
-  sessions *SessionRootNode
   SessionDatabase *SessionDB
   UserAccountDatabase *UserAccountDB
   gateways map[string]*FederationGateway
@@ -920,12 +927,9 @@ type Server struct {
 func NewServer(config *ServerConfig) *Server {
   r := &Server{Config:config, children:make(map[string]Node), NodeBase:NodeBase{parent:nil, name:config.Domain, postChannel:make(chan *PostRequest), getChannel:make(chan *GetRequest), stopChannel:make(chan bool), pubSubChannel:make(chan *PubSubRequest)}}
   r.manifest = &ServerManifest{Domain:config.Domain, Port:config.MainConfig.Port, HostName:config.Hostname};
-  r.sessions = NewSessionRootNode(r)
   r.gateways = make(map[string]*FederationGateway)
   r.SessionDatabase = NewSessionDB(r)
   r.UserAccountDatabase = NewUserAccountDB(r)
-  // Launch the server, i.e. start processing messages
-  go r.sessions.Run()
   return r
 }
 
@@ -1001,8 +1005,6 @@ func (self *Server) post(req *PostRequest) {
         h.Stop()
       }
       oldfinish <- ok
-    case SessionURI:
-      self.sessions.Post(req)
     case ViewURI:
       panic("TODO")
     case ManifestURI:
@@ -1039,8 +1041,6 @@ func (self *Server) get(req *GetRequest) {
       }
       n.Get(req)
       return
-    case SessionURI:
-      self.sessions.Get(req)
     case ViewURI:
       panic("TODO")
     case ManifestURI:
@@ -1066,7 +1066,7 @@ func (self *Server) get(req *GetRequest) {
 }
 
 func (self *Server) pubSub(req* PubSubRequest) {
-  seq := strings.Split(req.Filter.Prefix[1:], "/", -1)
+  seq := strings.Split(req.DocumentURI[1:], "/", -1)
   if len(seq) < 1 {
     log.Println("Malformed NodeFilter prefix")
     return

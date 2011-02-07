@@ -23,23 +23,6 @@ func (self ViewURI) String() string {
 }
 
 // -----------------------------------------------
-// SessionURI
-
-type SessionURI struct {
-  User string
-  Name string
-  // The optional third path element which must start with '_'
-  Special string
-}
-
-func (self SessionURI) String() string {
-  if self.Special == "" {
-	return "_session/" + self.User + "/" + self.Name
-  }
-  return "_session/" + self.User + "/" + self.Name + "/" + self.Special
-}
-
-// -----------------------------------------------
 // ManifestURI
 
 type ManifestURI struct {
@@ -105,17 +88,6 @@ func NewURI(uri string) (result URI, ok bool) {
 	  return nil, false
 	}
 	return ViewURI{slices[1]}, true
-  } else if slices[0] == "_session" {
-	if len(slices) != 3 && len(slices) != 4 {
-	  return nil, false
-	}
-	if len(slices) == 4 {
-	  if (len(slices[3]) == 0 || slices[3][0] != '_') {
-		return nil, false
-	  }
-	  return SessionURI{slices[1], slices[2], slices[3]}, true
-	}
-	return SessionURI{slices[1], slices[2], ""}, true
   } else if slices[0][0] != '_' {
 	if len(slices) < 2 {
 	  return nil, false

@@ -38,7 +38,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
     errorHandler(w, r, err.String())
     return
   }
-  log.Println("URI is ", "/_static" + r.URL.Path)
+  // log.Println("URI is ", "/_static" + r.URL.Path)
   // Parse the URI, prepend "/_static"
   uri, ok := lightwave.NewURI("/_static" + r.URL.Path)
   if !ok {
@@ -64,65 +64,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
   req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.ClientOrigin, uri, nil}}
   server.Get( req )
   <- ch
-  log.Println("GET finished")
 }
-
-/*
-// Maps wave federation requests to requests of the generalized federation protocol.
-// Therefore, this handler is performing some URL rewriting
-func waveFederationHandler(w http.ResponseWriter, r *http.Request) {
-  // Determine the virtual host
-  server, err := findServer(r.Host)
-  if err != nil {
-    errorHandler(w, r, err.String())
-    return
-  }
-  // The URL is of the form http://host/wave/fed/wave-host/wave-id/wavelet-host/wavelet-id    
-  waveurl, err := wave.NewWaveUrlFromId(r.URL.Path[5:])
-  if err != nil {
-    errorHandler(w, r, "Error parsing wave ID")
-    return
-  }
-  uri, _ := lightwave.NewURI("/" + waveurl.WaveletDomain + "/" + waveurl.WaveDomain + "$" + waveurl.WaveId + "$" + waveurl.WaveletId)
-  // GET handler
-  if r.Method == "GET" {
-    ch := make(chan bool)
-    req := &lightwave.GetRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin, uri}}
-    server.Get( req )
-    <- ch
-    log.Println("GET finished")
-  // POST handler
-  } else if r.Method == "POST" || r.Method == "PUT" {
-    // TODO: Meaningful limit on the size of data
-    if r.ContentLength < 0 || r.ContentLength > 100000 {
-      errorHandler(w, r, "Negative or oversize content length in HTTP POST body")
-      return
-    }
-    buffer := make([]byte, r.ContentLength)
-    _, err := r.Body.Read(buffer)
-    if err != nil {
-      errorHandler(w, r, "Error reading from HTTP POST body")
-      return
-    }
-    ch := make(chan bool)
-    req := &lightwave.PostRequest{lightwave.Request{w, r.URL.RawQuery, ch, lightwave.FederationOrigin, uri}, buffer, ""}
-    var ok bool
-    if req.MimeType, ok = r.Header["Content-Type"]; !ok {
-      errorHandler(w, r, "Content-Type is missing in POST")
-      return
-    }
-    if req.MimeType != "application/x-protobuf-wave" {
-      errorHandler(w, r, "Content-Type " + req.MimeType + " is not understood")
-      return
-    }
-    server.Post( req )
-    <- ch
-    log.Println("POST finished")
-  } else {
-    errorHandler(w, r, "Unsupported HTTP method")
-  }  
-}
-*/
 
 func clientHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
@@ -243,6 +185,99 @@ func sessionInfoHandler(w http.ResponseWriter, r *http.Request) {
     return
   }
   session.InfoHandler(w, r)
+}
+
+func sessionGetHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionGetRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}} )
+  <- wait
+}
+
+func sessionPollHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionPollRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}} )
+  <- wait
+}
+
+func openHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  log.Println("OPEN", r.FormValue("uri"))
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionOpenDocRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("uri")} )
+  <- wait
+}
+
+func closeHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionCloseDocRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("uri")} )
+  <- wait
 }
 
 func signupHandler(w http.ResponseWriter, r *http.Request) {
@@ -371,38 +406,6 @@ func main() {
     return
   }
   
-  /*
-  config := &lightwave.Config{Port:8080}
-  server := lightwave.NewServer(&lightwave.ServerConfig{MainConfig:config, Domain:"localhost", Hostname:"localhost"})
-  servers["localhost"] = server
-  f := lightwave.NewStaticNode(server, "../webroot")
-  go f.Run()
-  server.AddChild(f)
-  // TODO: This is a hack
-  server.LocalHost().Users().CreateUser("weis")
-  server.LocalHost().Users().CreateUser("tux")
-  server.LocalHost().Users().CreateUser("konqi")
-  // TODO: This is a hack
-  if _, err := server.UserAccountDatabase.FindUser("weis"); err != nil {
-    server.UserAccountDatabase.SignUpUser("weis@mail.com", "Torben", "weis", "pass")
-  }
-  if _, err := server.UserAccountDatabase.FindUser("tux"); err != nil {
-    server.UserAccountDatabase.SignUpUser("tux123@mail.com", "Tux", "tux", "pass2")
-  }
-  if _, err := server.UserAccountDatabase.FindUser("konqi"); err != nil {  
-    server.UserAccountDatabase.SignUpUser("kon@mail.com", "Konqi", "konqi", "pass3")
-  }
-  // End hack
-  go server.Run()
-
-  server2 := lightwave.NewServer(&lightwave.ServerConfig{MainConfig:config, Domain:"sony", Hostname:"sony"})
-  servers["sony"] = server2
-  f2 := lightwave.NewStaticNode(server, "../webroot")
-  go f2.Run()
-  server2.AddChild(f2)
-  go server2.Run()
-*/
-  
 //  lightwave.RegisterNodeFactory("application/x-protobuf-wave", wave.NewWaveletNode)
 //  lightwave.RegisterNodeFactory("application/x-json-wave", wave.NewWaveletNode)
   
@@ -416,6 +419,15 @@ func main() {
   http.HandleFunc("/_sessioninfo", sessionInfoHandler)
   // The SignUp page posts here to register a new user and to be redirected
   http.HandleFunc("/_signup", signupHandler)
+  // Opens a document and sends a snapshot to the client. Further updates to the document are sent as well
+  http.HandleFunc("/_open", openHandler)
+  // Stops sending updates of this document to the client
+  http.HandleFunc("/_close", closeHandler)
+  // Retrieves the latest document updates belonging to the current session. Return immediately if there are none.
+  http.HandleFunc("/_sessionget", sessionGetHandler)
+  // Retrieves the latest document updates belonging to the current session. Wait if there are none.
+  http.HandleFunc("/_sessionpoll", sessionPollHandler)
+  
   // Behave like a wave server with HTTP transport
 //  http.HandleFunc("/wave/fed/", waveFederationHandler)
   // Run the generalized federation protocol via HTTP. It is more powerful than wave but non-standard
