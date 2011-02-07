@@ -113,55 +113,23 @@ LW.Rpc.enqueueErrCallback_ = function(reply) {
 // Session
 
 LW.Session = {
-  id : null,
-  sessionCreated : false,
-  content : { },
-  version : 0
+    id : null,
+    /**
+     * The keys are document URIs. The values are useless currently.
+     */
+    openDocs : { },
 };
 
 LW.Session.init = function() {
-  if ( !LW.Session.sessionCreated ) {
-	LW.Session.createSession_();
-  } else {
-	LW.Session.sessionPoll_();
-  }
-};
-
-// Create a new session at the server
-LW.Session.createSession_ = function() {
-  LW.Session.id = "s" + Math.random().toString();
-  var mutation = {"_rev":0, "_data":{"filters":{}}};
-  LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
-  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.createSessionCallback_, LW.Session.createSessionErrCallback_);
-};
-
-// Callback for the successful attempt of creating a session on the server
-LW.Session.createSessionCallback_ = function(reply) {
-  // console.log("create session: " + reply)
-  var json = JSON.parse(reply)
-  if ( json.ok == true ) {
-	LW.Session.sessionCreated = true;
-	LW.Session.version = json.version;
-	// Open the inbox
-	LW.Session.open("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox", true, false )
-	// Start polling the session to get updates on the documents
-	LW.Session.sessionPoll_();
-  } else {
-	alert("Failed to create a session");
-  }
-};
-
-// Callback for the failed attempt of creating a session on the server
-LW.Session.createSessionErrCallback_ = function() {
-    if ( LW.Rpc.logout ) {
-        return;
-    }
-    alert("Offline", "You seem to be offline");
+    // Open the inbox
+    LW.Session.open("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox")
+    // Start polling the session to get updates on the documents
+    LW.Session.sessionPoll_();
 };
 	
 // HTTP long call to get updates on the documents
 LW.Session.sessionPoll_ = function() {
-  LW.Rpc.get("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id + "/_poll", LW.Session.sessionPollCallback_, LW.Session.sessionPollErrCallback_);  
+  LW.Rpc.get("/_sessionpoll", LW.Session.sessionPollCallback_, LW.Session.sessionErrCallback_);  
 };
 
 // Successful response from the HTTP long call
@@ -180,7 +148,7 @@ LW.Session.sessionPollCallback_ = function(reply) {
 };
 
 // Failed response from the HTTP long call
-LW.Session.sessionPollErrCallback_ = function() {
+LW.Session.sessionErrCallback_ = function() {
     if ( LW.Rpc.logout ) {
         return;
     }
@@ -188,31 +156,43 @@ LW.Session.sessionPollErrCallback_ = function() {
 };
 	
 // Adds a new document to the session
-LW.Session.open = function(prefix, snapshot, recursive, mimeTypes, schemas) {
-  if ( !mimeTypes ) {
-	mimeTypes = [];
-  }
-  if ( !schemas ) {
-	schemas = [];
-  }
-  // This document is already open?
-  if ( LW.Session.content._data.filters[prefix] ) {
-	return
-  }
-  var mutation = { "_rev":LW.Session.version, "_data":{ "$object":true, "filters":{"$object":true} } };
-  mutation._data.filters[prefix] = {"recursive":recursive, "mimeTypes":mimeTypes, "schemas":schemas, "snapshot":snapshot};
-  LW.JsonOT.applyDocMutation( LW.Session.content, mutation, 0);
-  // console.log("-> " + JSON.stringify(mutation))
-  LW.Rpc.enqueue("/client/_session/" + LW.Rpc.user + "/" + LW.Session.id, JSON.stringify(mutation), LW.Session.openCallback_);
+LW.Session.open = function(uri) {
+    // This document is already open?
+    if ( LW.Session.openDocs[uri] ) {
+        return
+    }
+    // TODO: proper escaping of the URI
+    LW.Rpc.get("/_open?uri=" + uri, function(reply) { LW.Session.openCallback_(reply, uri); }, LW.Session.sessionErrCallback_);
 };
 
 // Response to the request of adding a document to the session
-LW.Session.openCallback_ = function(reply) {
-  // console.log("open: " + reply)
-  var json = JSON.parse(reply)
-  if ( json.ok == true ) {
-	LW.Session.version = json.version;
-  } else {
-	alert("Failed to open a document");
-  }  
+LW.Session.openCallback_ = function(reply, uri) {
+    // console.log("open: " + reply)
+    var json = JSON.parse(reply);
+    if ( json.ok == false ) {
+        alert("Failed to open a document");
+        return;
+    }
+    LW.Session.openDocs[uri] = true;
+};
+
+// Adds a new document to the session
+LW.Session.close = function(uri) {
+    // This document is already open?
+    if ( !LW.Session.openDocs[uri] ) {
+        return
+    }
+    // TODO: proper escaping of the URI
+    LW.Rpc.get("/_close?uri=" + uri, function(reply) { LW.Session.closeCallback_(reply, uri); }, LW.Session.sessionErrCallback_);
+};
+
+// Response to the request of adding a document to the session
+LW.Session.closeCallback_ = function(reply, uri) {
+    // console.log("close: " + reply)
+    var json = JSON.parse(reply);
+    if ( json.ok == false ) {
+        alert("Failed to close a document");
+        return;
+    }  
+    delete LW.Session.openDocs[uri];
 };
