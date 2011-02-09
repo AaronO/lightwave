@@ -22,12 +22,13 @@ LW.Social.initCallback_ = function(reply) {
     LW.Session.init();
 
     var renderInboxEntry = function(jsDoc, jsObject, state) {
-        state.dom.innerHTML = '<span class="title">' + jsObject.authors + '</span> <span class="digest">' + jsObject.digest + '</span>';
+        // state.dom.innerHTML = '<span class="title">' + jsObject.authors + '</span> <span class="digest">' + jsObject.digest + '</span>';
+        state.dom.innerHTML = '<span class="title">' + jsObject.value + '</span>';
         state.dom.onclick = function() {
-            var newdoc = LW.Inbox.getOrCreateDoc(jsObject.uri);
+            var newdoc = LW.Inbox.getOrCreateDoc(jsObject.key);
             LW.Social.documentController.bind(newdoc, newdoc.content._data);
             LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
-            LW.Session.open(jsObject.uri);
+            LW.Session.open(jsObject.key, true);
         };
     };
     // Controller for the inbox
@@ -49,8 +50,9 @@ LW.Social.initCallback_ = function(reply) {
         state.controller = new LW.Controller.ListController( state.dom, null, createEntry, deleteEntry);
         state.controller.bind(jsDoc, jsObject);
     };
-    LW.Social.inboxController = new LW.Controller.AttributeController(document.getElementById("inbox"), "docs", docsBindFunc);
-    LW.Social.inboxController.bind(LW.Inbox.self, LW.Inbox.self.content._data);
+    LW.Social.inboxController = new LW.Controller.AttributeController(document.getElementById("inbox"), "items", docsBindFunc);
+    var inbox = LW.Inbox.getOrCreateDoc("/_view/inbox")
+    LW.Social.inboxController.bind(inbox, inbox.content._data);
 
     LW.Social.documentController = LW.Social.createConversationController(document.getElementById("document"));
     LW.Social.participantsController = LW.Social.createParticipantsController(document.getElementById("document-panel"));
@@ -247,7 +249,7 @@ LW.Social.newDocument = function() {
     var newdoc = LW.Model.createDocument();
     LW.Social.documentController.bind(newdoc, newdoc.content._data);
     LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
-    LW.Session.open(newdoc.url);
+    LW.Session.open(newdoc.url, false);
 };
 
 // TODO

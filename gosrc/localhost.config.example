@@ -6,5 +6,6 @@
   "MainPage": "/social.html",
   "LoginPage": "/index.html",
   "SignupPage": "/signup.html",
-  "UserDB": "localhost_user.db"
+  "UserDB": "localhost_user.db",
+  "IndexDB": "localhost_index.db"
 }

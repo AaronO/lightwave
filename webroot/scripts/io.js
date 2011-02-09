@@ -118,11 +118,14 @@ LW.Session = {
      * The keys are document URIs. The values are useless currently.
      */
     openDocs : { },
+    openViews : { }
 };
 
 LW.Session.init = function() {
     // Open the inbox
-    LW.Session.open("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox")
+    // LW.Session.open("/" + LW.Rpc.domain + "/_user/" + LW.Rpc.user + "/inbox")
+// TODO: proper encoding
+    LW.Session.openView('inbox', 'map=digest&with=with:' + LW.Rpc.user  + "@" + LW.Rpc.domain)
     // Start polling the session to get updates on the documents
     LW.Session.sessionPoll_();
 };
@@ -156,13 +159,13 @@ LW.Session.sessionErrCallback_ = function() {
 };
 	
 // Adds a new document to the session
-LW.Session.open = function(uri) {
+LW.Session.open = function(uri, snapshot) {
     // This document is already open?
     if ( LW.Session.openDocs[uri] ) {
         return
     }
     // TODO: proper escaping of the URI
-    LW.Rpc.get("/_open?uri=" + uri, function(reply) { LW.Session.openCallback_(reply, uri); }, LW.Session.sessionErrCallback_);
+    LW.Rpc.get("/_open?uri=" + uri + "&snapshot=" + (snapshot ? "y" : "n"), function(reply) { LW.Session.openCallback_(reply, uri); }, LW.Session.sessionErrCallback_);
 };
 
 // Response to the request of adding a document to the session
@@ -195,4 +198,45 @@ LW.Session.closeCallback_ = function(reply, uri) {
         return;
     }  
     delete LW.Session.openDocs[uri];
+};
+
+// Adds a new document to the session
+LW.Session.openView = function(id, query) {
+    // This document is already open?
+    if ( LW.Session.openViews[id] ) {
+        alert("View ID used multiple times")
+    }
+    LW.Rpc.get("/_session/_openView?id=" + id + "&" + query, function(reply) { LW.Session.openViewCallback_(reply, id); }, LW.Session.sessionErrCallback_);
+};
+
+// Response to the request of adding a document to the session
+LW.Session.openViewCallback_ = function(reply, id) {
+    console.log("openView: " + reply)
+    var json = JSON.parse(reply);
+    if ( json.ok == false ) {
+        alert("Failed to open a view");
+        return;
+    }
+    LW.Session.openViews[id] = true;
+};
+
+// Adds a new document to the session
+LW.Session.closeView = function(id) {
+    // This document is already open?
+    if ( !LW.Session.openDocs[id] ) {
+        return
+    }
+    // TODO: proper escaping of the URI
+    LW.Rpc.get("/_session/_closeView?id=" + id, function(reply) { LW.Session.closeViewCallback_(reply, id); }, LW.Session.sessionErrCallback_);
+};
+
+// Response to the request of adding a document to the session
+LW.Session.closeCallback_ = function(reply, id) {
+    // console.log("close: " + reply)
+    var json = JSON.parse(reply);
+    if ( json.ok == false ) {
+        alert("Failed to close a view");
+        return;
+    }  
+    delete LW.Session.openViews[id];
 };

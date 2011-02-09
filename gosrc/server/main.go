@@ -187,6 +187,54 @@ func sessionInfoHandler(w http.ResponseWriter, r *http.Request) {
   session.InfoHandler(w, r)
 }
 
+func openViewHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  log.Println("OPEN VIEW", r.FormValue("id"), r.FormValue("map"), r.FormValue("with"), r.FormValue("without"))
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionOpenViewRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("id"), lightwave.DocumentMappingId(r.FormValue("map")), r.Form["with"], r.Form["without"]} )
+  <- wait
+}
+
+func closeViewHandler(w http.ResponseWriter, r *http.Request) {
+  // Determine the virtual host
+  server, err := findServer(r.Host)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  // GET handler
+  if r.Method != "GET" {
+    errorHandler(w, r, "Unsupported HTTP method")
+    return
+  }
+  // Find the session
+  session, err := server.SessionDatabase.FindSession(r)
+  if err != nil {
+    errorHandler(w, r, err.String())
+    return
+  }
+  log.Println("CLOSE VIEW", r.FormValue("id"))
+  wait := make(chan bool)
+  session.Enqueue( &lightwave.SessionCloseViewRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("id")} )
+  <- wait
+}
+
 func sessionGetHandler(w http.ResponseWriter, r *http.Request) {
   // Determine the virtual host
   server, err := findServer(r.Host)
@@ -252,8 +300,12 @@ func openHandler(w http.ResponseWriter, r *http.Request) {
     return
   }
   log.Println("OPEN", r.FormValue("uri"))
+  snapshot := true
+  if r.FormValue("snapshot") == "n" {
+    snapshot = false
+  }
   wait := make(chan bool)
-  session.Enqueue( &lightwave.SessionOpenDocRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("uri")} )
+  session.Enqueue( &lightwave.SessionOpenDocRequest{lightwave.SessionRequest{Response:w, FinishSignal:wait}, r.FormValue("uri"), snapshot} )
   <- wait
 }
 
@@ -427,6 +479,8 @@ func main() {
   http.HandleFunc("/_sessionget", sessionGetHandler)
   // Retrieves the latest document updates belonging to the current session. Wait if there are none.
   http.HandleFunc("/_sessionpoll", sessionPollHandler)
+  http.HandleFunc("/_session/_openView", openViewHandler)
+  http.HandleFunc("/_session/_closeView", closeViewHandler)
   
   // Behave like a wave server with HTTP transport
 //  http.HandleFunc("/wave/fed/", waveFederationHandler)
