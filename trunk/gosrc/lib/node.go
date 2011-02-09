@@ -76,38 +76,22 @@ type GetRequest struct {
 const (
   Subscribe = iota
   Unsubscribe
-  SubscribeDigest
-  UnsubscribeDigest
+  SubscribeIndexer
+  UnsubscribeIndexer
 )
 
 type PubSubRequest struct {
   // Id of the subscription. Required to remove a subscription later on.
   Id string
-  // Used for SubscribeDigest
-  User string
   // Used for Subscribe
   Snapshot bool
   // Subscribe or Unsubscribe
   Action uint32
+  // Used in SubscribeIndexer
+  Mapping DocumentMappingId
   DocumentURI string
   Subscriber Subscriber
   FinishSignal chan bool
-}
-
-type DigestMsg struct {
-  // User whom this digest has been created for
-  User string
-  // URI of the document for which this digest has been created
-  URI string
-  // Digest text
-  Digest string
-  // A HTML formatted string of authors
-  Authors string
-  // Number of messages
-  MessageCount int
-  // True, if the receiver of this message has already issued a subscription to this digest.
-  // False, if this message is an advertisement and the receiver might want to subscribe to it
-  IsSubscribed bool
 }
 
 // Update messages are sent to subscribers
@@ -119,7 +103,7 @@ type UpdateMsg struct {
 }
 
 type Subscriber interface {
-  Update(msg *UpdateMsg)
+  Enqueue(msg interface{})
 }
 
 // -------------------------------------------
@@ -237,6 +221,8 @@ type DocumentNode struct {
   digestAuthors string
   // Cashed digest message count
   digestMessageCount int
+  mappings map[DocumentMappingId]interface{}
+  tags []string
 }
 
 func DocumentNodeFactory(parent Node, name string, level int) Node {
@@ -255,6 +241,8 @@ func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   d.digest = ""
   d.digestAuthors = ""
   d.digestMessageCount = 0
+  d.tags = []string{}
+  d.mappings = make(map[DocumentMappingId]interface{})
   return d
 }
 
@@ -287,7 +275,7 @@ func (self *DocumentNode) Participants() []*UserId {
   if !ok {
     return nil;
   }
-  var result = make([]*UserId, 0, len(arr))
+  result := make([]*UserId, 0, len(arr))
   for _, p := range arr {
     if user, ok := p.(map[string]interface{}); ok {
       if d, ok := user["userid"]; ok {
@@ -303,6 +291,7 @@ func (self *DocumentNode) Participants() []*UserId {
   return result
 }
 
+/*
 func countComments(comments []interface{}) int {
   count := len(comments)
   for _, x := range comments {
@@ -321,7 +310,9 @@ func countComments(comments []interface{}) int {
   }
   return count
 }
+*/
 
+/*
 func (self *DocumentNode) Digest() (digest string, authors string, commentCount int) {
   // Generate the digest HTML fragment for the authors
   participants := self.Participants()
@@ -353,6 +344,7 @@ func (self *DocumentNode) Digest() (digest string, authors string, commentCount 
   }
   return title, digestAuthors, digestCommentCount
 }
+*/
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   if !(IsDocumentMutation(mutation)) {
@@ -395,34 +387,24 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   // Send message to subscribers
   for _, s := range self.subscriptions {
     jsonmsg, _ := json.Marshal(m)
-    s.Update( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
+    s.Enqueue( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
   }
   // At this point we know that the mutation is applied.
 
   users := self.Participants()
   server := self.Server()
   
-  // Inform all local users of this document that the document has changed
-  newdigest, newdigestauthors, newcommentscount := self.Digest()
-  if newdigest != self.digest || newdigestauthors != self.digestAuthors || newcommentscount != self.digestMessageCount {
-    self.digest = newdigest
-    self.digestAuthors = newdigestauthors
-    self.digestMessageCount = newcommentscount
-    for _, u := range users {
-      if u.Domain != server.manifest.Domain {
-        continue
-      }
-      b, ok := self.digestMode[u.Username]
-      if !ok {
-        self.digestMode[u.Username] = false;
-      }
-      if !ok || b {
-        // Send a digest updates
-        self.Server().LocalHost().Users().Digest(&DigestMsg{u.Username, self.URI(), self.digest, self.digestAuthors, self.digestMessageCount, ok && b})
-      }
-    }
+  // Compute tags for the indexer
+  self.tags = make([]string, 0, len(users))
+  for _, u := range users {
+    self.tags = append(self.tags, "with:" + u.Username + "@" + u.Domain)
   }
-  
+  // Recompute all mappings
+  for mapping, _ := range self.mappings {
+    self.mappings[mapping] = self.view(mapping)
+  }
+  server.Indexer.Put( self.URI(), self.mappings, self.tags )
+    
   // If this is just a remote server for this document, we are done
   if !self.Host().IsLocal() {
     return true
@@ -446,7 +428,7 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
       panic("Cannot encode my own data")
     }
     for domain, _ := range self.federatedDomains {
-      self.Server().Gateway(domain).WaveletUpdate(self.URI(), msg)
+      server.Gateway(domain).WaveletUpdate(self.URI(), msg)
     }
   }
   
@@ -703,7 +685,7 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
         clone["_data"].(map[string]interface{})["$object"] = true;
         clone["_meta"].(map[string]interface{})["$object"] = true;
         m, _ := json.Marshal(clone)
-        req.Subscriber.Update( &UpdateMsg{uri, []string{string(m)}} )
+        req.Subscriber.Enqueue( &UpdateMsg{uri, []string{string(m)}} )
       } else {
         // Send delta history to subscriber
         lst := make([]string, self.Revision())
@@ -712,7 +694,7 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
           m, _ := json.Marshal(d)
           lst[i] = string(m)
         }
-        req.Subscriber.Update( &UpdateMsg{uri, lst} )
+        req.Subscriber.Enqueue( &UpdateMsg{uri, lst} )
       }
     case Unsubscribe:
       log.Println("Unsubscribing node ", uri)
@@ -720,19 +702,11 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
       if req.FinishSignal != nil {
 	req.FinishSignal <- true
       }
-    case SubscribeDigest:
-      log.Println("Subscribing digest for ", uri, " on behalf of ", req.User)
-      self.digestMode[req.User] = true
-      if req.FinishSignal != nil {
-	req.FinishSignal <- true
-      }
-      self.Server().LocalHost().Users().Digest(&DigestMsg{req.User, uri, self.digest, self.digestAuthors, self.digestMessageCount, true})
-    case UnsubscribeDigest:
-      log.Println("Unsubscribing digest for ", uri)
-      self.digestMode[req.User] = false        
-      if req.FinishSignal != nil {
-	req.FinishSignal <- true
-      }
+    case SubscribeIndexer:
+      self.mappings[req.Mapping] = self.view(req.Mapping)
+      self.Server().Indexer.Put(req.DocumentURI, self.mappings, self.tags)
+    case UnsubscribeIndexer:
+      self.mappings[req.Mapping] = "", false
     default:
       panic("Unsupported PubSub action")
     }
@@ -747,6 +721,10 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
     }
     node.PubSub(req)  
   }    
+}
+
+func (self *DocumentNode) view(mapping DocumentMappingId) string {
+  return "TODO"
 }
 
 func (self *DocumentNode) loadDocument(name string) Node {
@@ -920,6 +898,7 @@ type Server struct {
   children map[string]Node
   SessionDatabase *SessionDB
   UserAccountDatabase *UserAccountDB
+  Indexer *MemoryIndexer
   gateways map[string]*FederationGateway
   gatewaysMutex sync.Mutex
 }
@@ -930,6 +909,9 @@ func NewServer(config *ServerConfig) *Server {
   r.gateways = make(map[string]*FederationGateway)
   r.SessionDatabase = NewSessionDB(r)
   r.UserAccountDatabase = NewUserAccountDB(r)
+  di := NewDiskIndexer(config.IndexDB)
+  r.Indexer = NewMemoryIndexer(r, di)
+  go r.Indexer.Run()
   return r
 }
 
@@ -1068,16 +1050,17 @@ func (self *Server) get(req *GetRequest) {
 func (self *Server) pubSub(req* PubSubRequest) {
   seq := strings.Split(req.DocumentURI[1:], "/", -1)
   if len(seq) < 1 {
-    log.Println("Malformed NodeFilter prefix")
+    log.Println("Malformed URI")
     return
   }
   node, ok := self.children[seq[0]]
   if !ok {
-    node = self.loadHost(seq[0])
-  }
-  if node == nil {
-    log.Println("Host ", seq[0], " does not exist")
-    return
+    host := self.loadHost(seq[0])
+    if host == nil {
+      log.Println("Host ", seq[0], " does not exist")
+      return
+    }
+    node = host
   }
   node.PubSub(req)
 }
@@ -1090,4 +1073,8 @@ func (self *Server) loadHost(hostName string) *HostNode {
   go h.Run()
   self.AddChild(h)
   return h
+}
+
+func (self *Server) Map(uri string, mapping DocumentMappingId) {
+  self.pubSub( &PubSubRequest{DocumentURI:uri, Mapping:mapping, Action:SubscribeIndexer} )
 }

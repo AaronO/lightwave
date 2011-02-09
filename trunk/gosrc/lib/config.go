@@ -49,6 +49,10 @@ type ServerConfig struct {
    * Filename to the sqlite database that stores user names.
    */
   UserDB string
+  /**
+   * Filename to the sqlite database that stores the index.
+   */
+  IndexDB string
 }
 
 func ReadConfig() (*Config, os.Error) {

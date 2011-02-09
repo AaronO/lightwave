@@ -9,6 +9,7 @@ import (
   "strconv"
   "time"
   hmac "crypto/hmac"
+  vec "container/vector"
   "os"
   "sync"
 )
@@ -20,6 +21,106 @@ const (
   SessionDuration = 60 * 60 * 24
   ServerSecret = "MakeMeASecret"
 )
+
+// ----------------------------------------------------
+// View
+
+type View struct {
+  session *Session
+  id string
+  queryId string
+  revision int64
+  keys vec.StringVector
+}
+
+func NewView(session *Session, viewId string, mapping DocumentMappingId, withTags []string, withoutTags []string) *View {
+  r := &View{session:session, id:viewId, revision:0}
+  r.queryId = session.Id + ":" + viewId
+  session.sessionDatabase.server.Indexer.Query(r.queryId, r, mapping, withTags, withoutTags)
+  return r
+}
+
+func (self *View) stop() {
+  self.session.sessionDatabase.server.Indexer.StopQuery(self.queryId)
+}
+
+func (self *View) AddResult(queryId string, key string, value interface{}) {
+  log.Println("VIEW ADD", key, value)
+  mut := make(map[string]interface{})
+  mut["_rev"] = float64(self.revision)
+  self.revision++
+  mut["_endRev"] = float64(self.revision)
+  arraymut := make([]interface{}, 0, 2)
+  digmut := make(map[string]interface{})
+  digmut["value"] = value
+  digmut["key"] = key
+  arraymut = append(arraymut, digmut)
+  if len(self.keys) > 0 {
+    arraymut = append(arraymut, NewSkipMutation(len(self.keys)))
+  }
+  self.keys.Insert(0, key)
+  datamut := NewObjectMutation()
+  datamut["items"] = NewArrayMutation(arraymut)
+  mut["_data"] = datamut
+  self.send(mut)
+}
+
+func (self *View) UpdateResult(queryId string, key string, value interface{}) {
+  log.Println("VIEW UPDATE", key, value)
+  mut := make(map[string]interface{})
+  mut["_rev"] = float64(self.revision)
+  self.revision++
+  arraymut := make([]interface{}, 0, 3)
+  // What is the position of this key
+  for i, k := range self.keys {
+    if key != k {
+      continue
+    }
+    if i > 0 {
+      arraymut = append(arraymut, NewSkipMutation(i))
+    }
+    digmut := NewObjectMutation()
+    digmut["value"] = value
+    arraymut = append(arraymut, value)
+    if len(self.keys) > i + 1 {
+      arraymut = append(arraymut, NewSkipMutation(len(self.keys) - i - 1))
+    }
+    self.send(mut)
+    return
+  }
+}
+
+func (self *View) DeleteResult(queryId string, key string) {
+  log.Println("VIEW DELETE", key)
+  mut := make(map[string]interface{})
+  mut["_rev"] = float64(self.revision)
+  self.revision++
+  arraymut := make([]interface{}, 0, 3)
+  // What is the position of this key
+  for i, k := range self.keys {
+    if key != k {
+      continue
+    }
+    if i > 0 {
+      arraymut = append(arraymut, NewSkipMutation(i))
+    }
+    arraymut = append(arraymut, NewDeleteMutation(1))
+    if len(self.keys) > i + 1 {
+      arraymut = append(arraymut, NewSkipMutation(len(self.keys) - i - 1))
+    }
+    self.send(mut)
+    return
+  }
+}
+
+func (self *View) send(mut map[string]interface{}) {
+  jsonmut, err := json.Marshal(mut)
+  if err != nil {
+    panic("Cannot serializa JSON")
+  }
+  log.Println("VIEW", "/_view/" + self.id, string(jsonmut))
+  self.session.Enqueue( &UpdateMsg{URI:"/_view/" + self.id, Mutation: []string{string(jsonmut)}} )
+}
 
 // ----------------------------------------------------
 // Helper function, thanks to web.go
@@ -125,11 +226,25 @@ type SessionPollRequest struct {
 type SessionOpenDocRequest struct {
   SessionRequest
   DocumentURI string
+  Snapshot bool
 }
 
 type SessionCloseDocRequest struct {
   SessionRequest
   DocumentURI string
+}
+
+type SessionOpenViewRequest struct {
+  SessionRequest
+  ViewId string
+  Mapping DocumentMappingId
+  WithTags []string
+  WithoutTags []string
+}
+
+type SessionCloseViewRequest struct {
+  SessionRequest
+  ViewId string
 }
 
 type SessionCloseMsg struct {
@@ -151,6 +266,9 @@ type Session struct {
   // The value is the document describing this update, i.e. a serialized JSON document
   queue map[string][]string
   openDocs map[string]bool
+  // The key is the view ID transmitted by the client.
+  // The value is the queryId that has been passed to the indexer.
+  openViews map[string]*View
 }
 
 func newSession(sessionDatabase *SessionDB, username string) *Session {
@@ -162,6 +280,7 @@ func newSession(sessionDatabase *SessionDB, username string) *Session {
   s.channel = make(chan interface{}, 10)
   s.queue = make(map[string][]string)
   s.openDocs = make(map[string]bool)
+  s.openViews = make(map[string]*View)
   return s
 }
 
@@ -184,6 +303,10 @@ func (self *Session) Run() {
 	self.openDoc(msg.(*SessionOpenDocRequest))
       case *SessionCloseDocRequest:
 	self.closeDoc(msg.(*SessionCloseDocRequest))
+      case *SessionOpenViewRequest:
+	self.openView(msg.(*SessionOpenViewRequest))
+      case *SessionCloseViewRequest:
+	self.closeView(msg.(*SessionCloseViewRequest))
       case *SessionCloseMsg:
 	self.closeSession()
 	return
@@ -192,6 +315,52 @@ func (self *Session) Run() {
       }
     }
   }
+}
+
+func (self *Session) openView(msg *SessionOpenViewRequest) {
+  msg.Response.SetHeader("Content-Type", "application/json")
+
+  if _, ok := self.openViews[msg.ViewId]; ok {
+    _, err := msg.Response.Write( []byte("{\"ok\":false, \"error\":\"View ID is already in use.\"}") )
+    if err != nil {
+      log.Println("Failed writing HTTP response")
+      msg.FinishSignal <- false
+    }
+    msg.FinishSignal <- true
+  }
+  view := NewView(self, msg.ViewId, msg.Mapping, msg.WithTags, msg.WithoutTags)
+  self.openViews[msg.ViewId] = view  
+
+  _, err := msg.Response.Write( []byte("{\"ok\":true}") )
+  if err != nil {
+    log.Println("Failed writing HTTP response")
+    msg.FinishSignal <- false
+  }
+  msg.FinishSignal <- true
+}
+
+func (self *Session) closeView(msg *SessionCloseViewRequest) {
+  msg.Response.SetHeader("Content-Type", "application/json")
+
+  view, ok := self.openViews[msg.ViewId]
+  if !ok {
+    _, err := msg.Response.Write( []byte("{\"ok\":false, \"error\":\"Unknown view ID\"}") )
+    if err != nil {
+      log.Println("Failed writing HTTP response")
+      msg.FinishSignal <- false
+    }
+    msg.FinishSignal <- true
+  }
+  
+  view.stop()
+  self.openViews[msg.ViewId] = nil, false
+  
+  _, err := msg.Response.Write( []byte("{\"ok\":true}") )
+  if err != nil {
+    log.Println("Failed writing HTTP response")
+    msg.FinishSignal <- false
+  }
+  msg.FinishSignal <- true
 }
 
 func (self *Session) openDoc(msg *SessionOpenDocRequest) {
@@ -207,7 +376,7 @@ func (self *Session) openDoc(msg *SessionOpenDocRequest) {
   } ()
   if _, ok := self.openDocs[msg.DocumentURI]; !ok {
     response := make(chan bool)
-    self.sessionDatabase.server.PubSub( &PubSubRequest{Action:Subscribe, DocumentURI:msg.DocumentURI, Subscriber:self, FinishSignal:response, Snapshot:true, Id:self.Id} )
+    self.sessionDatabase.server.PubSub( &PubSubRequest{Action:Subscribe, DocumentURI:msg.DocumentURI, Subscriber:self, FinishSignal:response, Snapshot:msg.Snapshot, Id:self.Id} )
     // Wait for the result
     success = <-response
     if success {
@@ -251,9 +420,9 @@ func (self *Session) closeSession() {
 }
 
 // For Subscriber interface
-func (self *Session) Update(msg *UpdateMsg) {
-  self.channel <- msg
-}
+//func (self *Session) Update(msg *UpdateMsg) {
+//  self.channel <- msg
+//}
 
 func (self *Session) update(msg *UpdateMsg) {
   log.Println("Update for session ", self.Id, " from URI ", msg.URI)
