@@ -22,8 +22,56 @@ LW.Social.initCallback_ = function(reply) {
     LW.Session.init();
 
     var renderInboxEntry = function(jsDoc, jsObject, state) {
-        // state.dom.innerHTML = '<span class="title">' + jsObject.authors + '</span> <span class="digest">' + jsObject.digest + '</span>';
-        state.dom.innerHTML = '<span class="title">' + jsObject.value + '</span>';
+        // state.dom.innerHTML = '<span class="title">' + jsObject.value + '</span>';
+        var html = "";
+        html += '<table style="font-size:10pt; width:100%">'
+        html += '  <tbody>';
+        html += '    <tr>';
+        html += '      <td style="vertical-align:top; width:42px">';
+        html += '        <img style="height:40px" src="images/unknown.png">';
+        html += '      </td>';
+        html += '      <td>';
+        html += '        <div style="color:#3b5998; margin-bottom:2px">' + jsObject.value.author + '</div>';
+        html += '        <div>' + jsObject.value.text + '</div>';
+        html += '        <div style="margin-top:3px"><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span> <span style="color:#3b5998">Comment</span></div>';
+        if ( jsObject.value.comments.length > 0 ) {
+            html += '<div class="thread-digest">';
+            if ( jsObject.value.blipCount > 1 + jsObject.value.comments.length ) {
+                html += '<div class="blip-digest">';
+                html += '  <div class="blip-digest-border"></div>';
+                html += '  <span style="color:#3b5998">View all ' + jsObject.value.blipCount.toString() + ' comments</span>';
+                html += '</div>';
+            }
+            html += '<div class="blip-digest">';
+            html += '  <div class="blip-digest-border"></div>';
+            html += '  <span style="color:#3b5998">Torben</span> and 2 people like this';
+            html += '</div>';
+            for ( var i = 0; i < jsObject.value.comments.length; ++i ) {
+                var c = jsObject.value.comments[i];
+                html += '<div class="blip-digest">';
+                html += '  <div class="blip-digest-border"></div>';
+                html += '  <table style="font-size:10pt; margin:0px">';
+                html += '    <tbody>';
+                html += '      <tr>';
+                html += '        <td style="vertical-align:top">';
+                html += '          <img style="height:27px" src="../images/unknown.png">';
+                html += '        </td>';
+                html += '        <td>';
+                html += '          <div><span style="color:#3b5998; margin-bottom:2px">' + c.author + ' </span>' + c.text + '</div>';
+                html += '          <div><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span> <span style="color:#3b5998">Comment</span></div>';
+                html += '        </td>';
+                html += '      </tr>';
+                html += '    </tbody>';
+                html += '  </table>';
+                html += '</div>';
+            }
+        }
+        html += '      </td>';
+        html += '    </tr>';
+        html += '  </tbody>';
+        html += '</table>';
+        html += '<div style="margin-top:3px; margin-bottom:1px" class="blip-digest-border"></div>';
+        state.dom.innerHTML = html;
         state.dom.onclick = function() {
             var newdoc = LW.Inbox.getOrCreateDoc(jsObject.key);
             LW.Social.documentController.bind(newdoc, newdoc.content._data);
@@ -35,7 +83,7 @@ LW.Social.initCallback_ = function(reply) {
     var createEntry = function(jsDoc, jsObject, states, index) {
         var state = states[index];
         state.dom = document.createElement("div");
-        state.dom.className = "inbox-entry";
+        // state.dom.className = "inbox-entry";
         state.controller = new LW.Controller.ObjectController(state.dom, renderInboxEntry, null );
         state.controller.bind(jsDoc, jsObject);
     };
