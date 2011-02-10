@@ -197,3 +197,29 @@ html, body {
 .friend:hover .friend-id {
   color:#ccc;
 }
+
+.thread-digest {
+  position:relative;
+  left:-8px;
+  margin-top:3px;
+  margin-left:12px;
+  border-left:1px solid #ccc;
+  border-right:1px solid #ddd;
+  border-bottom-left-radius:6px;
+  border-bottom-right-radius:6px;
+  border-bottom:1px solid #ccc;
+  padding-left:8px;
+  padding-right:6px;
+   box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+  -moz-box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+  -webkit-box-shadow:-3px 3px 3px rgba(0,0,0,0.1);
+}
+.blip-digest {
+  margin-top:0px;
+  margin-bottom:0px;
+}
+.blip-digest-border {
+  border-top:1px dotted #ccc;
+  margin-bottom:1px;
+  position:relative;
+}

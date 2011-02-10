@@ -279,26 +279,16 @@ func (self *DocumentNode) Participants() []*UserId {
   return result
 }
 
-/*
-func countComments(comments []interface{}) int {
-  count := len(comments)
-  for _, x := range comments {
-    c, ok := x.(map[string]interface{})
-    if !ok {
-      continue
-    }
-    next, ok := c["comments"]
-    if !ok {
-      continue
-    }
-    nextcomments, ok := next.([]interface{})
-    if ok {
-      count += countComments(nextcomments)
+
+func countBlips(blips []interface{}) int {
+  count := len(blips)
+  for _, x := range blips {
+    for _, t := range getArray(getObject(x)["threads"]) {
+      count += countBlips( getArray(getObject(t)["blips"]) )
     }
   }
   return count
 }
-*/
 
 func getObject(obj interface{}) map[string]interface{} {
   result, ok := obj.(map[string]interface{})
@@ -336,12 +326,37 @@ func (self *DocumentNode) Digest() map[string]interface{} {
 	digest += str
       } else if getString(getObject(t)["_type"]) == "parag" {
 	if digest != "" {
-	  digest += "\n"
+	  digest += "</br>"
 	}
       }	
     }
     result["text"] = digest
   }
+  // Add data about the last 5 comments in the main thread
+  comments := make([]interface{}, 0, 3)
+  l := len(blips) - 1
+  if l > 3 {
+    l = 3
+  }
+  for i := len(blips) - l; i < len(blips); i++ {
+    c := make(map[string]interface{})
+    c["author"] = getString(getObject(getObject(blips[i])["_meta"])["author"])
+    text := getArray(getObject(getObject(blips[i])["content"])["text"])
+    digest := ""
+    for _, t := range text {
+      if str, ok := t.(string); ok {
+	digest += str
+      } else if getString(getObject(t)["_type"]) == "parag" {
+	if digest != "" {
+	  digest += "</br>"
+	}
+      }	
+    }
+    c["text"] = digest
+    comments = append(comments, c)
+  }
+  result["comments"] = comments
+  result["blipCount"] = countBlips(blips)
   return result
 }
 

@@ -89,7 +89,7 @@ type MemoryIndexer struct {
 }
 
 func NewMemoryIndexer(mapper DocumentMapper, diskIndexer *DiskIndexer) *MemoryIndexer {
-  r := &MemoryIndexer{mapper:mapper, indices:make(map[string]*MemoryIndex), entries:make(map[string]*MemoryIndexEntry), queries:make(map[string]*Query), channel:make(chan interface{}, 100)}
+  r := &MemoryIndexer{mapper:mapper, indices:make(map[string]*MemoryIndex), entries:make(map[string]*MemoryIndexEntry), queries:make(map[string]*Query), channel:make(chan interface{}, 1000)}
   r.diskIndexer = diskIndexer
   r.modifiedEntries = make(map[string]bool)
   r.ticker = time.NewTicker(1000000000 * 10)
@@ -171,6 +171,7 @@ func (self *MemoryIndexer) put(key string, value map[DocumentMappingId]interface
   if !ok {
     // Create a new entry
     entry = &MemoryIndexEntry{Key:key, Value:value, TagElements:make(map[string]*list.Element)}
+    self.entries[key] = entry
   } else {
     oldentry = &MemoryIndexEntry{Key:key, Value:entry.Value, TagElements:entry.TagElements}
   }
@@ -458,7 +459,8 @@ func (self *DiskIndexer) Delete(key string) {
 
 func (self *DiskIndexer) Put(key string, values map[DocumentMappingId]interface{}, tags []string) {
   self.Delete(key)
-
+  log.Println("DB WRITE ", key, values, tags)
+  
   stmnt, err := self.dbcon.Prepare("INSERT INTO Digest VALUES ( ?1, ?2, ?3 )")
   if err != nil {
     panic(err.String())
@@ -495,7 +497,7 @@ func (self *DiskIndexer) Query(mapping DocumentMappingId, tags []string, noTags 
   for i := 0; i < len(tags); i++ {
     sql += ")"
   }
-  log.Println(sql)
+  log.Println(sql, mapping)
   stmnt, err := self.dbcon.Prepare(sql)
   if err != nil {
     panic(err.String())

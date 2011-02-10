@@ -65,7 +65,9 @@ func (self *View) AddResult(queryId string, key string, value interface{}) {
   mut["_endRev"] = float64(self.revision)
   arraymut := make([]interface{}, 0, 2)
   digmut := make(map[string]interface{})
-  digmut["value"] = value
+  jsonValue := make(map[string]interface{})
+  json.Unmarshal([]byte(value.(string)), &jsonValue)
+  digmut["value"] = jsonValue
   digmut["key"] = key
   arraymut = append(arraymut, digmut)
   if len(self.keys) > 0 {
@@ -93,7 +95,9 @@ func (self *View) updateResult(queryId string, key string, value interface{}) {
       arraymut = append(arraymut, NewSkipMutation(i))
     }
     digmut := NewObjectMutation()
-    digmut["value"] = value
+    jsonValue := make(map[string]interface{})
+    json.Unmarshal([]byte(value.(string)), &jsonValue)
+    digmut["value"] = jsonValue
     arraymut = append(arraymut, digmut)
     if len(self.keys) > i + 1 {
       arraymut = append(arraymut, NewSkipMutation(len(self.keys) - i - 1))
