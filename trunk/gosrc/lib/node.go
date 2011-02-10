@@ -300,39 +300,50 @@ func countComments(comments []interface{}) int {
 }
 */
 
-/*
-func (self *DocumentNode) Digest() (digest string, authors string, commentCount int) {
-  // Generate the digest HTML fragment for the authors
-  participants := self.Participants()
-  lst := make([]string, len(participants))
-  for i, p := range participants {
-    // TODO: Escape name
-    // TODO: Try to get real name of the person
-    lst[i] = "<b>" + p.Username + "</b>"
-  }
-  digestAuthors := strings.Join(lst,",")
-  // Count comments
-  data := self.doc["_data"].(map[string]interface{})
-  tmp, ok := data["comments"]
-  digestCommentCount := 0
+func getObject(obj interface{}) map[string]interface{} {
+  result, ok := obj.(map[string]interface{})
   if ok {
-    comments, ok := tmp.([]interface{})
-    if ok {
-      digestCommentCount = countComments(comments)
-    }
+    return result
   }
-  // Generate the digest string for the document content
-  tmp, ok = data["title"];
-  if !ok {
-    return "", digestAuthors, digestCommentCount
-  }
-  title, ok := tmp.(string)
-  if !ok {
-    return "", digestAuthors, digestCommentCount
-  }
-  return title, digestAuthors, digestCommentCount
+  return make(map[string]interface{})
 }
-*/
+
+func getArray(obj interface{}) []interface{} {
+  result, ok := obj.([]interface{})
+  if ok {
+    return result
+  }
+  return []interface{}{}
+}
+
+func getString(obj interface{}) string {
+  result, ok := obj.(string)
+  if ok {
+    return result
+  }
+  return ""
+}
+
+func (self *DocumentNode) Digest() map[string]interface{} {
+  result := make(map[string]interface{})
+  blips := getArray(getObject(self.doc["_data"])["blips"])
+  if len(blips) > 0 {
+    result["author"] = getString(getObject(getObject(blips[0])["_meta"])["author"])
+    text := getArray(getObject(getObject(blips[0])["content"])["text"])
+    digest := ""
+    for _, t := range text {
+      if str, ok := t.(string); ok {
+	digest += str
+      } else if getString(getObject(t)["_type"]) == "parag" {
+	if digest != "" {
+	  digest += "\n"
+	}
+      }	
+    }
+    result["text"] = digest
+  }
+  return result
+}
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   if !(IsDocumentMutation(mutation)) {
@@ -712,7 +723,8 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
 }
 
 func (self *DocumentNode) view(mapping DocumentMappingId) string {
-  return "TODO"
+  result, _ := json.Marshal(self.Digest())
+  return string(result)
 }
 
 func (self *DocumentNode) loadDocument(name string) Node {

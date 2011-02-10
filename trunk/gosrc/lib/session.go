@@ -44,7 +44,20 @@ func (self *View) stop() {
   self.session.sessionDatabase.server.Indexer.StopQuery(self.queryId)
 }
 
+func (self *View) hasKey(key string) bool {
+  for _, k := range self.keys {
+    if k == key {
+      return true
+    }
+  }
+  return false
+}
+
 func (self *View) AddResult(queryId string, key string, value interface{}) {
+  if self.hasKey(key) {
+    self.updateResult(queryId, key, value)
+    return
+  }
   log.Println("VIEW ADD", key, value)
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.revision)
@@ -65,7 +78,7 @@ func (self *View) AddResult(queryId string, key string, value interface{}) {
   self.send(mut)
 }
 
-func (self *View) UpdateResult(queryId string, key string, value interface{}) {
+func (self *View) updateResult(queryId string, key string, value interface{}) {
   log.Println("VIEW UPDATE", key, value)
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.revision)
@@ -81,10 +94,13 @@ func (self *View) UpdateResult(queryId string, key string, value interface{}) {
     }
     digmut := NewObjectMutation()
     digmut["value"] = value
-    arraymut = append(arraymut, value)
+    arraymut = append(arraymut, digmut)
     if len(self.keys) > i + 1 {
       arraymut = append(arraymut, NewSkipMutation(len(self.keys) - i - 1))
     }
+    datamut := NewObjectMutation()
+    datamut["items"] = NewArrayMutation(arraymut)
+    mut["_data"] = datamut
     self.send(mut)
     return
   }
@@ -94,7 +110,6 @@ func (self *View) DeleteResult(queryId string, key string) {
   log.Println("VIEW DELETE", key)
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.revision)
-  self.revision++
   arraymut := make([]interface{}, 0, 3)
   // What is the position of this key
   for i, k := range self.keys {
@@ -108,6 +123,10 @@ func (self *View) DeleteResult(queryId string, key string) {
     if len(self.keys) > i + 1 {
       arraymut = append(arraymut, NewSkipMutation(len(self.keys) - i - 1))
     }
+    datamut := NewObjectMutation()
+    datamut["items"] = NewArrayMutation(arraymut)
+    mut["_data"] = datamut    
+    self.revision++
     self.send(mut)
     return
   }
