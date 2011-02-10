@@ -210,17 +210,9 @@ type DocumentNode struct {
   level int
   doc map[string]interface{}
   subscriptions map[string]Subscriber
-  // Maps user names to a bool. If true, send digest updates to the user's inbox.
-  digestMode map[string]bool
   // List of domains which participate in federating this document
   federatedDomains map[string]bool
   history *DocumentHistory
-  // Cashed digest string
-  digest string
-  // Cashed digest authors
-  digestAuthors string
-  // Cashed digest message count
-  digestMessageCount int
   mappings map[DocumentMappingId]interface{}
   tags []string
 }
@@ -237,10 +229,6 @@ func NewDocumentNode(parent Node, name string, level int) *DocumentNode {
   if d.history.broken {
     log.Println("Failed to read: ", d.URI())
   }
-  d.digestMode = make(map[string]bool)
-  d.digest = ""
-  d.digestAuthors = ""
-  d.digestMessageCount = 0
   d.tags = []string{}
   d.mappings = make(map[DocumentMappingId]interface{})
   return d
