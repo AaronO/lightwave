@@ -31,9 +31,10 @@ LW.Social.initCallback_ = function(reply) {
         html += '        <img style="height:40px" src="images/unknown.png">';
         html += '      </td>';
         html += '      <td>';
+        html += '        <div style="text-align:right; float:right; margin-top:3px"><span style="color:#aaa">12:48 pm</span><br><span style="color:#3b5998">Like</span></div>';
         html += '        <div style="color:#3b5998; margin-bottom:2px">' + jsObject.value.author + '</div>';
         html += '        <div>' + jsObject.value.text + '</div>';
-        html += '        <div style="margin-top:3px"><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span> <span style="color:#3b5998">Comment</span></div>';
+//        html += '        <div style="margin-top:3px"><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span> <span style="color:#3b5998">Comment</span></div>';
         if ( jsObject.value.comments.length > 0 ) {
             html += '<div class="thread-digest">';
             if ( jsObject.value.blipCount > 1 + jsObject.value.comments.length ) {
@@ -42,10 +43,12 @@ LW.Social.initCallback_ = function(reply) {
                 html += '  <span style="color:#3b5998">View all ' + jsObject.value.blipCount.toString() + ' comments</span>';
                 html += '</div>';
             }
-            html += '<div class="blip-digest">';
-            html += '  <div class="blip-digest-border"></div>';
-            html += '  <span style="color:#3b5998">Torben</span> and 2 people like this';
-            html += '</div>';
+            if ( jsObject.value.likes ) {
+                html += '<div class="blip-digest">';
+                html += '  <div class="blip-digest-border"></div>';
+                html += '  <span style="color:#3b5998">Torben</span> and 2 people like this';
+                html += '</div>';
+            }
             for ( var i = 0; i < jsObject.value.comments.length; ++i ) {
                 var c = jsObject.value.comments[i];
                 html += '<div class="blip-digest">';
@@ -58,7 +61,7 @@ LW.Social.initCallback_ = function(reply) {
                 html += '        </td>';
                 html += '        <td>';
                 html += '          <div><span style="color:#3b5998; margin-bottom:2px">' + c.author + ' </span>' + c.text + '</div>';
-                html += '          <div><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span> <span style="color:#3b5998">Comment</span></div>';
+                html += '          <div><span style="color:#aaa">12:48 pm</span> <span style="color:#3b5998">Like</span></div>';
                 html += '        </td>';
                 html += '      </tr>';
                 html += '    </tbody>';
@@ -102,6 +105,10 @@ LW.Social.initCallback_ = function(reply) {
     var inbox = LW.Inbox.getOrCreateDoc("/_view/inbox")
     LW.Social.inboxController.bind(inbox, inbox.content._data);
 
+    var friends = LW.Session.openView("friends", 'map=digest&with=friend:' + LW.Rpc.user  + "@" + LW.Rpc.domain);
+    LW.Social.friendsController = LW.Social.createFriendsController(document.getElementById("friends"));
+    LW.Social.friendsController.bind(friends, friends.content._data);
+
     LW.Social.documentController = LW.Social.createConversationController(document.getElementById("document"));
     LW.Social.participantsController = LW.Social.createParticipantsController(document.getElementById("document-panel"));
 
@@ -142,6 +149,86 @@ LW.Social.initCallback_ = function(reply) {
         LW.Rpc.logout = true;
         window.location.pathname = "/_logout";
     });
+    $("#show-share-status").click( function() {
+        $("#share-status").show();
+        $("#share-link").hide();
+    });
+    $("#show-share-link").click( function() {
+        $("#share-link").show();
+        $("#share-status").hide();
+    });
+    $("#share-status-edit").focus( function() {
+        if ( this.innerText == "What's on your mind?" ) {
+            this.innerHTML = "";
+            this.style.color = "black";
+            $("#share-status-button").show();
+        }
+    });
+    $("#share-status-edit").blur( function() {
+        if ( !this.innerText || trim(this.innerText) == "" ) {
+            this.innerHTML = "What's on your mind?"
+            this.style.color = "#999";
+            $("#share-status-button").hide();
+        }
+    });
+    $("#share-status-button").click( function() {
+        var edit = $("#share-status-edit")[0]
+        if ( edit.innerText && trim(edit.innerText) != "" ) {
+            var newdoc = LW.Model.createDocument(trim(edit.innerText))
+            LW.Session.open(newdoc.url, false);
+            edit.innerHTML = "What's on your mind?"
+            edit.style.color = "#999";
+            $("#share-status-button").hide();
+        }
+    });
+    $("#share-link-edit").focus( function() {
+        if ( this.innerText == "http://" ) {
+            this.innerHTML = "";
+            this.style.color = "black";
+            $("#share-link-button").show();
+        }
+    });
+    $("#share-link-edit").blur( function() {
+        if ( !this.innerText || trim(this.innerText) == "" ) {
+            this.innerHTML = "http://"
+            this.style.color = "#999";
+            $("#share-link-button").hide();
+        }
+    });
+};
+
+LW.Social.createFriendsController = function(parentdom) {
+    var updateFriend = function(jsDoc, jsObject, state) {
+        var html = '<img style="float:left" src="../images/unknown.png"><span style="color:#3b5998">' + jsObject.value.displayName + '</span></br><span style="color:#666">' + jsObject.value.userid + '</span>';
+        state.dom.innerHTML = html;
+        state.dom.alt = jsObject.displayName;
+    };
+    var createFriend = function(jsDoc, jsObject, states, index) {
+        var state = states[index];
+        state.dom = document.createElement("div");
+        state.dom.className = "clearfix friend";
+        state.controller = new LW.Controller.ObjectController(state.dom, updateFriend, null, null );
+        state.controller.bind(jsDoc, jsObject);
+    };
+    var deleteFriend = function(jsDoc, jsObject, states, index) {
+        var state = states[index];
+        if ( state.controller ) {
+            state.controller.unbind();
+            delete state.controller;
+        }
+    };
+    var bindFunc = function(jsDoc, jsObject, state) {
+        if ( !state.controller ) {
+            state.controller = new LW.Controller.ListController( parentdom, null, createFriend, deleteFriend);
+        }
+        state.controller.bind(jsDoc, jsObject);
+    };
+    var unbindFunc = function(jsDoc, jsObject, state) {
+        if ( state.controller ) {
+            state.controller.unbind();
+        }
+    };
+    return new LW.Controller.AttributeController(parentdom, "items", bindFunc, unbindFunc);
 };
 
 LW.Social.createParticipantsController = function(parentdom) {
@@ -293,14 +380,20 @@ LW.Social.createConversationController = function(parentdom) {
     return new LW.Controller.AttributeController(parentdom, "blips", bindBlipsFunc, unbindBlipsFunc);
 };
 
+/*
 LW.Social.newDocument = function() {
     var newdoc = LW.Model.createDocument();
     LW.Social.documentController.bind(newdoc, newdoc.content._data);
     LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
     LW.Session.open(newdoc.url, false);
 };
+*/
 
 // TODO
 function esc(str) {
     return str;
+}
+
+function trim(str) {
+  return str.replace (/^\s+/, '').replace (/\s+$/, '');
 }

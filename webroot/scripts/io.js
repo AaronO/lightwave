@@ -207,6 +207,7 @@ LW.Session.openView = function(id, query) {
         alert("View ID used multiple times")
     }
     LW.Rpc.get("/_session/_openView?id=" + id + "&" + query, function(reply) { LW.Session.openViewCallback_(reply, id); }, LW.Session.sessionErrCallback_);
+    return LW.Inbox.getOrCreateDoc("/_view/" + id);
 };
 
 // Response to the request of adding a document to the session

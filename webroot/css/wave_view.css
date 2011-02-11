@@ -223,3 +223,32 @@ html, body {
   margin-bottom:1px;
   position:relative;
 }
+.navi-link {
+  padding-left:4px;
+  padding-bottom:2px;
+  padding-top:2px;
+}
+.navi-link:hover {
+ background-color:#eee
+}
+.selected-navi-link {
+  padding-left:4px;
+  padding-bottom:2px;
+  padding-top:2px;
+ background-color:#ddd
+}
+.share-button {
+  display:none
+}
+#show-share-status {
+  cursor:pointer
+}
+#show-share-link {
+  cursor:pointer
+}
+#share-link {
+  display:none;
+}
+.friend {
+  margin-bottom:3px;
+}

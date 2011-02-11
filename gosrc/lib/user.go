@@ -128,12 +128,28 @@ func (self *UserRootNode) Run() {
   }
 }
 
-func (self *UserRootNode) CreateUser(name string) *UserNode {
+func (self *UserRootNode) CreateUser(name, displayName, email string) *UserNode {
   if _, ok := self.users[name]; ok {
     log.Println("User already exists")
     return nil
   }
   u := NewUserNode(self, name)
+  
+  mut := make(map[string]interface{})
+  mut["_rev"] = float64(u.Revision())
+  datamut := NewObjectMutation()
+  datamut["userid"] = name + "@" + self.Server().Capabilities().Domain
+  datamut["displayName"] = displayName
+  datamut["email"] = email
+  datamut["image"] = "/images/unknown.png"
+  // HACK
+  datamut["friends"] = []interface{}{"tux@localhost", "konqi@localhost"}
+  mut["_data"] = datamut
+  metamut := NewObjectMutation()
+  metamut["schema"] = "//lightwave/user"
+  mut["_meta"] = metamut
+  u.apply(mut)
+
   go u.Run()
   self.addChild(u)
   return u
@@ -142,41 +158,37 @@ func (self *UserRootNode) CreateUser(name string) *UserNode {
 func (self *UserRootNode) post(req *PostRequest) {
   uri := req.URI.(DocumentURI)
   if len(uri.NameSeq) < 2 {
-    makeErrorResponse(req.Response, "Cannot get _user")
+    makeErrorResponse(req.Response, "Cannot post to _user")
     req.FinishSignal <- false
     return
   }
   // Check for the user node
+  var u Node
   u, ok := self.users[uri.NameSeq[1]]
-  if ok {
-    u.Post(req)
-    return
+  if !ok {
+    u = self.loadDocument(uri.NameSeq[1])
   }
-  u = NewUserNode(self, uri.NameSeq[1])
-  oldfinish := req.FinishSignal
-  finish := make(chan bool)
-  req.FinishSignal = finish
-  go u.Run()
+  if u == nil {
+    makeErrorResponse(req.Response, "No such user")
+    req.FinishSignal <- false
+  }
   u.Post(req)
-  ok = <-finish
-  if ok {
-    self.addChild(u)
-  } else {
-    u.Stop()
-  }
-  oldfinish <- ok
 }
 
 func (self *UserRootNode) get(req *GetRequest) {  
   uri := req.URI.(DocumentURI)
   if len(uri.NameSeq) < 2 {
-    makeErrorResponse(req.Response, "Cannot post _user")
+    makeErrorResponse(req.Response, "Cannot get _user")
     req.FinishSignal <- false
     return
   }
   // Check for the user node
+  var u Node
   u, ok := self.users[uri.NameSeq[1]]
   if !ok {
+    u = self.loadDocument(uri.NameSeq[1])
+  }
+  if u == nil {
     makeErrorResponse(req.Response, "The user does not exist")
     req.FinishSignal <- false
     return
@@ -191,10 +203,24 @@ func (self *UserRootNode) pubSub(req* PubSubRequest) {
     return
   }
   // Send to all host nodes
+  var node Node
   node, ok := self.users[seq[2]]
-  if ok {
+  if !ok {
+    node = self.loadDocument(seq[2])
+  }
+  if node != nil {
     node.PubSub(req)
   }  
+}
+
+func (self *UserRootNode) loadDocument(name string) Node {
+  if !isDocumentPersisted(self.Server(), self.URI() + "/" + name) {
+    return nil
+  }
+  doc := NewUserNode(self, name)
+  go doc.Run()
+  self.addChild(doc)
+  return doc
 }
 
 func (self *UserRootNode) addChild(child *UserNode) {
@@ -276,6 +302,9 @@ func (self *UserAccountDB) SignUpUser(email string, displayname string, username
     return nil, err
   }  
   stmnt.Next()
+  
+  // Create a document for this user
+  self.server.LocalHost().Users().CreateUser(username, displayname, email)
   return user, nil
 }
 
