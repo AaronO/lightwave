@@ -22,6 +22,15 @@ type DocumentHistory struct {
   broken bool
 }
 
+func isHostPersisted(server* Server, host string) bool {
+  path := server.Config.DataRoot + "/" + host + ".dir"
+  _, err := os.Stat(path)
+  if err != nil {
+    return false
+  }
+  return true
+}
+
 func isDocumentPersisted(server* Server, uri string) bool {
   lst := strings.Split(uri[1:], "/", -1)
   pathlst := make([]string, len(lst) - 1)

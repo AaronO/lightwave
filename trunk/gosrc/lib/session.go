@@ -85,6 +85,7 @@ func (self *View) updateResult(queryId string, key string, value interface{}) {
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.revision)
   self.revision++
+  mut["_endRev"] = float64(self.revision)
   arraymut := make([]interface{}, 0, 3)
   // What is the position of this key
   for i, k := range self.keys {
@@ -114,6 +115,7 @@ func (self *View) DeleteResult(queryId string, key string) {
   log.Println("VIEW DELETE", key)
   mut := make(map[string]interface{})
   mut["_rev"] = float64(self.revision)
+  mut["_endRev"] = float64(self.revision + 1)
   arraymut := make([]interface{}, 0, 3)
   // What is the position of this key
   for i, k := range self.keys {
@@ -350,6 +352,7 @@ func (self *Session) openView(msg *SessionOpenViewRequest) {
       msg.FinishSignal <- false
     }
     msg.FinishSignal <- true
+    return
   }
   view := NewView(self, msg.ViewId, msg.Mapping, msg.WithTags, msg.WithoutTags)
   self.openViews[msg.ViewId] = view  
@@ -373,6 +376,7 @@ func (self *Session) closeView(msg *SessionCloseViewRequest) {
       msg.FinishSignal <- false
     }
     msg.FinishSignal <- true
+    return
   }
   
   view.stop()

@@ -15,7 +15,8 @@ GOFILES=\
 	capabilities_store.go \
 	staticnode.go \
 	config.go \
-	indexer.go
+	indexer.go \
+	digest.go
 
 GC += -I ../wave/_obj
 LD += -L ../wave/_obj

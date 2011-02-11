@@ -429,9 +429,9 @@ func configure() (*lightwave.Config, os.Error) {
     go f.Run()
     server.AddChild(f)
     // TODO: This is a hack
-    server.LocalHost().Users().CreateUser("weis")
-    server.LocalHost().Users().CreateUser("tux")
-    server.LocalHost().Users().CreateUser("konqi")
+    // server.LocalHost().Users().CreateUser("weis")
+    // server.LocalHost().Users().CreateUser("tux")
+    // server.LocalHost().Users().CreateUser("konqi")
     // TODO: This is a hack
     if _, err := server.UserAccountDatabase.FindUser("weis"); err != nil {
       server.UserAccountDatabase.SignUpUser("weis@mail.com", "Torben", "weis", "pass")

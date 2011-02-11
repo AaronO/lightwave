@@ -29,19 +29,46 @@
   <span id="username">x@y</span> |
   <span id="logout" style="cursor:pointer; color:blue; text-decoration:underline">Logout</span>
 </div>
-  
-<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:10px; width:500px;">
-  <div class="wave-titlebar">Title</div>
-  <div class="wave-section-blue search">
-    <div class="searchInner">
-      <button style="float:left" onclick="LW.Social.newDocument()">New</button><span style="display:block; overflow:hidden"><input style="font-size:16px; outline:none; width:100%" type="text" class="wave-searchbox"></span>
-    </div>
-  </div>
-  <div class="wave-section" id="inbox" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;">
+
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:10px; width:180px; height:186px">
+  <div class="wave-titlebar">My Profile</div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:24px; bottom:10px; left:0px; right:0px;">
+   <div class="clearfix" style="margin-bottom:6px"><img style="float:left; width:60px; margin-right:4px" src="../images/torben.jpg"><span style="color:#3b5998">Torben Weis</span></br><span style="color:#666">weis@localhost</span></div>
+   <div class="selected-navi-link"><span style="font-weight:bold">Home</span></div>
+   <div class="navi-link"><span style="">Friends</span></div>
+   <div class="navi-link"><span style="">Info</span></div>
+   </div>
   </div>
 </div>
 
-<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:530px; right:10px;" id="document-panel">
+<div class="wave-panel" style="position:absolute; top:220px; bottom:20px; left:10px; width:180px;">
+  <div class="wave-titlebar">Friends</div>
+  <div class="wave-section-blue search">
+    <div class="searchInner">
+      <span style="display:block; overflow:hidden"><input style="font-size:16px; outline:none; width:100%" type="text" class="wave-searchbox"></span>
+    </div>
+  </div>
+  <div class="wave-section" id="friends" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;">
+  </div>
+</div>
+
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:200px; width:500px;">
+  <div class="wave-titlebar">News Feed</div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:24px; bottom:10px; left:0px; right:0px;">
+   <div>Share&nbsp;&nbsp;<span id="show-share-status" style="color:#3b5998">Status</span>&nbsp;&nbsp;<span id="show-share-link" style="color:#3b5998">Link</span>&nbsp;&nbsp;<span style="color:#3b5998">Photo</span></div>
+   <div class="clearfix" id="share-status" style="margin-top:4px; margin-bottom:4px">
+     <div class="share-edit" id="share-status-edit" style="border-radius:6px; background-color:white; border:1px solid #bdc7d8; color:#999; padding:4px; margin-bottom:4px" contentEditable="true">What's on your mind?</div>
+     <button id="share-status-button" class="share-button" style="float:right">Share</button>
+   </div>
+   <div class="clearfix" id="share-link" style="margin-top:4px; margin-bottom:4px">
+     <div class="share-edit" id="share-link-edit" style="border-radius:6px; background-color:white; border:1px solid #bdc7d8; color:#999; padding:4px; margin-bottom:4px" contentEditable="true">http://</div>
+     <button id="share-link-button" class="share-button" style="float:right">Share</button>
+   </div>
+   <div id="inbox"></div>
+ </div>
+</div>
+
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:710px; right:10px;" id="document-panel">
   <div class="wave-titlebar">Title</div>
   <div class="wave-section-blue participants">
     <div id="add-participant-button" style="float:left; position:relative; top:5px;"><button><span style="font-size:16px">+</span></button></div>
@@ -49,8 +76,6 @@
   <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
     <div class="mainthread"></div>
     <div class="reply clearfix" style="display:none; border-radius:6px; background-color:#ddd;color:#888;border:1px solid #888; padding:3px; font-style:italic; font-size:16px"><img class="author" src="../images/unknown.png"><div style="padding-top:4px">Click here to reply</div></div>
-
-    
   </div>
 </div>
 

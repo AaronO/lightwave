@@ -249,6 +249,10 @@ func (self *DocumentNode) Run() {
   }
 }
 
+func (self *DocumentNode) Schema() string {  
+  return getString(getObject(self.doc["_meta"])["schema"])
+}
+
 func (self *DocumentNode) Participants() []*UserId {  
   meta, ok := self.doc["_meta"]
   if !ok {
@@ -279,86 +283,6 @@ func (self *DocumentNode) Participants() []*UserId {
   return result
 }
 
-
-func countBlips(blips []interface{}) int {
-  count := len(blips)
-  for _, x := range blips {
-    for _, t := range getArray(getObject(x)["threads"]) {
-      count += countBlips( getArray(getObject(t)["blips"]) )
-    }
-  }
-  return count
-}
-
-func getObject(obj interface{}) map[string]interface{} {
-  result, ok := obj.(map[string]interface{})
-  if ok {
-    return result
-  }
-  return make(map[string]interface{})
-}
-
-func getArray(obj interface{}) []interface{} {
-  result, ok := obj.([]interface{})
-  if ok {
-    return result
-  }
-  return []interface{}{}
-}
-
-func getString(obj interface{}) string {
-  result, ok := obj.(string)
-  if ok {
-    return result
-  }
-  return ""
-}
-
-func (self *DocumentNode) Digest() map[string]interface{} {
-  result := make(map[string]interface{})
-  blips := getArray(getObject(self.doc["_data"])["blips"])
-  if len(blips) > 0 {
-    result["author"] = getString(getObject(getObject(blips[0])["_meta"])["author"])
-    text := getArray(getObject(getObject(blips[0])["content"])["text"])
-    digest := ""
-    for _, t := range text {
-      if str, ok := t.(string); ok {
-	digest += str
-      } else if getString(getObject(t)["_type"]) == "parag" {
-	if digest != "" {
-	  digest += "</br>"
-	}
-      }	
-    }
-    result["text"] = digest
-  }
-  // Add data about the last 5 comments in the main thread
-  comments := make([]interface{}, 0, 3)
-  l := len(blips) - 1
-  if l > 3 {
-    l = 3
-  }
-  for i := len(blips) - l; i < len(blips); i++ {
-    c := make(map[string]interface{})
-    c["author"] = getString(getObject(getObject(blips[i])["_meta"])["author"])
-    text := getArray(getObject(getObject(blips[i])["content"])["text"])
-    digest := ""
-    for _, t := range text {
-      if str, ok := t.(string); ok {
-	digest += str
-      } else if getString(getObject(t)["_type"]) == "parag" {
-	if digest != "" {
-	  digest += "</br>"
-	}
-      }	
-    }
-    c["text"] = digest
-    comments = append(comments, c)
-  }
-  result["comments"] = comments
-  result["blipCount"] = countBlips(blips)
-  return result
-}
 
 func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
   if !(IsDocumentMutation(mutation)) {
@@ -404,29 +328,26 @@ func (self *DocumentNode) apply( mutation map[string]interface{} ) bool {
     s.Enqueue( &UpdateMsg{self.URI(), []string{string(jsonmsg)}})
   }
   // At this point we know that the mutation is applied.
-
-  users := self.Participants()
-  server := self.Server()
   
-  // Compute tags for the indexer
-  self.tags = make([]string, 0, len(users))
-  for _, u := range users {
-    self.tags = append(self.tags, "with:" + u.Username + "@" + u.Domain)
-  }
-  // Recompute all mappings
+  // Compute tags and digest for the indexer
+  server := self.Server()
+  self.tags = GetTags(self)
   for mapping, _ := range self.mappings {
     self.mappings[mapping] = self.view(mapping)
   }
-  server.Indexer.Put( self.URI(), self.mappings, self.tags )
-    
+  if len(self.mappings) > 0 || len(self.tags) > 0 {
+    server.Indexer.Put( self.URI(), self.mappings, self.tags )
+  }
+  
   // If this is just a remote server for this document, we are done
   if !self.Host().IsLocal() {
     return true
   }
-  
+
   // Find out whether there are new domains involved. In this case we
   // have to send the mutation as a wavelet update to all the others
   // This code assumes that the meta data can be arbitrarily malformed. This is perhaps overly defensive
+  users := self.Participants()
   self.federatedDomains = make(map[string]bool)  
   for _, u := range users {
     // If this is a remote user, we must federate
@@ -522,7 +443,10 @@ func (self *DocumentNode) post(req *PostRequest) {
   
   // Request is aimed at a child document
   doc, ok := self.children[docuri.NameSeq[self.level]]
-  if ok {
+  if !ok {
+    doc = self.loadDocument(docuri.NameSeq[self.level])
+  }
+  if doc != nil {
     doc.Post(req)
     return
   }
@@ -738,7 +662,7 @@ func (self *DocumentNode) pubSub(req *PubSubRequest) {
 }
 
 func (self *DocumentNode) view(mapping DocumentMappingId) string {
-  result, _ := json.Marshal(self.Digest())
+  result, _ := json.Marshal(GetDigest(self, mapping))
   return string(result)
 }
 
@@ -873,7 +797,7 @@ func (self *HostNode) pubSub(req* PubSubRequest) {
     node = self.loadDocument(seq[1])
   }
   if node == nil {
-    log.Println("Host ", seq[1], " does not exist")
+    log.Println("Document ", seq[1], " does not exist")
     return
   }
   node.PubSub(req)  
@@ -1081,7 +1005,7 @@ func (self *Server) pubSub(req* PubSubRequest) {
 }
 
 func (self *Server) loadHost(hostName string) *HostNode {
-  if !isDocumentPersisted(self, "/" + hostName) {
+  if !isHostPersisted(self, "/" + hostName) {
     return nil
   }
   h := NewHostNode(self, hostName)

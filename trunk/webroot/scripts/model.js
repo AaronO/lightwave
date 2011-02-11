@@ -15,12 +15,12 @@ if ( !window.LW ) {
 LW.Model = {
 };
 
-LW.Model.createDocument = function() {
+LW.Model.createDocument = function(text) {
     var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
     var doc = LW.Inbox.getOrCreateDoc(url);
     // Send delta to the server to persist the new document
-    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "participants":[{userid:LW.Rpc.user + "@" + LW.Rpc.domain, displayName:LW.Rpc.displayName}]},
-                            "_data":{"$object":true, "blips":[{"content":{"$rtf":true, "text":[{"_type":"parag"},"Hallo Wave"]}, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain}}]}});
+    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "schema":"//lightwave/blips", "participants":[{userid:LW.Rpc.user + "@" + LW.Rpc.domain, displayName:LW.Rpc.displayName}]},
+                            "_data":{"$object":true, "blips":[{"content":{"$rtf":true, "text":[{"_type":"parag"},text]}, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain}}]}});
     return doc;
 };
 
