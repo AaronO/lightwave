@@ -1,7 +1,6 @@
 package lightwave
 
 import (
-  list "container/list"
   "log"
   "time"
   sqlite "gosqlite.googlecode.com/hg/sqlite"
@@ -129,11 +128,7 @@ func (self *MemoryIndexer) writeToDisk() {
     if !ok {
       self.diskIndexer.Delete(key)
     } else {
-      tags := make([]string, 0, len(entry.TagElements))
-      for tag, _ := range entry.TagElements {
-	tags = append(tags, tag)
-      }
-      self.diskIndexer.Put(key, entry.Value, tags)
+      self.diskIndexer.Put(key, entry.Value, entry.Tags)
     }
   } 
   self.modifiedEntries = make(map[string]bool)
@@ -170,24 +165,15 @@ func (self *MemoryIndexer) put(key string, value map[DocumentMappingId]interface
   entry, ok := self.entries[key]
   if !ok {
     // Create a new entry
-    entry = &MemoryIndexEntry{Key:key, Value:value, TagElements:make(map[string]*list.Element)}
+    entry = &MemoryIndexEntry{Key:key, Value:value, Tags:tags}
     self.entries[key] = entry
   } else {
-    oldentry = &MemoryIndexEntry{Key:key, Value:entry.Value, TagElements:entry.TagElements}
+    oldentry = &MemoryIndexEntry{Key:key, Value:entry.Value, Tags:entry.Tags}
   }
 
   // Fill in the tags for the updated entry
   entry.Value = value
-  entry.TagElements = make(map[string]*list.Element)
-  for _, tag := range tags {
-    if oldentry == nil {
-      entry.TagElements[tag] = nil      
-    } else if e, ok := oldentry.TagElements[tag]; ok {
-      entry.TagElements[tag] = e
-    } else {
-      entry.TagElements[tag] = nil
-    }
-  }
+  entry.Tags = tags
   
   for _, tag := range tags {
     index, indexok := self.indices[tag]
@@ -200,8 +186,8 @@ func (self *MemoryIndexer) put(key string, value map[DocumentMappingId]interface
   }
   // Remove entry from indexes where it no longer belongs
   if oldentry != nil {
-    for tag, _ := range oldentry.TagElements {
-      if _, ok := entry.TagElements[tag]; !ok {
+    for _, tag := range oldentry.Tags {
+      if !entry.HasTag(tag) {
 	if index, ok := self.indices[tag]; ok {
 	  index.Delete(oldentry)
 	}
@@ -215,7 +201,7 @@ func (self *MemoryIndexer) delete(key string) {
   if !ok {
     return
   }
-  for tag, _ := range entry.TagElements {
+  for _, tag := range entry.Tags {
     if index, ok := self.indices[tag]; ok {
       index.Delete(entry)
     }
@@ -291,35 +277,32 @@ func (self *MemoryIndexer) RequestMapping(key string, mapping DocumentMappingId)
 type MemoryIndex struct {
   indexer *MemoryIndexer
   tag string
-  entries list.List
+  entries map[string]*MemoryIndexEntry
   queries map[string]*Query
 }
 
 func NewMemoryIndex(indexer *MemoryIndexer, tag string) *MemoryIndex {
-  index := &MemoryIndex{indexer:indexer, tag:tag, queries:make(map[string]*Query)}
+  index := &MemoryIndex{indexer:indexer, tag:tag, queries:make(map[string]*Query), entries:make(map[string]*MemoryIndexEntry)}
   return index
 }
 
 func (self *MemoryIndex) Len() int {
-  return self.entries.Len()
+  return len(self.entries)
 }
 
 func (self *MemoryIndex) StartQuery(query* Query, execute bool) {
   self.queries[query.Id] = query;
   // Execute the query
   if execute {
-    ptr := self.entries.Front()
-    for ptr != nil {
-      entry := ptr.Value.(*MemoryIndexEntry)
+    for key, entry := range self.entries {
       if entry.Match(query) {
 	// Add to the result set
 	if entry.HasMapping(query.Mapping) {
-	  query.AddResult(entry.Key, entry.Value[query.Mapping])
+	  query.AddResult(key, entry.Value[query.Mapping])
 	} else {
-	  self.indexer.RequestMapping(entry.Key, query.Mapping)
+	  self.indexer.RequestMapping(key, query.Mapping)
 	}
       }
-      ptr = ptr.Next()
     }
   }
 }
@@ -329,8 +312,7 @@ func (self *MemoryIndex) StopQuery(query* Query) {
 }
 
 func (self *MemoryIndex) Put(entry *MemoryIndexEntry, oldentry *MemoryIndexEntry) {
-  element := self.entries.PushFront(entry)
-  entry.TagElements[self.tag] = element
+  self.entries[entry.Key] = entry
   // Does the new entry somehow affect the registered queries?
   for _, query := range self.queries {
     if entry.Match(query) {
@@ -348,8 +330,7 @@ func (self *MemoryIndex) Put(entry *MemoryIndexEntry, oldentry *MemoryIndexEntry
 }
 
 func (self *MemoryIndex) Delete(entry *MemoryIndexEntry) {
-  element := entry.TagElements[self.tag]
-  self.entries.Remove(element)
+  self.entries[entry.Key] = nil, false
   // The entry was part of a query? Then notify it
   for _, query := range self.queries {
     if entry.Match(query) {
@@ -365,7 +346,16 @@ func (self *MemoryIndex) Delete(entry *MemoryIndexEntry) {
 type MemoryIndexEntry struct {
   Key string
   Value map[DocumentMappingId]interface{}
-  TagElements map[string]*list.Element
+  Tags []string
+}
+
+func (self *MemoryIndexEntry) HasTag(tag string) bool {
+  for _, t := range self.Tags {
+    if t == tag {
+      return true
+    }
+  }
+  return false
 }
 
 func (self *MemoryIndexEntry) HasMapping(mapping DocumentMappingId) bool {
@@ -375,12 +365,12 @@ func (self *MemoryIndexEntry) HasMapping(mapping DocumentMappingId) bool {
 
 func (self *MemoryIndexEntry) Match(query* Query) bool {
   for _, tag := range query.HasTags {
-    if _, ok := self.TagElements[tag]; !ok {
+    if !self.HasTag(tag) {
       return false
     }
   }
   for _, tag := range query.HasNotTags {
-    if _, ok := self.TagElements[tag]; ok {
+    if self.HasTag(tag) {
       return false
     }
   }

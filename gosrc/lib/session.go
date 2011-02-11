@@ -435,6 +435,9 @@ func (self *Session) closeSession() {
   for uri, _ := range self.openDocs {
     self.sessionDatabase.server.PubSub( &PubSubRequest{Action:Unsubscribe, DocumentURI:uri, Subscriber:self, FinishSignal:nil} )
   }
+  for _, view := range self.openViews {
+    view.stop()
+  }
   if self.pollRequest != nil {
     self.pollRequest.Response.SetHeader("Content-Type", "application/json")
     _, err := self.pollRequest.Response.Write( []byte("{\"ok\":false, \"error\":\"Session has been closed\"}") )
