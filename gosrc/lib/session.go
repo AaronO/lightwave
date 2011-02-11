@@ -310,6 +310,7 @@ func newSession(sessionDatabase *SessionDB, username string) *Session {
 }
 
 func (self *Session) Enqueue( msg interface{} ) {
+  defer func() { recover() }()
   self.channel <- msg
 }
 
@@ -334,6 +335,7 @@ func (self *Session) Run() {
 	self.closeView(msg.(*SessionCloseViewRequest))
       case *SessionCloseMsg:
 	self.closeSession()
+	close(self.channel)
 	return
       default:
 	panic("Unknown message type received in session")
@@ -446,13 +448,9 @@ func (self *Session) closeSession() {
       self.pollRequest.FinishSignal <- false
     }
     self.pollRequest.FinishSignal <- true
+    self.pollRequest = nil
   }
 }
-
-// For Subscriber interface
-//func (self *Session) Update(msg *UpdateMsg) {
-//  self.channel <- msg
-//}
 
 func (self *Session) update(msg *UpdateMsg) {
   log.Println("Update for session ", self.Id, " from URI ", msg.URI)
