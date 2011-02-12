@@ -30,26 +30,15 @@
   <span id="logout" style="cursor:pointer; color:blue; text-decoration:underline">Logout</span>
 </div>
 
-<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:10px; width:180px; height:186px">
-  <div class="wave-titlebar">My Profile</div>
+<div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:10px; width:180px;">
+  <div class="wave-titlebar">Personal Information</div>
   <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:24px; bottom:10px; left:0px; right:0px;">
-   <div class="clearfix" style="margin-bottom:6px"><img style="float:left; width:60px; margin-right:4px" src="../images/torben.jpg"><span style="color:#3b5998">Torben Weis</span></br><span style="color:#666">weis@localhost</span></div>
-   <div class="selected-navi-link"><span style="font-weight:bold">Home</span></div>
-   <div class="navi-link"><span style="">Friends</span></div>
-   <div class="navi-link"><span style="">Info</span></div>
-   </div>
-  </div>
-</div>
-
-<div class="wave-panel" style="position:absolute; top:220px; bottom:20px; left:10px; width:180px;">
-  <div class="wave-titlebar">Friends</div>
-  <div class="wave-section-blue search">
-    <div class="searchInner">
-      <span style="display:block; overflow:hidden"><input style="font-size:16px; outline:none; width:100%" type="text" class="wave-searchbox"></span>
-    </div>
-  </div>
-  <div class="wave-section" id="friends" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;">
-  </div>
+   <div class="clearfix" style="margin-bottom:6px"><img style="float:left; width:60px; margin-right:4px" src="../images/unknown.png"><span style="color:#3b5998">Torben Weis</span></br><span style="color:#666">weis@localhost</span></div>
+   <div id="show-home" class="navi-link">Home</div>
+   <div id="show-friends" class="navi-link">Friends</div>
+   <div id="show-info" class="navi-link">Info</div>
+   <div id="friends" style="margin-top:12px; padding-top:2px; border-top:1px dotted #ccc"></div>
+ </div>
 </div>
 
 <div class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:200px; width:500px;">
@@ -76,6 +65,24 @@
   <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
     <div class="mainthread"></div>
     <div class="reply clearfix" style="display:none; border-radius:6px; background-color:#ddd;color:#888;border:1px solid #888; padding:3px; font-style:italic; font-size:16px"><img class="author" src="../images/unknown.png"><div style="padding-top:4px">Click here to reply</div></div>
+  </div>
+</div>
+
+<div id="home-panel" class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:710px; right:10px; display:none">
+  <div class="wave-titlebar">Home</div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
+  </div>
+</div>
+
+<div id="friends-panel" class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:710px; right:10px; display:none">
+  <div class="wave-titlebar">Friends</div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
+  </div>
+</div>
+
+<div id="info-panel" class="wave-panel" style="position:absolute; top:24px; bottom:20px; left:710px; right:10px; display:none">
+  <div class="wave-titlebar">My profile</div>
+  <div class="wave-section" style="overflow-y:auto; overflow-x:hidden; position:absolute; top:79px; bottom:10px; left:0px; right:0px;" id="document">
   </div>
 </div>
 

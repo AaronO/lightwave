@@ -76,10 +76,17 @@ LW.Social.initCallback_ = function(reply) {
         html += '<div style="margin-top:3px; margin-bottom:1px" class="blip-digest-border"></div>';
         state.dom.innerHTML = html;
         state.dom.onclick = function() {
+            $("#friends-panel").hide();
+            $("#info-panel").hide();
+            $("#home-panel").hide();
+            $("#show-home")[0].className = "navi-link";
+            $("#show-info")[0].className = "navi-link";
+            $("#show-friends")[0].className = "navi-link";
             var newdoc = LW.Inbox.getOrCreateDoc(jsObject.key);
             LW.Social.documentController.bind(newdoc, newdoc.content._data);
             LW.Social.participantsController.bind(newdoc, newdoc.content._meta);
             LW.Session.open(jsObject.key, true);
+            $("#document-panel").show();
         };
     };
     // Controller for the inbox
@@ -194,6 +201,33 @@ LW.Social.initCallback_ = function(reply) {
             this.style.color = "#999";
             $("#share-link-button").hide();
         }
+    });
+    $("#show-home").click( function() {
+        $("#document-panel").hide();
+        $("#friends-panel").hide();
+        $("#info-panel").hide();
+        $("#home-panel").show();
+        $("#show-home")[0].className = "selected-navi-link";
+        $("#show-info")[0].className = "navi-link";
+        $("#show-friends")[0].className = "navi-link";
+    });
+    $("#show-info").click( function() {
+        $("#document-panel").hide();
+        $("#friends-panel").hide();
+        $("#info-panel").show();
+        $("#home-panel").hide();
+        $("#show-home")[0].className = "navi-link";
+        $("#show-info")[0].className = "selected-navi-link";
+        $("#show-friends")[0].className = "navi-link";
+    });
+    $("#show-friends").click( function() {
+        $("#document-panel").hide();
+        $("#friends-panel").show();
+        $("#info-panel").hide();
+        $("#home-panel").hide();
+        $("#show-home")[0].className = "navi-link";
+        $("#show-info")[0].className = "navi-link";
+        $("#show-friends")[0].className = "selected-navi-link";
     });
 };
 
