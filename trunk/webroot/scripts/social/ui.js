@@ -18,6 +18,8 @@ LW.Social.initCallback_ = function(reply) {
     LW.Rpc.displayName = info.displayName;
     // Show which user is logged in
     document.getElementById("username").innerText = LW.Rpc.displayName;
+    document.getElementById("username2").innerText = LW.Rpc.displayName;
+    document.getElementById("userid").innerText = LW.Rpc.user + "@" + LW.Rpc.domain;
     LW.Inbox.init();
     LW.Session.init();
 
@@ -240,7 +242,7 @@ LW.Social.createFriendsController = function(parentdom) {
     var createFriend = function(jsDoc, jsObject, states, index) {
         var state = states[index];
         state.dom = document.createElement("div");
-        state.dom.className = "clearfix friend";
+        state.dom.className = "clearfix friend-large";
         state.controller = new LW.Controller.ObjectController(state.dom, updateFriend, null, null );
         state.controller.bind(jsDoc, jsObject);
     };
