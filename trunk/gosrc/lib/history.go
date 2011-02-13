@@ -115,7 +115,7 @@ func (self *DocumentHistory) Commit() {
   self.fsnapshot.Seek(0, 0)
   jsonmsg, _ := json.Marshal(self.node.doc)
   bin.Write(self.fsnapshot, bin.LittleEndian, self.commitVersion)
-  bin.Write(self.fsnapshot, bin.LittleEndian, int(len(jsonmsg)))
+  bin.Write(self.fsnapshot, bin.LittleEndian, int64(len(jsonmsg)))
   self.fsnapshot.Write(jsonmsg)
 }
 
@@ -133,7 +133,7 @@ func (self *DocumentHistory) initialRead() {
   
   // Try to read snapshot
   var version int64
-  var snaplen int
+  var snaplen int64
   var doc map[string]interface{}
   err := bin.Read(self.fsnapshot, bin.LittleEndian, &version)
   if err == nil {
@@ -141,7 +141,8 @@ func (self *DocumentHistory) initialRead() {
     if err == nil {
       bytes := make([]byte, snaplen)
       n, err := self.fsnapshot.Read(bytes)
-      if n == snaplen {
+      log.Println("Read", snaplen, n, err)
+      if n == int(snaplen) {
         doc = make(map[string]interface{})
         err = json.Unmarshal(bytes, &doc)
         if err == nil {
@@ -150,10 +151,18 @@ func (self *DocumentHistory) initialRead() {
           self.commitVersion = version
         } else {
 	  doc = nil
+	  log.Println("Unable to decode snapshot")
 	}
+      } else {
+	log.Println("Cannot read entire snapshot")
       }
+    } else {
+      log.Println("Cannot read snapshot length", err)
     }
+  } else {
+    log.Println("Cannot read snapshot version")
   }
+  
   // No snapshot?
   if doc == nil {
     doc = make(map[string]interface{})
@@ -239,7 +248,8 @@ func (self *DocumentHistory) rangeFromDisk(startVersion int64, endVersion int64)
     }
     endVersion = stat.Size / 8
   }
-  
+
+  log.Println("LOADING from ", startVersion, "to", endVersion)
   if startVersion == endVersion {
     return make([]DocumentMutation, 0), nil
   }
