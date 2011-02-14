@@ -23,7 +23,37 @@ LW.Social.initCallback_ = function(reply) {
     LW.Inbox.init();
     LW.Session.init();
 
+    var renderFriendRequest = function(jsDoc, jsObject, state) {
+        var html = "";
+        html += '<table style="font-size:10pt; width:100%">'
+        html += '  <tbody>';
+        html += '    <tr>';
+        html += '      <td style="vertical-align:top; width:42px">';
+        html += '        <img style="height:40px" src="images/unknown.png">';
+        html += '      </td>';
+        html += '      <td>';
+        html += '        <div style="text-align:right; float:right; margin-top:3px"><span style="color:#aaa">12:48 pm</span></div>';
+        html += '        <div style="margin-bottom:2px"><span style="color:#3b5998">' + jsObject.value.author + ' </span>';
+        html += '        ' + jsObject.value.text + '<br>';
+        if ( jsObject.value.request.userid == LW.Rpc.user + "@" + LW.Rpc.domain ) {
+            html += '<button>Cancel</button>';
+        } else if ( jsObject.value.response.userid == LW.Rpc.user + "@" + LW.Rpc.domain ) {
+            html += '<button>Confirm</button> <button>Not Now</button>';
+        }
+        html += '        </div>';
+        html += '      </td>';
+        html += '    </tr>';
+        html += '  </tbody>';
+        html += '</table>';
+        html += '<div style="margin-top:3px; margin-bottom:1px" class="blip-digest-border"></div>';
+        state.dom.innerHTML = html;
+    };
+
     var renderInboxEntry = function(jsDoc, jsObject, state) {
+        if ( jsObject.value.schema == "//lightwave/friend-request" ) {
+            renderFriendRequest(jsDoc, jsObject, state);
+            return;
+        }
         // state.dom.innerHTML = '<span class="title">' + jsObject.value + '</span>';
         var html = "";
         html += '<table style="font-size:10pt; width:100%">'
@@ -222,15 +252,59 @@ LW.Social.initCallback_ = function(reply) {
         $("#show-info")[0].className = "selected-navi-link";
         $("#show-friends")[0].className = "navi-link";
     });
-    $("#show-friends").click( function() {
-        $("#document-panel").hide();
-        $("#friends-panel").show();
-        $("#info-panel").hide();
-        $("#home-panel").hide();
-        $("#show-home")[0].className = "navi-link";
-        $("#show-info")[0].className = "navi-link";
-        $("#show-friends")[0].className = "selected-navi-link";
-    });
+    $("#show-friends").click( LW.Social.showFriends );
+};
+
+LW.Social.showFriends = function() {
+    $("#document-panel").hide();
+    $("#friends-panel").show();
+    $("#info-panel").hide();
+    $("#home-panel").hide();
+    $("#show-home")[0].className = "navi-link";
+    $("#show-info")[0].className = "navi-link";
+    $("#show-friends")[0].className = "selected-navi-link";
+    if ( !LW.Social.peopleView ) {
+        LW.Social.peopleView = LW.Session.openView("people", 'map=digest&with=schema://lightwave/user');
+        LW.Social.peopleController = LW.Social.createPeopleController(document.getElementById("people"));
+        LW.Social.peopleController.bind(LW.Social.peopleView, LW.Social.peopleView.content._data);
+    }
+};
+
+LW.Social.createPeopleController = function(parentdom) {
+    var updateFriend = function(jsDoc, jsObject, state) {
+        var html = '<td style="width:200px"><div class="friend-large"><img style="float:left" src="../images/unknown.png"><span style="color:#3b5998">' + jsObject.value.displayName + '</span></br><span style="color:#666">' + jsObject.value.userid + '</span></div></td>';
+        html += '<td><button class="add-friend-button">+1 Add as Friend</button></td>'
+        state.dom.innerHTML = html;
+        state.dom.alt = jsObject.displayName;
+        $(state.dom).find(".add-friend-button").click( function() {
+            LW.Model.createFriendRequest(jsObject.value.userid);
+        });
+    };
+    var createFriend = function(jsDoc, jsObject, states, index) {
+        var state = states[index];
+        state.dom = document.createElement("tr");
+        state.controller = new LW.Controller.ObjectController(state.dom, updateFriend, null, null );
+        state.controller.bind(jsDoc, jsObject);
+    };
+    var deleteFriend = function(jsDoc, jsObject, states, index) {
+        var state = states[index];
+        if ( state.controller ) {
+            state.controller.unbind();
+            delete state.controller;
+        }
+    };
+    var bindFunc = function(jsDoc, jsObject, state) {
+        if ( !state.controller ) {
+            state.controller = new LW.Controller.ListController( parentdom, null, createFriend, deleteFriend);
+        }
+        state.controller.bind(jsDoc, jsObject);
+    };
+    var unbindFunc = function(jsDoc, jsObject, state) {
+        if ( state.controller ) {
+            state.controller.unbind();
+        }
+    };
+    return new LW.Controller.AttributeController(parentdom, "items", bindFunc, unbindFunc);
 };
 
 LW.Social.createFriendsController = function(parentdom) {
