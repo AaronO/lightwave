@@ -40,6 +40,8 @@ func GetTags(node *DocumentNode) []string {
     return BlipsTags(node)
   case "//lightwave/user":
     return UserTags(node)
+  case "//lightwave/friend-request":
+    return FriendRequestTags(node)
   }
   return []string{}
 }
@@ -50,6 +52,8 @@ func GetDigest(node *DocumentNode, mapping DocumentMappingId) map[string]interfa
     return BlipsDigest(node)
   case "//lightwave/user":
     return UserDigest(node)
+  case "//lightwave/friend-request":
+    return FriendRequestDigest(node)
   }
   return make(map[string]interface{})
 }
@@ -71,6 +75,23 @@ func UserTags(node *DocumentNode) []string {
   for _, f := range friends {
     tags = append(tags, "friend:" + getString(f))
   }
+  tags = append(tags, "schema://lightwave/user")
+  return tags
+}
+
+func FriendRequestTags(node *DocumentNode) []string {
+  users := node.Participants()  
+  // Compute tags for the indexer
+  tags := make([]string, 0, len(users))
+  for _, u := range users {
+    tags = append(tags, "with:" + u.Username + "@" + u.Domain)
+  }
+  request := getObject(getObject(getObject(node.doc)["_data"])["request"])
+  response := getObject(getObject(getObject(node.doc)["_data"])["response"])
+  tags = append(tags, "friend-req:" + getString(request["userid"]))
+  tags = append(tags, "friend-res:" + getString(response["userid"]))
+  tags = append(tags, "friend-state:" + getString(response["state"]))
+
   return tags
 }
 
@@ -127,4 +148,19 @@ func UserDigest(node *DocumentNode) map[string]interface{} {
   result["displayName"] = data["displayName"]
   result["image"] = data["image"]
   return result 
+}
+
+func FriendRequestDigest(node *DocumentNode) map[string]interface{} {
+  result := BlipsDigest(node)
+  request := getObject(getObject(getObject(node.doc)["_data"])["request"])
+  response := getObject(getObject(getObject(node.doc)["_data"])["response"])
+  r := make(map[string]interface{})
+  r["userid"] = getString(request["userid"])
+  result["request"] = r
+  r = make(map[string]interface{})
+  r["userid"] = getString(response["userid"])
+  r["state"] = getString(response["state"])
+  result["response"] = r
+  result["schema"] = "//lightwave/friend-request"
+  return result
 }

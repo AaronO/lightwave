@@ -24,6 +24,15 @@ LW.Model.createDocument = function(text) {
     return doc;
 };
 
+LW.Model.createFriendRequest = function(userid) {
+    var url = "/" + LW.Rpc.domain + "/" + LW.Inbox.uniqueId();
+    var doc = LW.Inbox.getOrCreateDoc(url);
+    // Send delta to the server to persist the new document
+    doc.submitDocMutation( {"_rev":0, "_meta":{"$object":true, "schema":"//lightwave/friend-request", "participants":[{userid:LW.Rpc.user + "@" + LW.Rpc.domain, displayName:LW.Rpc.displayName},{userid:userid}]},
+                            "_data":{"$object":true, "request":{userid:LW.Rpc.user + "@" + LW.Rpc.domain}, response:{userid:userid, state:"pending"}, "blips":[{"content":{"$rtf":true, "text":[{"_type":"parag"}, "Friend request"]}, "_meta":{"author":LW.Rpc.user + "@" + LW.Rpc.domain}}]}});
+    return doc;
+};
+
 // Creates and sends a document mutation to insert a new blip.
 //
 // @param doc is a LW.Doc object
