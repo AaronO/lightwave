@@ -703,7 +703,7 @@ func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) os.Err
     // Server insert/squeeze go first
     for IsInsertMutation(smut) || IsSqueezeMutation(smut) {
       if cinside > 0 {
-        self.split(carr, cindex, cinside )
+        self.split(&carr, cindex, cinside )
         cinside = 0
         cindex++
         cmut = carr[cindex]
@@ -763,7 +763,7 @@ func (self Transformer) transform_pass1_array( sobj, cobj ArrayMutation ) os.Err
     // Client insert/squeeze go next
     for IsInsertMutation(cmut) || IsSqueezeMutation(cmut) {
       if sinside > 0 {
-        self.split(sarr, sindex, sinside )
+        self.split(&sarr, sindex, sinside )
         sinside = 0
         sindex++
         smut = sarr[sindex]
@@ -987,7 +987,7 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) os.Error
     if IsInsertMutation(smut) {
       // In the middle of a client skip/delete? Split it
       if cinside > 0 {
-        self.split(carr, cindex, cinside )
+        self.split(&carr, cindex, cinside )
         cinside = 0
         cindex++
         cmut = carr[cindex]
@@ -1007,7 +1007,7 @@ func (self Transformer) transform_pass1_text( sobj, cobj TextMutation ) os.Error
     if IsInsertMutation(cmut)  {
       // In the middle of a server skip/delete? Split it
       if sinside > 0 {
-        self.split(sarr, sindex, sinside )
+        self.split(&sarr, sindex, sinside )
         sinside = 0
         sindex++
         smut = sarr[sindex]
@@ -1107,7 +1107,7 @@ func (self Transformer) transform_pass1_richtext( sobj, cobj RichTextMutation ) 
     if IsInsertMutation(smut) {
       // In the middle of a client skip/delete? Split it
       if cinside > 0 {
-        self.split(carr, cindex, cinside )
+        self.split(&carr, cindex, cinside )
         cinside = 0
         cindex++
         cmut = carr[cindex]
@@ -1131,7 +1131,7 @@ func (self Transformer) transform_pass1_richtext( sobj, cobj RichTextMutation ) 
     if IsInsertMutation(cmut)  {
       // In the middle of a server skip/delete? Split it
       if sinside > 0 {
-        self.split(sarr, sindex, sinside )
+        self.split(&sarr, sindex, sinside )
         sinside = 0
         sindex++
         smut = sarr[sindex]
@@ -1242,8 +1242,8 @@ func (self Transformer) transform_pass1_richtext( sobj, cobj RichTextMutation ) 
   return nil
 }
 
-func (self Transformer) split( arr vec.Vector, index, inside int ) {
-  mut := arr[index]
+func (self Transformer) split( arr *vec.Vector, index, inside int ) {
+  mut := arr.At(index)
   if IsDeleteMutation(mut) {
     arr.Insert(index+1, NewDeleteMutation( toDeleteMutation(mut).Count() - inside))
     toDeleteMutation(mut).SetCount(inside);
