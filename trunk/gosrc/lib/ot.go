@@ -393,10 +393,10 @@ func (self Transformer) Transform( s, c DocumentMutation ) os.Error {
   if s_ok && c_ok {
     if IsInsertMutation(s_tmp) {
       // If the server has an insert mutation it will win
-      c["_data"] = nil, false
+      c["_meta"] = nil, false
     } else if IsInsertMutation(c_tmp) {
       // If the server has an insert mutation it will win
-      s["_data"] = nil, false
+      s["_meta"] = nil, false
     } else {
       if !IsObjectMutation(c_tmp) {
         return os.NewError("The client-side mutation is not an object or insert mutation")
