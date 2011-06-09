@@ -38,3 +38,8 @@ File structure
 /gosrc/server/lightwave
         The server executable. It is a stand-alone server with a HTTP
         interface. Use your web browser and point it to http://host:port/index.html.
+
+Experimental Code
+=================
+
+A new TP2 OT algorithm with a sample collaborative editor can be found in the 'experimental' folder.
